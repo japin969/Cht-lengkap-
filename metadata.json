@@ -1,0 +1,6 @@
+{
+  "name": "Telegram",
+  "description": "Telegram Android UI Reconstruction featuring Chat List, Chat Room, and Contact Info screens with authentic Material design, real-time flows, and security layer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
