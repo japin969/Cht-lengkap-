@@ -116,12 +116,8 @@ class AuthViewModel(
             return
         }
 
-        val clientId = try {
-            context.getString(R.string.default_web_client_id)
-        } catch (_: Exception) {
-            return
-        }
-        if (clientId.isBlank()) return
+        // Google Sign-In dinonaktifkan (default_web_client_id tidak tersedia)
+        return
 
         val credentialManager = CredentialManager.create(context)
         val googleIdOption = GetGoogleIdOption.Builder()
@@ -249,12 +245,8 @@ class AuthViewModel(
             return
         }
 
-        val clientId = try {
-            context.getString(R.string.default_web_client_id)
-        } catch (_: Exception) {
-            _uiState.value = AuthUiState.Error("Konfigurasi Google Sign-In (default_web_client_id) belum tersedia")
-            return
-        }
+        _uiState.value = AuthUiState.Error("Login Google belum dikonfigurasi. Gunakan email/password.")
+        return
 
         val credentialManager = CredentialManager.create(context)
         val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = clientId).build()
