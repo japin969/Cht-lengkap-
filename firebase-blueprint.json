@@ -1,0 +1,288 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Authenticated Jayra user account storing email, generated country phone number, country name, and profile settings.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the account owner."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Validated email address of the user."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Auto-generated country-prefixed phone number."
+        },
+        "country": {
+          "type": "string",
+          "description": "Selected country display name."
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional display name."
+        },
+        "bio": {
+          "type": "string",
+          "description": "Optional user bio."
+        },
+        "username": {
+          "type": "string",
+          "description": "Optional handle."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Optional avatar URL."
+        },
+        "disappearingDuration": {
+          "type": "string",
+          "description": "Auto-delete timer preference."
+        },
+        "fcmToken": {
+          "type": "string",
+          "description": "Owner-isolated Firebase Cloud Messaging registration token."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on registration."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp() on profile updates."
+        }
+      },
+      "required": ["userId", "email", "phoneNumber", "country", "createdAt"]
+    },
+    "ChatRoom": {
+      "title": "ChatRoom",
+      "description": "Direct or group chat metadata scoped to bounded participant UIDs.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "participants": { "type": "array", "description": "Bounded list of participant UIDs (max 50)." },
+        "isGroup": { "type": "boolean" },
+        "hasTopics": { "type": "boolean", "description": "Whether topic tabs are enabled for this group chat." },
+        "isChannel": { "type": "boolean" },
+        "isPinned": { "type": "boolean" },
+        "isMuted": { "type": "boolean" },
+        "isRead": { "type": "boolean" },
+        "isArchived": { "type": "boolean" },
+        "unreadCount": { "type": "integer" }
+      },
+      "required": ["name", "participants"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Encrypted message inside a chat room subcollection.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "cipherText": { "type": "string" },
+        "iv": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "timestampFormatted": { "type": "string" },
+        "topicId": { "type": "string", "description": "Topic identifier within topic-enabled groups (defaults to general)." },
+        "forwardedFrom": { "type": "string", "description": "Original sender display name when a message is forwarded." },
+        "checklistTitle": { "type": "string", "description": "Optional title of an interactive checklist message." },
+        "checklistItems": { "type": "array", "description": "Bounded list of checklist task objects {id, text, isDone} (max 50)." },
+        "allowOthersToToggle": { "type": "boolean", "description": "Whether chat participants other than the sender can toggle checklist items." },
+        "voiceDurationMillis": { "type": "integer", "description": "Trimmed voice note duration in milliseconds (100..3600000)." },
+        "voiceWaveform": { "type": "array", "description": "Bounded list of normalized waveform bar amplitudes [0..1] (max 80)." },
+        "participants": { "type": "array" }
+      },
+      "required": ["senderId", "cipherText", "timestamp"]
+    },
+    "Community": {
+      "title": "Community",
+      "description": "Community hub grouping multiple related group chats for members.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "groupIds": { "type": "array", "description": "Bounded list of associated group chat IDs (max 50)." },
+        "creatorId": { "type": "string", "description": "UID of the community creator." },
+        "memberIds": { "type": "array", "description": "Bounded list of community member UIDs (max 100)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["name", "creatorId", "memberIds", "groupIds"]
+    },
+    "GroupRoom": {
+      "title": "GroupRoom",
+      "description": "Group conversation configuration and bounded member list.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "members": { "type": "array" }
+      },
+      "required": ["name", "creatorId", "members"]
+    },
+    "ChannelRoom": {
+      "title": "ChannelRoom",
+      "description": "Broadcast channel metadata.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "subscribers": { "type": "array" }
+      },
+      "required": ["name", "creatorId"]
+    },
+    "CallRecord": {
+      "title": "CallRecord",
+      "description": "Voice or video call log owned by a specific user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "participantId": { "type": "string" },
+        "participantName": { "type": "string" },
+        "duration": { "type": "integer" }
+      },
+      "required": ["userId", "participantId"]
+    },
+    "CallSignalDoc": {
+      "title": "CallSignalDoc",
+      "description": "Signaling state between caller and receiver.",
+      "type": "object",
+      "properties": {
+        "callerId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "status": { "type": "string" },
+        "callId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "type": { "type": "string" },
+        "sdp": { "type": "string" },
+        "candidate": { "type": "string" },
+        "invitedUserId": { "type": "string" },
+        "isFrontCamera": { "type": "boolean" },
+        "participants": { "type": "array", "description": "Bounded list of call participant UIDs (max 50)." },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["callerId", "receiverId", "status"]
+    },
+    "UserSession": {
+      "title": "UserSession",
+      "description": "Active device session belonging to an authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "deviceName": { "type": "string" },
+        "location": { "type": "string" }
+      },
+      "required": ["userId", "deviceName"]
+    },
+    "AssistantMessage": {
+      "title": "AssistantMessage",
+      "description": "AES-256-GCM encrypted AI assistant message scoped under assistant_chats/{userId}/messages.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "timeFormatted": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["senderId", "text"]
+    },
+    "Story": {
+      "title": "Story",
+      "description": "Ephemeral or album-saved photo story posted by an authenticated user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "UID of the story author." },
+        "userName": { "type": "string" },
+        "userAvatarUrl": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "viewsCount": { "type": "integer" },
+        "isViewed": { "type": "boolean" },
+        "albumId": { "type": "string", "description": "Optional Story Album identifier." },
+        "albumTitle": { "type": "string", "description": "Optional Story Album display title." },
+        "viewerIds": { "type": "array", "description": "Bounded list of viewer UIDs (max 100)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["userId", "imageUrl", "timestamp", "viewsCount", "isViewed"]
+    },
+    "ContactNote": {
+      "title": "ContactNote",
+      "description": "Owner-isolated private note and birthday metadata about a specific contact.",
+      "type": "object",
+      "properties": {
+        "contactId": { "type": "string", "description": "Target contact identifier." },
+        "ownerId": { "type": "string", "description": "Firebase Auth UID of the note owner." },
+        "note": { "type": "string", "description": "Private personal note about the contact." },
+        "birthdayFormatted": { "type": "string", "description": "Human-readable birthday string." },
+        "birthdayMillis": { "type": "integer", "description": "UTC epoch milliseconds from Material3 DatePicker." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp set via FieldValue.serverTimestamp()." }
+      },
+      "required": ["contactId", "ownerId", "note", "birthdayFormatted", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserAccount",
+      "description": "User account registration and profile documents isolated to owner UID."
+    },
+    "/users/{userId}/notes/{contactId}": {
+      "schema": "ContactNote",
+      "description": "Private contact notes and birthdays strictly isolated under owner UID."
+    },
+    "/chats/{chatId}": {
+      "schema": "ChatRoom",
+      "description": "Chat rooms accessible only to participants."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Encrypted chat messages accessible only to chat participants."
+    },
+    "/communities/{communityId}": {
+      "schema": "Community",
+      "description": "Communities grouping related group chats accessible to community members."
+    },
+    "/groups/{groupId}": {
+      "schema": "GroupRoom",
+      "description": "Groups accessible to group members."
+    },
+    "/channels/{channelId}": {
+      "schema": "ChannelRoom",
+      "description": "Channels accessible to creator and subscribers."
+    },
+    "/calls/{callId}": {
+      "schema": "CallRecord",
+      "description": "Call history logs isolated per user."
+    },
+    "/call_signals/{callId}": {
+      "schema": "CallSignalDoc",
+      "description": "WebRTC/call signaling documents restricted to caller and receiver."
+    },
+    "/sessions/{sessionId}": {
+      "schema": "UserSession",
+      "description": "Active device sessions isolated per user."
+    },
+    "/assistant_chats/{userId}/messages/{messageId}": {
+      "schema": "AssistantMessage",
+      "description": "Encrypted AI assistant history isolated under owner UID."
+    },
+    "/stories/{storyId}": {
+      "schema": "Story",
+      "description": "Story albums and photo stories readable by authenticated users and authored by owner UID."
+    }
+  }
+}

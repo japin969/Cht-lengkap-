@@ -1,16 +1,11 @@
 package com.example.ui.chatroom
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -29,22 +24,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import com.example.model.Poll
 import com.example.model.PollOption
 import androidx.compose.runtime.getValue
@@ -56,26 +50,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.Message
 import com.example.model.MessageStatus
+import com.example.model.Reaction
+import com.example.model.RichTextEditorConfig
+import com.example.model.RichTextFormatOption
 import com.example.ui.theme.TelegramBlue
 import com.example.ui.theme.TelegramBubbleInDark
 import com.example.ui.theme.TelegramBubbleInLight
 import com.example.ui.theme.TelegramBubbleOutDark
 import com.example.ui.theme.TelegramBubbleOutLight
 import com.example.ui.theme.TelegramDangerRed
+import com.example.ui.theme.TelegramDarkChatBg
 import com.example.ui.theme.TelegramInputDark
 import com.example.ui.theme.TelegramInputLight
+import com.example.ui.theme.TelegramLightChatBg
 import com.example.ui.theme.TelegramReplyDark
 import com.example.ui.theme.TelegramReplyLight
 import com.example.ui.theme.TelegramSubtext
+import com.example.ui.theme.TelegramTheme
+import com.example.util.MarkdownParser
 
 @Composable
 fun DateSeparator(dateText: String) {
@@ -112,7 +114,9 @@ fun MessageBubble(
     onReactionClick: (String) -> Unit,
     onReplyClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    onCopyClick: () -> Unit
+    onCopyClick: () -> Unit,
+    onForwardClick: () -> Unit = {},
+    onToggleChecklistItem: (String) -> Unit = {}
 ) {
     val isDark = isSystemInDarkTheme()
     var showMenu by remember { mutableStateOf(false) }
@@ -165,6 +169,31 @@ fun MessageBubble(
                     )
                 }
 
+                // Forwarded From Header inside bubble
+                if (!message.forwardedFrom.isNullOrBlank()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(bottom = 3.dp)
+                    ) {
+                        // GANTI SVG TELEGRAM
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Forward,
+                            contentDescription = null,
+                            tint = TelegramBlue,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Diteruskan dari ${message.forwardedFrom}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TelegramBlue,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
                 // Reply Preview inside bubble
                 if (!message.replyToText.isNullOrBlank()) {
                     Box(
@@ -190,8 +219,11 @@ fun MessageBubble(
                                     color = TelegramBlue,
                                     maxLines = 1
                                 )
+                                val parsedReplyText = remember(message.replyToText) {
+                                    MarkdownParser.parse(message.replyToText)
+                                }
                                 Text(
-                                    text = message.replyToText,
+                                    text = parsedReplyText,
                                     fontSize = 12.sp,
                                     color = TelegramSubtext,
                                     maxLines = 1,
@@ -203,12 +235,31 @@ fun MessageBubble(
                     Spacer(modifier = Modifier.height(4.dp))
                 }
 
-                // Message Content (Poll, Location, Contact, or standard Text)
+                // Message Content (Checklist, Voice Note, Poll, Location, Contact, or standard Text)
+                val isChecklist = message.checklistItems.isNotEmpty()
+                val isVoiceNote = message.voiceDurationMillis != null || message.text.startsWith("🎤 [Voice Note")
                 val isPoll = message.text.startsWith("📊 Poling:") || message.text.startsWith("🧠 Kuis:")
                 val isLocation = message.text.startsWith("📍 [Lokasi]")
                 val isContact = message.text.startsWith("👤 [Kontak]")
 
-                if (isPoll) {
+                if (isChecklist) {
+                    ChecklistBubble(
+                        checklist = com.example.model.Checklist(
+                            id = message.id,
+                            title = message.checklistTitle ?: "Daftar Tugas",
+                            items = message.checklistItems,
+                            allowOthersToToggle = message.allowOthersToToggle
+                        ),
+                        onToggleItem = onToggleChecklistItem
+                    )
+                } else if (isVoiceNote) {
+                    VoiceNoteBubble(
+                        messageId = message.id,
+                        durationMillis = message.voiceDurationMillis ?: 5_000L,
+                        waveform = message.voiceWaveform,
+                        filePath = message.voiceFilePath
+                    )
+                } else if (isPoll) {
                     val lines = message.text.lines()
                     val header = lines.firstOrNull() ?: ""
                     val isQuizMode = header.startsWith("🧠 Kuis:")
@@ -315,8 +366,11 @@ fun MessageBubble(
                         }
                     }
                 } else {
+                    val formattedMessageText = remember(message.text) {
+                        MarkdownParser.parse(message.text)
+                    }
                     Text(
-                        text = message.text,
+                        text = formattedMessageText,
                         fontSize = 16.sp,
                         lineHeight = 22.sp,
                         color = textColor
@@ -383,6 +437,10 @@ fun MessageBubble(
                 DropdownMenuItem(
                     text = { Text("Reply") },
                     onClick = { onReplyClick(); showMenu = false }
+                )
+                DropdownMenuItem(
+                    text = { Text("Teruskan") },
+                    onClick = { onForwardClick(); showMenu = false }
                 )
                 DropdownMenuItem(
                     text = { Text("Copy") },
@@ -507,12 +565,14 @@ fun TypingIndicatorBubble() {
 
 @Composable
 fun ChatInputBar(
-    messageText: String,
-    onMessageChange: (String) -> Unit,
+    editorValue: TextFieldValue,
+    onEditorValueChange: (TextFieldValue) -> Unit,
+    onApplyFormat: (RichTextFormatOption) -> Unit,
     onSend: () -> Unit,
     replyTo: Message?,
     onCancelReply: () -> Unit,
     onAttachClick: () -> Unit = {},
+    config: RichTextEditorConfig = RichTextEditorConfig(),
     modifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
@@ -525,6 +585,9 @@ fun ChatInputBar(
     ) {
         // Reply bar banner
         if (replyTo != null) {
+            val replyPreviewAnnotated = remember(replyTo.text) {
+                MarkdownParser.parse(replyTo.text)
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -540,23 +603,28 @@ fun ChatInputBar(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Reply to ${replyTo.senderName}",
+                        text = "${config.replyPrefixLabel} ${replyTo.senderName}",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = TelegramBlue
                     )
                     Text(
-                        text = replyTo.text,
+                        text = replyPreviewAnnotated,
                         fontSize = 12.sp,
                         color = TelegramSubtext,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = onCancelReply, modifier = Modifier.size(28.dp)) {
+                IconButton(
+                    onClick = onCancelReply,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag("cancel_reply_button")
+                ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel reply",
+                        contentDescription = config.cancelReplyContentDescription,
                         tint = TelegramSubtext,
                         modifier = Modifier.size(18.dp)
                     )
@@ -564,82 +632,117 @@ fun ChatInputBar(
             }
         }
 
-        // Input row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onAttachClick,
-                modifier = Modifier
-                    .size(40.dp)
-                    .testTag("attach_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AttachFile,
-                    contentDescription = "Attach file",
-                    tint = TelegramSubtext,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+        // Fase 21.2: Rich Text Editor dengan Toolbar pemformatan & TextField multi-baris
+        RichTextEditor(
+            value = editorValue,
+            onValueChange = onEditorValueChange,
+            onFormatSelected = onApplyFormat,
+            onSend = onSend,
+            onAttachClick = onAttachClick,
+            config = config
+        )
+    }
+}
 
-            BasicTextField(
-                value = messageText,
-                onValueChange = onMessageChange,
-                maxLines = 5,
-                cursorBrush = SolidColor(TelegramBlue),
-                textStyle = TextStyle(
-                    fontSize = 16.sp,
-                    color = if (isDark) Color.White else Color.Black
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
-                    .testTag("chat_input_textfield"),
-                decorationBox = { innerTextField ->
-                    if (messageText.isEmpty()) {
-                        Text(
-                            text = "Message",
-                            fontSize = 16.sp,
-                            color = TelegramSubtext
-                        )
-                    }
-                    innerTextField()
-                }
+@Composable
+fun ChatInputBar(
+    messageText: String,
+    onMessageChange: (String) -> Unit,
+    onSend: () -> Unit,
+    replyTo: Message?,
+    onCancelReply: () -> Unit,
+    onAttachClick: () -> Unit = {},
+    config: RichTextEditorConfig = RichTextEditorConfig(),
+    modifier: Modifier = Modifier
+) {
+    var localFieldValue by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = messageText,
+                selection = TextRange(messageText.length)
             )
+        )
+    }
 
-            IconButton(
-                onClick = { /* Emoji picker */ },
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.EmojiEmotions,
-                    contentDescription = "Emoji",
-                    tint = TelegramSubtext,
-                    modifier = Modifier.size(24.dp)
+    LaunchedEffect(messageText) {
+        if (localFieldValue.text != messageText) {
+            localFieldValue = TextFieldValue(
+                text = messageText,
+                selection = TextRange(messageText.length)
+            )
+        }
+    }
+
+    ChatInputBar(
+        editorValue = localFieldValue,
+        onEditorValueChange = { updated ->
+            localFieldValue = updated
+            onMessageChange(updated.text)
+        },
+        onApplyFormat = { option ->
+            val formatted = MarkdownParser.applyFormatting(localFieldValue, option)
+            localFieldValue = formatted
+            onMessageChange(formatted.text)
+        },
+        onSend = onSend,
+        replyTo = replyTo,
+        onCancelReply = onCancelReply,
+        onAttachClick = onAttachClick,
+        config = config,
+        modifier = modifier
+    )
+}
+
+@Preview(name = "Message Bubble Markdown Light", showBackground = true)
+@Composable
+private fun MessageBubbleMarkdownLightPreview() {
+    TelegramTheme(darkTheme = false) {
+        Surface(color = TelegramLightChatBg) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                DateSeparator(dateText = "Hari Ini")
+                MessageBubble(
+                    message = Message(
+                        id = "preview_md_1",
+                        senderId = "pavel",
+                        senderName = "Pavel Durov",
+                        text = "Uji **Tebal**, __Miring__, ~~Coret~~, `Monospace`, dan https://jayra.app!",
+                        timestamp = "10:45",
+                        status = MessageStatus.READ,
+                        reactions = listOf(Reaction("🔥", 3, true))
+                    ),
+                    isOutgoing = false,
+                    onReactionClick = {},
+                    onReplyClick = {},
+                    onDeleteClick = {},
+                    onCopyClick = {}
                 )
             }
+        }
+    }
+}
 
-            AnimatedVisibility(
-                visible = messageText.isNotBlank(),
-                enter = scaleIn(tween(150)) + fadeIn(),
-                exit = scaleOut(tween(150)) + fadeOut()
-            ) {
-                IconButton(
-                    onClick = onSend,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .testTag("send_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
-                        tint = TelegramBlue,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+@Preview(name = "Message Bubble Markdown Dark", showBackground = true)
+@Composable
+private fun MessageBubbleMarkdownDarkPreview() {
+    TelegramTheme(darkTheme = true) {
+        Surface(color = TelegramDarkChatBg) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                MessageBubble(
+                    message = Message(
+                        id = "preview_md_2",
+                        senderId = "user_telegram_me",
+                        senderName = "Me",
+                        text = "Dokumentasi resmi di [Portal Jayra](https://jayra.app/docs) siap digunakan!",
+                        timestamp = "10:46",
+                        status = MessageStatus.READ
+                    ),
+                    isOutgoing = true,
+                    onReactionClick = {},
+                    onReplyClick = {},
+                    onDeleteClick = {},
+                    onCopyClick = {}
+                )
+                TypingIndicatorBubble()
             }
         }
     }

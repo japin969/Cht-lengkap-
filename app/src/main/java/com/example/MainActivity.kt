@@ -1,435 +1,286 @@
 package com.example
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.example.model.SearchResultType
-import com.example.ui.about.AboutScreen
-import com.example.ui.addmember.AddMemberScreen
-import com.example.ui.assistant.AssistantScreen
-import com.example.ui.call.CallHistoryScreen
-import com.example.ui.call.CallScreen
-import com.example.ui.calls.CallsScreen
-import com.example.ui.channelinfo.ChannelInfoScreen
-import com.example.ui.chatlist.ChatListScreen
-import com.example.ui.chatroom.ChatRoomScreen
-import com.example.ui.contactinfo.ContactInfoScreen
-import com.example.ui.contacts.ContactsScreen
-import com.example.ui.contacts.ContactSharingScreen
-import com.example.ui.help.HelpScreen
-import com.example.ui.help.PrivacyPolicyScreen
-import com.example.ui.location.LocationSharingScreen
-import com.example.ui.poll.CreatePollScreen
-import com.example.ui.settings.LanguageScreen
-import com.example.ui.settings.ThemeScreen
-import com.example.ui.stickers.StickersScreen
-import com.example.ui.groupinfo.GroupInfoScreen
-import com.example.ui.groupmembers.GroupMembersScreen
-import com.example.ui.profile.EditProfileScreen
-import com.example.ui.profile.MyProfileScreen
-import com.example.ui.search.SearchScreen
-import com.example.ui.settings.AdvancedSettingsScreen
-import com.example.ui.settings.DataStorageScreen
-import com.example.ui.settings.NotificationsScreen
-import com.example.ui.settings.PrivacyScreen
-import com.example.ui.settings.ProxyScreen
-import com.example.ui.security.ActiveSessionsScreen
-import com.example.ui.security.PasscodeScreen
-import com.example.ui.security.TwoStepVerificationScreen
-import com.example.ui.settings.SettingsScreen
-import com.example.ui.settings.StorageDetailScreen
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import com.example.data.OperationType
+import com.example.data.handleFirestoreError
+import com.example.di.AppModule
+import com.example.model.NavItem
+import com.example.service.MyFirebaseMessagingService
+import com.example.ui.main.JayraBottomNavigationBar
+import com.example.ui.main.MainScreen
 import com.example.ui.theme.TelegramTheme
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : ComponentActivity() {
+
+    private var pendingChatId by mutableStateOf<String?>(null)
+    private var pendingCallParticipantId by mutableStateOf<String?>(null)
+    private var pendingCallType by mutableStateOf("voice")
+    private var pendingOpenGlobalSearch by mutableStateOf(false)
+    private var cachedFcmToken: String? = null
+    private var authStateListener: FirebaseAuth.AuthStateListener? = null
+
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            setupFCM()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
+        AppModule.init(applicationContext)
+        extractNotificationExtras(intent)
+        observeAuthForTokenSync()
+        requestNotificationPermissionAndSetupFCM()
+
         // Mandatory Edge-to-Edge display
         enableEdgeToEdge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Section 5.3 Screen Security: Prevent screenshots and recents screen sniffing
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE
-        )
+        // Screen Security: Prevent screenshots and recents screen sniffing in release builds
+        if (!BuildConfig.DEBUG) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            )
+        }
 
         setContent {
             TelegramTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    TelegramAppNavigation()
+                    MainScreen(
+                        initialChatId = pendingChatId,
+                        initialCallParticipantId = pendingCallParticipantId,
+                        initialCallType = pendingCallType,
+                        initialOpenGlobalSearch = pendingOpenGlobalSearch,
+                        onNotificationNavigationHandled = {
+                            pendingChatId = null
+                            pendingCallParticipantId = null
+                            pendingOpenGlobalSearch = false
+                        }
+                    )
                 }
             }
         }
     }
-}
 
-@Composable
-fun TelegramAppNavigation() {
-    val navController = rememberNavController()
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        extractNotificationExtras(intent)
+    }
 
-    fun navigateToInfo(targetId: String) {
-        when (targetId) {
-            "chat_2", "chat_5" -> navController.navigate("group/$targetId")
-            "chat_4", "durov" -> navController.navigate("channel/$targetId")
-            else -> navController.navigate("contact/$targetId")
+    override fun onDestroy() {
+        authStateListener?.let { listener ->
+            try {
+                Firebase.auth.removeAuthStateListener(listener)
+            } catch (_: Exception) {
+                // Ignore if FirebaseAuth is unavailable in preview/test environments
+            }
+        }
+        super.onDestroy()
+    }
+
+    private fun extractNotificationExtras(incomingIntent: Intent?) {
+        val chatId = incomingIntent?.getStringExtra(MyFirebaseMessagingService.EXTRA_CHAT_ID)
+        val callParticipantId = incomingIntent?.getStringExtra(
+            MyFirebaseMessagingService.EXTRA_CALL_PARTICIPANT_ID
+        )
+        val callType = incomingIntent?.getStringExtra(MyFirebaseMessagingService.EXTRA_CALL_TYPE)
+            ?: "voice"
+
+        if (!chatId.isNullOrBlank()) {
+            pendingChatId = chatId
+            incomingIntent.removeExtra(MyFirebaseMessagingService.EXTRA_CHAT_ID)
+        }
+        if (!callParticipantId.isNullOrBlank()) {
+            pendingCallParticipantId = callParticipantId
+            pendingCallType = callType
+            incomingIntent.removeExtra(MyFirebaseMessagingService.EXTRA_CALL_PARTICIPANT_ID)
+        }
+        val shouldOpenGlobalSearch =
+            incomingIntent?.action == Intent.ACTION_SEARCH ||
+                incomingIntent?.getBooleanExtra(EXTRA_OPEN_GLOBAL_SEARCH, false) == true
+        if (shouldOpenGlobalSearch) {
+            pendingOpenGlobalSearch = true
+            incomingIntent?.removeExtra(EXTRA_OPEN_GLOBAL_SEARCH)
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = "chat_list"
-    ) {
-        composable("chat_list") {
-            ChatListScreen(
-                onChatClick = { chatId ->
-                    navController.navigate("chat/$chatId")
-                },
-                onContactInfoClick = { targetId ->
-                    navigateToInfo(targetId)
-                },
-                onMyProfileClick = {
-                    navController.navigate("settings")
-                },
-                onCallsClick = {
-                    navController.navigate("calls")
-                },
-                onContactsClick = {
-                    navController.navigate("contacts")
-                },
-                onSearchClick = {
-                    navController.navigate("search")
-                }
-            )
+    private fun requestNotificationPermissionAndSetupFCM() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val isGranted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (isGranted) {
+                setupFCM()
+            } else {
+                requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        } else {
+            setupFCM()
         }
+    }
 
-        composable("search") {
-            SearchScreen(
-                onBack = { navController.popBackStack() },
-                onNavigateToResult = { result ->
-                    when (result.type) {
-                        SearchResultType.CHANNEL -> navController.navigate("channel/${result.targetId}")
-                        SearchResultType.GROUP -> navController.navigate("group/${result.targetId}")
-                        SearchResultType.CONTACT -> navController.navigate("contact/${result.targetId}")
-                        SearchResultType.CHAT, SearchResultType.MESSAGE -> navController.navigate("chat/${result.targetId}")
+    private fun setupFCM() {
+        createJayraNotificationChannels()
+
+        try {
+            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    if (!token.isNullOrBlank()) {
+                        cachedFcmToken = token
+                        saveTokenToFirestore(token)
                     }
+                } else if (BuildConfig.DEBUG) {
+                    Log.w(TAG, "Gagal mengambil token FCM: ${task.exception?.message}")
                 }
-            )
+            }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.w(TAG, "FirebaseMessaging belum siap: ${e.message}")
+            }
         }
+    }
 
-        composable("calls") {
-            CallsScreen(
-                onBackClick = { navController.popBackStack() },
-                onNavigateToContactInfo = { targetId ->
-                    navigateToInfo(targetId)
+    private fun createJayraNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            val chatChannel = NotificationChannel(
+                MyFirebaseMessagingService.CHAT_CHANNEL_ID,
+                "Chat Jayra",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = getString(R.string.fcm_chat_channel_desc)
+                enableVibration(true)
+            }
+            notificationManager.createNotificationChannel(chatChannel)
+
+            MyFirebaseMessagingService.ensureCallNotificationChannel(this)
+        }
+    }
+
+    private fun observeAuthForTokenSync() {
+        try {
+            val auth = Firebase.auth
+            val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+                val token = cachedFcmToken
+                if (firebaseAuth.currentUser != null && !token.isNullOrBlank()) {
+                    saveTokenToFirestore(token)
                 }
-            )
+            }
+            authStateListener = listener
+            auth.addAuthStateListener(listener)
+        } catch (_: Exception) {
+            // FirebaseAuth not initialized in headless preview/unit test
         }
+    }
 
-        composable("contacts") {
-            ContactsScreen(
-                onBackClick = { navController.popBackStack() },
-                onContactClick = { targetId ->
-                    navController.navigate("chat/$targetId")
+    private fun saveTokenToFirestore(token: String) {
+        val currentUserId = try {
+            Firebase.auth.currentUser?.uid
+        } catch (_: Exception) {
+            null
+        } ?: return
+
+        val databaseId = applicationContext.getString(R.string.firestore_database_id)
+        val docRef = FirebaseFirestore.getInstance(databaseId)
+            .collection("users")
+            .document(currentUserId)
+
+        docRef.update("fcmToken", token)
+            .addOnFailureListener { error ->
+                if (BuildConfig.DEBUG) {
+                    handleFirestoreError(error, OperationType.UPDATE, docRef.path)
+                } else {
+                    Log.e(TAG, "Gagal menyimpan fcmToken ke Firestore.")
                 }
+            }
+    }
+
+    companion object {
+        private const val TAG = "MainActivityFCM"
+        const val ROUTE_GLOBAL_SEARCH = "global_search"
+        const val EXTRA_OPEN_GLOBAL_SEARCH = "extra_open_global_search"
+    }
+}
+
+@Suppress("DEPRECATION")
+@Preview(name = "Root Bottom Navigation Light", showBackground = true)
+@Composable
+private fun MainActivityRootLightPreview() {
+    val sampleTabs = listOf(
+        NavItem("chat_list", "Chat", Icons.Default.Chat, badgeCount = 2),
+        NavItem("calls", "Panggilan", Icons.Default.Call),
+        NavItem("music_home", "Musik", Icons.Default.MusicNote),
+        NavItem("settings", "Pengaturan", Icons.Default.Settings)
+    )
+    TelegramTheme(darkTheme = false) {
+        Surface {
+            JayraBottomNavigationBar(
+                items = sampleTabs,
+                currentRoute = "chat_list",
+                onItemClick = {}
             )
         }
+    }
+}
 
-        composable(
-            route = "chat/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            ChatRoomScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() },
-                onContactInfoClick = { cId ->
-                    navigateToInfo(cId)
-                },
-                onNavigateToCreatePoll = { cId ->
-                    navController.navigate("create_poll/$cId")
-                },
-                onNavigateToLocation = { cId ->
-                    navController.navigate("location_sharing/$cId")
-                },
-                onNavigateToContact = { cId ->
-                    navController.navigate("contact_sharing/$cId")
-                }
-            )
-        }
-
-        composable(
-            route = "contact/{contactId}",
-            arguments = listOf(navArgument("contactId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val contactId = backStackEntry.arguments?.getString("contactId") ?: "chat_1"
-            ContactInfoScreen(
-                contactId = contactId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "group/{groupId}",
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId") ?: "chat_2"
-            GroupInfoScreen(
-                groupId = groupId,
-                onBack = { navController.popBackStack() },
-                onMembersClick = { gId ->
-                    navController.navigate("group_members/$gId")
-                }
-            )
-        }
-
-        composable(
-            route = "group_members/{groupId}",
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId") ?: "chat_2"
-            GroupMembersScreen(
-                groupId = groupId,
-                onBack = { navController.popBackStack() },
-                onMemberClick = { memberId ->
-                    navController.navigate("chat/$memberId")
-                },
-                onAddMemberClick = { gId ->
-                    navController.navigate("add_member/$gId")
-                }
-            )
-        }
-
-        composable(
-            route = "add_member/{groupId}",
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId") ?: "chat_2"
-            AddMemberScreen(
-                groupId = groupId,
-                onBack = { navController.popBackStack() },
-                onMemberAdded = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "channel/{channelId}",
-            arguments = listOf(navArgument("channelId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val channelId = backStackEntry.arguments?.getString("channelId") ?: "chat_4"
-            ChannelInfoScreen(
-                channelId = channelId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("settings") {
-            SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onProfileClick = { navController.navigate("my_profile") },
-                onPrivacyClick = { navController.navigate("privacy") },
-                onNotificationsClick = { navController.navigate("notifications") },
-                onStorageClick = { navController.navigate("data_storage") },
-                onAssistantClick = { navController.navigate("assistant") },
-                onThemeClick = { navController.navigate("theme") },
-                onLanguageClick = { navController.navigate("language") },
-                onStickersClick = { navController.navigate("stickers") },
-                onHelpClick = { navController.navigate("help") },
-                onPrivacyPolicyClick = { navController.navigate("privacy_policy") },
-                onAboutClick = { navController.navigate("about") }
-            )
-        }
-
-        composable("advanced_settings") {
-            AdvancedSettingsScreen(
-                onBack = { navController.popBackStack() },
-                onProxyClick = { navController.navigate("proxy") }
-            )
-        }
-
-        composable("data_storage") {
-            DataStorageScreen(
-                onBack = { navController.popBackStack() },
-                onCategoryClick = { category ->
-                    navController.navigate("storage_detail/$category")
-                }
-            )
-        }
-
-        composable("proxy") {
-            ProxyScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "storage_detail/{category}",
-            arguments = listOf(navArgument("category") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val category = backStackEntry.arguments?.getString("category") ?: "photo"
-            StorageDetailScreen(
-                category = category,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("assistant") {
-            AssistantScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("my_profile") {
-            MyProfileScreen(
-                onBack = { navController.popBackStack() },
-                onEditProfileClick = { navController.navigate("edit_profile") },
-                onPrivacyClick = { navController.navigate("privacy") }
-            )
-        }
-
-        composable("edit_profile") {
-            EditProfileScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("privacy") {
-            PrivacyScreen(
-                onBack = { navController.popBackStack() },
-                onTwoStepClick = { navController.navigate("two_step_verification") },
-                onActiveDevicesClick = { navController.navigate("active_sessions") },
-                onPasscodeClick = { navController.navigate("passcode") }
-            )
-        }
-
-        composable("two_step_verification") {
-            TwoStepVerificationScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("active_sessions") {
-            ActiveSessionsScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("passcode") {
-            PasscodeScreen(
-                onBack = { navController.popBackStack() },
-                onSuccessUnlock = { navController.popBackStack() }
-            )
-        }
-
-        composable("notifications") {
-            NotificationsScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "call/{participantId}/{type}",
-            arguments = listOf(
-                navArgument("participantId") { type = NavType.StringType },
-                navArgument("type") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val participantId = backStackEntry.arguments?.getString("participantId") ?: ""
-            val type = backStackEntry.arguments?.getString("type") ?: "voice"
-            CallScreen(
-                participantId = participantId,
-                isVideo = (type == "video"),
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("call_history") {
-            CallHistoryScreen(
-                onBack = { navController.popBackStack() },
-                onCallClick = { participantId, type ->
-                    navController.navigate("call/$participantId/$type")
-                }
-            )
-        }
-
-        composable("help") {
-            HelpScreen(
-                onBack = { navController.popBackStack() },
-                onPrivacyClick = { navController.navigate("privacy_policy") }
-            )
-        }
-
-        composable("privacy_policy") {
-            PrivacyPolicyScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("about") {
-            AboutScreen(
-                onBack = { navController.popBackStack() },
-                onPrivacyClick = { navController.navigate("privacy_policy") }
-            )
-        }
-
-        composable("stickers") {
-            StickersScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("theme") {
-            ThemeScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("language") {
-            LanguageScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "create_poll/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            CreatePollScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "location_sharing/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            LocationSharingScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "contact_sharing/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            ContactSharingScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() }
+@Suppress("DEPRECATION")
+@Preview(name = "Root Bottom Navigation Dark", showBackground = true)
+@Composable
+private fun MainActivityRootDarkPreview() {
+    val sampleTabs = listOf(
+        NavItem("chat_list", "Chat", Icons.Default.Chat, badgeCount = 5),
+        NavItem("calls", "Panggilan", Icons.Default.Call),
+        NavItem("music_home", "Musik", Icons.Default.MusicNote),
+        NavItem("settings", "Pengaturan", Icons.Default.Settings)
+    )
+    TelegramTheme(darkTheme = true) {
+        Surface {
+            JayraBottomNavigationBar(
+                items = sampleTabs,
+                currentRoute = "settings",
+                onItemClick = {}
             )
         }
     }

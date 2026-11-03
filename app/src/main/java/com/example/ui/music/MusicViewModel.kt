@@ -28,7 +28,7 @@ sealed interface MusicUiState {
 }
 
 @OptIn(FlowPreview::class)
-class MusicViewModel(
+class MusicViewModel @JvmOverloads constructor(
     application: Application,
     private val nexadevApi: NexadevApi = NexadevApi.create()
 ) : AndroidViewModel(application) {

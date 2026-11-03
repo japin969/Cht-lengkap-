@@ -49,6 +49,7 @@ data class Chat(
     val isMuted: Boolean = false,
     val isRead: Boolean = true,
     val isGroup: Boolean = false,
+    val hasTopics: Boolean = false,
     val isChannel: Boolean = false,
     val participants: List<String> = emptyList(),
     val isArchived: Boolean = false
@@ -67,7 +68,15 @@ data class Message(
     val replyToId: String? = null,
     val replyToText: String? = null,
     val replyToSender: String? = null,
-    val reactions: List<Reaction> = emptyList()
+    val reactions: List<Reaction> = emptyList(),
+    val forwardedFrom: String? = null,
+    val topicId: String = "general",
+    val checklistTitle: String? = null,
+    val checklistItems: List<ChecklistItem> = emptyList(),
+    val allowOthersToToggle: Boolean = true,
+    val voiceFilePath: String? = null,
+    val voiceDurationMillis: Long? = null,
+    val voiceWaveform: List<Float> = emptyList()
 )
 
 @Immutable
@@ -289,13 +298,27 @@ sealed interface ContactsUiState {
     data class Error(val message: String) : ContactsUiState
 }
 
-enum class SearchFilter(val label: String) {
-    ALL("Semua"),
-    CHATS("Obrolan"),
-    MESSAGES("Pesan"),
-    CONTACTS("Kontak"),
-    GROUPS("Grup"),
-    CHANNELS("Saluran")
+enum class SearchFilter(
+    val label: String,
+    val globalChipLabel: String = label
+) {
+    ALL(label = "Semua", globalChipLabel = "Semua"),
+    CHATS(label = "Obrolan", globalChipLabel = "Chat"),
+    MESSAGES(label = "Pesan", globalChipLabel = "Pesan"),
+    CONTACTS(label = "Kontak", globalChipLabel = "Kontak"),
+    FILES(label = "File", globalChipLabel = "File"),
+    GROUPS(label = "Grup", globalChipLabel = "Grup"),
+    CHANNELS(label = "Saluran", globalChipLabel = "Saluran");
+
+    companion object {
+        val GLOBAL_SEARCH_FILTERS: List<SearchFilter> = listOf(
+            ALL,
+            CHATS,
+            MESSAGES,
+            CONTACTS,
+            FILES
+        )
+    }
 }
 
 enum class SearchResultType {
@@ -303,7 +326,8 @@ enum class SearchResultType {
     MESSAGE,
     CONTACT,
     GROUP,
-    CHANNEL
+    CHANNEL,
+    FILE
 }
 
 @Immutable
@@ -315,7 +339,8 @@ data class SearchResult(
     val type: SearchResultType = SearchResultType.CHAT,
     val avatarUrl: String = "",
     val memberCount: Int = 0,
-    val targetId: String = id
+    val targetId: String = id,
+    val isOnline: Boolean = false
 )
 
 sealed interface SearchUiState {
@@ -428,11 +453,26 @@ sealed interface StorageDetailUiState {
     data class Error(val message: String) : StorageDetailUiState
 }
 
+@Immutable
+data class CallParticipant(
+    val id: String = "",
+    val name: String = "",
+    val avatarUrl: String = "",
+    val isMuted: Boolean = false,
+    val isVideoEnabled: Boolean = true,
+    val isSpeaking: Boolean = false,
+    val isLocalUser: Boolean = false,
+    val isFrontCamera: Boolean = true
+)
+
 sealed interface CallUiState {
     data class Connecting(
         val participantName: String,
         val participantAvatar: String = "",
-        val isVideoCall: Boolean = false
+        val isVideoCall: Boolean = false,
+        val isFrontCamera: Boolean = true,
+        val participants: List<CallParticipant> = emptyList(),
+        val availableContacts: List<User> = emptyList()
     ) : CallUiState
 
     data class Connected(
@@ -443,7 +483,10 @@ sealed interface CallUiState {
         val isMuted: Boolean = false,
         val isVideoEnabled: Boolean = true,
         val isSpeakerOn: Boolean = false,
-        val isRemoteVideoAvailable: Boolean = true
+        val isRemoteVideoAvailable: Boolean = true,
+        val isFrontCamera: Boolean = true,
+        val participants: List<CallParticipant> = emptyList(),
+        val availableContacts: List<User> = emptyList()
     ) : CallUiState
 
     data class Ended(
@@ -702,4 +745,447 @@ sealed interface ContactSharingUiState {
     data object Empty : ContactSharingUiState
     data class Error(val message: String) : ContactSharingUiState
 }
+
+// ================= FASE 15: LOGIN, REGISTRASI, & NOMOR OTOMATIS PER NEGARA =================
+
+@Immutable
+data class Country(
+    val name: String = "",
+    val code: String = "",
+    val dialCode: String = ""
+)
+
+sealed interface AuthUiState {
+    data object Idle : AuthUiState
+    data object Loading : AuthUiState
+    data object Success : AuthUiState
+    data class Error(val message: String) : AuthUiState
+}
+
+@com.google.firebase.firestore.IgnoreExtraProperties
+data class UserAccount(
+    @com.google.firebase.firestore.DocumentId val id: String = "",
+    val userId: String = "",
+    val email: String = "",
+    val phoneNumber: String = "",
+    val country: String = "",
+    val fcmToken: String = "",
+    @com.google.firebase.firestore.ServerTimestamp val createdAt: com.google.firebase.Timestamp? = null,
+    @com.google.firebase.firestore.ServerTimestamp val updatedAt: com.google.firebase.Timestamp? = null
+)
+
+// ================= FASE 16: BOTTOM NAVIGATION BAR & PUSH NOTIFICATIONS (FCM) =================
+
+@Immutable
+data class NavItem(
+    val route: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val badgeCount: Int = 0
+)
+
+// ================= FASE 18: SAVED MESSAGES & FORWARD MESSAGES =================
+
+sealed interface SavedMessagesUiState {
+    data object Loading : SavedMessagesUiState
+    data class Success(
+        val chatId: String,
+        val headerTitle: String = "Pesan Tersimpan",
+        val headerSubtitle: String = "Penyimpanan cloud pribadi",
+        val messages: List<Message> = emptyList(),
+        val replyTo: Message? = null,
+        val searchQuery: String = "",
+        val isSearchActive: Boolean = false,
+        val emptyTitle: String = "Penyimpanan Cloud Anda",
+        val emptyHighlights: List<String> = listOf(
+            "Simpan pesan, tautan, dan catatan pribadi di sini",
+            "Teruskan pesan penting dari obrolan mana pun",
+            "Akses aman dari seluruh perangkat Jayra Anda"
+        )
+    ) : SavedMessagesUiState
+    data class Error(val message: String) : SavedMessagesUiState
+}
+
+sealed interface ForwardUiState {
+    data object Loading : ForwardUiState
+    data class Success(
+        val sourceMessage: Message,
+        val availableChats: List<Chat>,
+        val selectedChatIds: Set<String> = emptySet(),
+        val searchQuery: String = "",
+        val comment: String = "",
+        val isForwarding: Boolean = false,
+        val savedMessagesChatId: String = ""
+    ) : ForwardUiState
+    data class Error(val message: String) : ForwardUiState
+}
+
+// ================= FASE 19: GLOBAL SEARCH (PENCARIAN GLOBAL) =================
+
+@Immutable
+data class GlobalSearchStrings(
+    val searchPlaceholder: String = "Cari pesan, kontak, atau grup",
+    val idleTitle: String = "Cari di Jayra",
+    val idleSubtitle: String = "Temukan pesan, kontak, atau grup",
+    val emptyTitlePrefix: String = "Tidak ada hasil untuk",
+    val emptySubtitle: String = "Coba kata kunci lain",
+    val errorTitle: String = "Gagal mencari",
+    val retryButtonLabel: String = "Coba Lagi"
+)
+
+sealed interface GlobalSearchUiState {
+    data object Idle : GlobalSearchUiState
+    data object Loading : GlobalSearchUiState
+    data class Success(val results: List<SearchResult>) : GlobalSearchUiState
+    data object Empty : GlobalSearchUiState
+    data class Error(val message: String) : GlobalSearchUiState
+}
+
+
+// ================= FASE 20: FINAL POLISH, ERROR HANDLING, & RELEASE CONFIG =================
+
+@Immutable
+data class SplashUiState(
+    val appTitle: String = "Jayra",
+    val tagline: String = "Modern, Cepat, Aman",
+    val splashDelayMillis: Long = 1500L
+)
+
+// ================= FASE 21: RICH TEXT EDITOR & MESSAGE FORMATTING =================
+
+enum class RichTextFormatType {
+    BOLD,
+    ITALIC,
+    STRIKETHROUGH,
+    CODE,
+    LINK
+}
+
+@Immutable
+data class RichTextFormatOption(
+    val type: RichTextFormatType,
+    val label: String,
+    val prefix: String,
+    val suffix: String,
+    val placeholder: String = ""
+)
+
+@Immutable
+data class RichTextEditorConfig(
+    val placeholderText: String = "Ketik pesan...",
+    val attachContentDescription: String = "Lampirkan berkas",
+    val sendContentDescription: String = "Kirim pesan",
+    val cancelReplyContentDescription: String = "Batalkan balasan",
+    val replyPrefixLabel: String = "Balas ke",
+    val previewHeaderLabel: String = "Pratinjau",
+    val formatOptions: List<RichTextFormatOption> = DEFAULT_FORMAT_OPTIONS
+) {
+    companion object {
+        val DEFAULT_FORMAT_OPTIONS: List<RichTextFormatOption> = listOf(
+            RichTextFormatOption(
+                type = RichTextFormatType.BOLD,
+                label = "Tebal",
+                prefix = "**",
+                suffix = "**"
+            ),
+            RichTextFormatOption(
+                type = RichTextFormatType.ITALIC,
+                label = "Miring",
+                prefix = "__",
+                suffix = "__"
+            ),
+            RichTextFormatOption(
+                type = RichTextFormatType.STRIKETHROUGH,
+                label = "Coret",
+                prefix = "~~",
+                suffix = "~~"
+            ),
+            RichTextFormatOption(
+                type = RichTextFormatType.CODE,
+                label = "Kode",
+                prefix = "`",
+                suffix = "`"
+            ),
+            RichTextFormatOption(
+                type = RichTextFormatType.LINK,
+                label = "Tautan",
+                prefix = "[",
+                suffix = "](https://)",
+                placeholder = "teks"
+            )
+        )
+    }
+}
+
+// ================= FASE 22: COMMUNITIES & TOPIC TABS =================
+
+@Immutable
+@com.google.firebase.firestore.IgnoreExtraProperties
+data class Community(
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val avatarUrl: String = "",
+    val groupIds: List<String> = emptyList(),
+    val creatorId: String = "",
+    val memberIds: List<String> = emptyList(),
+    @com.google.firebase.firestore.ServerTimestamp val createdAt: com.google.firebase.Timestamp? = null
+)
+
+sealed interface CommunityUiState {
+    data object Loading : CommunityUiState
+    data class Success(val communities: List<Community>) : CommunityUiState
+    data object Empty : CommunityUiState
+    data class Error(val message: String) : CommunityUiState
+}
+
+@Immutable
+data class ChatTopic(
+    val id: String,
+    val title: String
+) {
+    companion object {
+        const val GENERAL_TOPIC_ID = "general"
+
+        val DEFAULT_TOPICS: List<ChatTopic> = listOf(
+            ChatTopic(id = "general", title = "General"),
+            ChatTopic(id = "topik_1", title = "Topik 1"),
+            ChatTopic(id = "topik_2", title = "Topik 2")
+        )
+    }
+}
+
+@Immutable
+data class CommunitiesStrings(
+    val screenTitle: String = "Komunitas",
+    val backContentDescription: String = "Kembali",
+    val addContentDescription: String = "Tambah Komunitas",
+    val groupCountSuffix: String = "Grup",
+    val emptyTitle: String = "Belum Ada Komunitas",
+    val emptySubtitle: String = "Gabungkan beberapa grup topik ke dalam satu wadah komunitas Jayra.",
+    val createButtonLabel: String = "Buat Komunitas",
+    val retryButtonLabel: String = "Coba Lagi",
+    val dialogTitle: String = "Komunitas Baru",
+    val nameLabel: String = "Nama Komunitas",
+    val descriptionLabel: String = "Deskripsi",
+    val selectGroupsLabel: String = "Pilih Grup Terhubung",
+    val saveLabel: String = "Simpan",
+    val cancelLabel: String = "Batal",
+    val selectGroupSheetTitle: String = "Grup dalam Komunitas"
+)
+
+// ================= FASE 23: STORY ALBUMS =================
+
+@Immutable
+@com.google.firebase.firestore.IgnoreExtraProperties
+data class Story(
+    val id: String = "",
+    val userId: String = "",
+    val imageUrl: String = "",
+    val timestamp: String = "",
+    val viewsCount: Int = 0,
+    val isViewed: Boolean = false,
+    val albumId: String? = null,
+    val albumTitle: String? = null,
+    val userName: String = "",
+    val userAvatarUrl: String = "",
+    val caption: String = "",
+    val viewerIds: List<String> = emptyList(),
+    @com.google.firebase.firestore.ServerTimestamp val createdAt: com.google.firebase.Timestamp? = null
+)
+
+sealed interface StoryUiState {
+    data object Loading : StoryUiState
+    data class Success(
+        val stories: List<Story>,
+        val selectedAlbumId: String? = null
+    ) : StoryUiState
+    data object Empty : StoryUiState
+    data class Error(val message: String) : StoryUiState
+}
+
+sealed interface StoryViewerUiState {
+    data object Loading : StoryViewerUiState
+    data class Success(
+        val stories: List<Story>,
+        val currentIndex: Int
+    ) : StoryViewerUiState
+    data object Empty : StoryViewerUiState
+    data class Error(val message: String) : StoryViewerUiState
+}
+
+@Immutable
+data class StoryAlbumFilter(
+    val id: String?,
+    val title: String
+)
+
+@Immutable
+data class StoryStrings(
+    val screenTitle: String = "Stories",
+    val backContentDescription: String = "Kembali",
+    val addStoryContentDescription: String = "Tambah Story",
+    val allAlbumsChip: String = "Semua",
+    val emptyTitle: String = "Belum Ada Story",
+    val emptySubtitle: String = "Bagikan momen foto dan susun dalam album koleksi di profil Jayra Anda.",
+    val addStoryButtonLabel: String = "Buat Story Baru",
+    val retryButtonLabel: String = "Coba Lagi",
+    val viewsSuffix: String = "tayangan",
+    val dialogTitle: String = "Story Baru",
+    val captionLabel: String = "Keterangan Story",
+    val imageUrlLabel: String = "URL Foto Story",
+    val albumLabel: String = "Pilih Album Story",
+    val presetPhotosLabel: String = "Pilih Template Foto",
+    val saveLabel: String = "Bagikan",
+    val cancelLabel: String = "Batal",
+    val closeViewerContentDescription: String = "Tutup Story",
+    val previousHintDescription: String = "Story sebelumnya",
+    val nextHintDescription: String = "Story berikutnya",
+    val viewerLoadingLabel: String = "Memuat Story...",
+    val viewerEmptyLabel: String = "Story tidak ditemukan"
+)
+
+// ================= FASE 24: NOTES FOR CONTACTS & BIRTHDAYS =================
+
+@Immutable
+@com.google.firebase.firestore.IgnoreExtraProperties
+data class ContactNote(
+    val contactId: String = "",
+    val ownerId: String = "",
+    val note: String = "",
+    val birthdayFormatted: String = "",
+    val birthdayMillis: Long? = null,
+    @com.google.firebase.firestore.ServerTimestamp val updatedAt: com.google.firebase.Timestamp? = null
+)
+
+@Immutable
+data class ContactNoteStrings(
+    val personalNoteCardTitle: String = "Catatan Pribadi",
+    val personalNoteSubtitle: String = "Hanya terlihat oleh Anda dan tersimpan terisolasi di akun Jayra Anda.",
+    val personalNotePlaceholder: String = "Tulis catatan khusus tentang kontak ini...",
+    val saveNoteButtonLabel: String = "Simpan Catatan",
+    val savingLabel: String = "Menyimpan...",
+    val savedBadgeLabel: String = "Tersimpan",
+    val birthdayCardTitle: String = "Ulang Tahun",
+    val birthdayEmptyLabel: String = "Belum diatur",
+    val selectBirthdayButtonLabel: String = "Pilih Tanggal",
+    val changeBirthdayButtonLabel: String = "Ubah Tanggal",
+    val clearBirthdayButtonLabel: String = "Hapus",
+    val datePickerTitle: String = "Pilih Tanggal Ulang Tahun",
+    val confirmButtonLabel: String = "Simpan",
+    val cancelButtonLabel: String = "Batal"
+)
+
+// ================= FASE 25: CHECKLISTS (DAFTAR TUGAS DI CHAT) =================
+
+@Immutable
+data class ChecklistItem(
+    val id: String = "",
+    val text: String = "",
+    val isDone: Boolean = false
+)
+
+@Immutable
+data class Checklist(
+    val id: String = "",
+    val title: String = "",
+    val items: List<ChecklistItem> = emptyList(),
+    val allowOthersToToggle: Boolean = true
+) {
+    val completedCount: Int
+        get() = items.count { it.isDone }
+
+    val totalCount: Int
+        get() = items.size
+
+    val progressFraction: Float
+        get() = if (items.isEmpty()) 0f else completedCount.toFloat() / items.size.toFloat()
+}
+
+sealed interface CreateChecklistUiState {
+    data object Idle : CreateChecklistUiState
+    data object Loading : CreateChecklistUiState
+    data object Success : CreateChecklistUiState
+    data class Error(val message: String) : CreateChecklistUiState
+}
+
+@Immutable
+data class ChecklistStrings(
+    val screenTitle: String = "Daftar Tugas Baru",
+    val backContentDescription: String = "Kembali",
+    val createActionLabel: String = "BUAT",
+    val titleSectionHeader: String = "Judul Daftar Tugas",
+    val titlePlaceholder: String = "Contoh: Persiapan Rilis Jayra...",
+    val itemsSectionHeader: String = "Daftar Tugas",
+    val itemPlaceholderPrefix: String = "Tugas",
+    val removeItemContentDescription: String = "Hapus tugas",
+    val addItemButtonLabel: String = "Tambah Tugas",
+    val settingsSectionHeader: String = "Pengaturan",
+    val allowOthersTitle: String = "Izinkan Anggota Menandai Selesai",
+    val allowOthersSubtitle: String = "Peserta obrolan dapat mencentang tugas secara kolaboratif",
+    val bubbleBadgeLabel: String = "Daftar Tugas",
+    val completedProgressSuffix: String = "selesai",
+    val attachmentSheetLabel: String = "Tugas"
+)
+
+// ================= FASE 26: VOICE TRIMMING (POTONG VOICE NOTE) =================
+
+@Immutable
+data class TrimmedAudioResult(
+    val outputFilePath: String,
+    val durationMillis: Long,
+    val sizeBytes: Long,
+    val waveform: List<Float>
+)
+
+sealed interface VoiceTrimmerUiState {
+    data object Loading : VoiceTrimmerUiState
+    data class Ready(
+        val sourceFilePath: String,
+        val totalDurationMillis: Long,
+        val startFraction: Float = 0.15f,
+        val endFraction: Float = 0.80f,
+        val waveform: List<Float> = emptyList(),
+        val isPlayingPreview: Boolean = false,
+        val playheadFraction: Float = 0.15f,
+        val isRecordingMic: Boolean = false,
+        val recordingElapsedMillis: Long = 0L
+    ) : VoiceTrimmerUiState {
+        val startMillis: Long
+            get() = (totalDurationMillis * startFraction.coerceIn(0f, 1f)).toLong()
+
+        val endMillis: Long
+            get() = (totalDurationMillis * endFraction.coerceIn(0f, 1f)).toLong()
+
+        val trimmedDurationMillis: Long
+            get() = (endMillis - startMillis).coerceAtLeast(0L)
+    }
+    data object Saving : VoiceTrimmerUiState
+    data class Error(val message: String) : VoiceTrimmerUiState
+}
+
+@Immutable
+data class VoiceTrimmerStrings(
+    val screenTitle: String = "Potong Voice Note",
+    val backContentDescription: String = "Kembali",
+    val waveformHeaderTitle: String = "Gelombang Suara",
+    val waveformSubtitle: String = "Geser penanda awal dan akhir untuk memotong bagian rekaman terbaik",
+    val rangeSliderLabel: String = "Rentang Potong Cepat",
+    val startSliderLabel: String = "Batas Awal",
+    val endSliderLabel: String = "Batas Akhir",
+    val totalDurationLabel: String = "Total Asli",
+    val trimmedDurationLabel: String = "Hasil Potong",
+    val previewPlayLabel: String = "Putar Potongan",
+    val previewPauseLabel: String = "Jeda Pratinjau",
+    val recordMicLabel: String = "Rekam Mikrofon",
+    val stopRecordLabel: String = "Hentikan Rekaman",
+    val resetSampleLabel: String = " Contoh Suara",
+    val saveButtonLabel: String = "Simpan",
+    val savingLabel: String = "Memotong & Mengirim...",
+    val retryLabel: String = "Coba Lagi",
+    val permissionDeniedMessage: String = "Izin mikrofon ditolak. Anda tetap dapat memotong contoh rekaman suara.",
+    val voiceBubbleLabel: String = "Voice Note",
+    val attachmentSheetLabel: String = "Suara"
+)
+
 
