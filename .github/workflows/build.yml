@@ -32,6 +32,9 @@ jobs:
           DATA: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: echo "$DATA" | base64 -di > app/google-services.json
 
+      - name: Print SHA-1 (signingReport)
+        run: ./gradlew signingReport --no-daemon
+
       - name: Build Debug APK
         run: ./gradlew clean assembleDebug --no-daemon --stacktrace
 
