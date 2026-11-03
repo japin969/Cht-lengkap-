@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.model.SearchResultType
 import com.example.ui.addmember.AddMemberScreen
+import com.example.ui.assistant.AssistantScreen
 import com.example.ui.calls.CallsScreen
 import com.example.ui.channelinfo.ChannelInfoScreen
 import com.example.ui.chatlist.ChatListScreen
@@ -27,9 +28,13 @@ import com.example.ui.groupmembers.GroupMembersScreen
 import com.example.ui.profile.EditProfileScreen
 import com.example.ui.profile.MyProfileScreen
 import com.example.ui.search.SearchScreen
+import com.example.ui.settings.AdvancedSettingsScreen
+import com.example.ui.settings.DataStorageScreen
 import com.example.ui.settings.NotificationsScreen
 import com.example.ui.settings.PrivacyScreen
+import com.example.ui.settings.ProxyScreen
 import com.example.ui.settings.SettingsScreen
+import com.example.ui.settings.StorageDetailScreen
 import com.example.ui.theme.TelegramTheme
 
 class MainActivity : ComponentActivity() {
@@ -210,7 +215,48 @@ fun TelegramAppNavigation() {
                 onBack = { navController.popBackStack() },
                 onProfileClick = { navController.navigate("my_profile") },
                 onPrivacyClick = { navController.navigate("privacy") },
-                onNotificationsClick = { navController.navigate("notifications") }
+                onNotificationsClick = { navController.navigate("notifications") },
+                onStorageClick = { navController.navigate("data_storage") },
+                onAssistantClick = { navController.navigate("assistant") }
+            )
+        }
+
+        composable("advanced_settings") {
+            AdvancedSettingsScreen(
+                onBack = { navController.popBackStack() },
+                onProxyClick = { navController.navigate("proxy") }
+            )
+        }
+
+        composable("data_storage") {
+            DataStorageScreen(
+                onBack = { navController.popBackStack() },
+                onCategoryClick = { category ->
+                    navController.navigate("storage_detail/$category")
+                }
+            )
+        }
+
+        composable("proxy") {
+            ProxyScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "storage_detail/{category}",
+            arguments = listOf(navArgument("category") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val category = backStackEntry.arguments?.getString("category") ?: "photo"
+            StorageDetailScreen(
+                category = category,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("assistant") {
+            AssistantScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 

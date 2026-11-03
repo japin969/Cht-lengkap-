@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Policy
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -67,6 +70,7 @@ import coil.request.ImageRequest
 import com.example.model.SettingsUiState
 import com.example.model.User
 import com.example.ui.components.InfoSettingRow
+import com.example.ui.components.InfoSwitchRow
 import com.example.ui.components.ShimmerCardList
 import com.example.ui.theme.TelegramBlue
 import com.example.ui.theme.TelegramCardDark
@@ -89,6 +93,7 @@ fun SettingsScreen(
     onPrivacyClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onStorageClick: () -> Unit = {},
+    onAssistantClick: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     BackHandler { onBack() }
@@ -102,6 +107,7 @@ fun SettingsScreen(
         onPrivacyClick = onPrivacyClick,
         onNotificationsClick = onNotificationsClick,
         onStorageClick = onStorageClick,
+        onAssistantClick = onAssistantClick,
         onThemeChange = viewModel::onThemeChange,
         onLanguageChange = viewModel::onLanguageChange
     )
@@ -115,9 +121,16 @@ fun SettingsContent(
     onPrivacyClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onStorageClick: () -> Unit,
+    onAssistantClick: () -> Unit = {},
     onThemeChange: (String) -> Unit,
     onLanguageChange: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("jayra_security_prefs", Context.MODE_PRIVATE) }
+    var isAssistantEnabled by remember {
+        mutableStateOf(prefs.getBoolean("assistant_ai_enabled", true))
+    }
+
     val isDark = isSystemInDarkTheme()
     val topBarBg = if (isDark) TelegramDarkTopBar else TelegramLightTopBar
     val screenBg = if (isDark) TelegramDarkChatBg else TelegramLightChatBg
@@ -301,6 +314,40 @@ fun SettingsContent(
                                     )
                                 }
 
+                                // Card Asisten AI (Fase 8)
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(cardBg)
+                                ) {
+                                    InfoSwitchRow(
+                                        icon = Icons.Default.SmartToy,
+                                        iconTint = TelegramBlue,
+                                        title = "Aktifkan Asisten AI",
+                                        checked = isAssistantEnabled,
+                                        onCheckedChange = { isChecked ->
+                                            isAssistantEnabled = isChecked
+                                            prefs.edit().putBoolean("assistant_ai_enabled", isChecked).apply()
+                                        },
+                                        showSeparator = true
+                                    )
+                                    InfoSettingRow(
+                                        icon = Icons.Default.SmartToy,
+                                        iconTint = TelegramBlue,
+                                        title = "Asisten AI (Jayra AI)",
+                                        valueText = if (isAssistantEnabled) "Aktif" else "Nonaktif",
+                                        onClick = {
+                                            if (isAssistantEnabled) {
+                                                onAssistantClick()
+                                            } else {
+                                                Toast.makeText(context, "Asisten AI dinonaktifkan", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        showSeparator = false
+                                    )
+                                }
+
                                 // Card Settings 2 (Umum: Wallpaper & Bunyi, Bahasa, Tema)
                                 Column(
                                     modifier = Modifier
@@ -450,6 +497,7 @@ private fun SettingsLightPreview() {
                 onPrivacyClick = {},
                 onNotificationsClick = {},
                 onStorageClick = {},
+                onAssistantClick = {},
                 onThemeChange = {},
                 onLanguageChange = {}
             )
@@ -477,6 +525,7 @@ private fun SettingsDarkPreview() {
                 onPrivacyClick = {},
                 onNotificationsClick = {},
                 onStorageClick = {},
+                onAssistantClick = {},
                 onThemeChange = {},
                 onLanguageChange = {}
             )
