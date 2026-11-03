@@ -125,6 +125,16 @@ class CallRepository(
         }
     }
 
+    val callLogs: Flow<List<CallLog>>
+        get() = getCalls()
+
+    fun logCall(callLog: CallLog) {
+        _localCalls.update { listOf(callLog) + it }
+        try {
+            firestore?.collection("calls")?.document(callLog.id)?.set(callLog)
+        } catch (_: Exception) {}
+    }
+
     fun startCall(context: Context, participantId: String, participantName: String, type: CallType) {
         val isVideo = (type == CallType.VIDEO)
         _activeCall.value = ActiveCallState(

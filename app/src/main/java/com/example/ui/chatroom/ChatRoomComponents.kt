@@ -37,12 +37,16 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.example.model.Poll
+import com.example.model.PollOption
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -199,13 +203,125 @@ fun MessageBubble(
                     Spacer(modifier = Modifier.height(4.dp))
                 }
 
-                // Message Text
-                Text(
-                    text = message.text,
-                    fontSize = 16.sp,
-                    lineHeight = 22.sp,
-                    color = textColor
-                )
+                // Message Content (Poll, Location, Contact, or standard Text)
+                val isPoll = message.text.startsWith("📊 Poling:") || message.text.startsWith("🧠 Kuis:")
+                val isLocation = message.text.startsWith("📍 [Lokasi]")
+                val isContact = message.text.startsWith("👤 [Kontak]")
+
+                if (isPoll) {
+                    val lines = message.text.lines()
+                    val header = lines.firstOrNull() ?: ""
+                    val isQuizMode = header.startsWith("🧠 Kuis:")
+                    val questionText = header.substringAfter(": ").trim()
+                    val optionItems = lines.drop(1).filter { it.isNotBlank() }.map { line ->
+                        val textOnly = line.replaceFirst(Regex("^\\d+\\.\\s*"), "")
+                        PollOption(text = textOnly, voteCount = 0)
+                    }
+                    if (optionItems.isNotEmpty()) {
+                        PollBubble(
+                            poll = Poll(
+                                id = message.id,
+                                question = questionText.ifBlank { "Poling" },
+                                options = optionItems,
+                                isQuiz = isQuizMode,
+                                isAnonymous = !isQuizMode
+                            )
+                        )
+                    } else {
+                        Text(
+                            text = message.text,
+                            fontSize = 16.sp,
+                            lineHeight = 22.sp,
+                            color = textColor
+                        )
+                    }
+                } else if (isLocation) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(TelegramBlue),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Text(
+                                text = "Lokasi Dibagikan",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TelegramBlue
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = message.text.substringAfter("📍 [Lokasi]").trim(),
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                            color = textColor
+                        )
+                    }
+                } else if (isContact) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(TelegramBlue),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Kartu Kontak",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TelegramBlue
+                                )
+                                Text(
+                                    text = message.text.substringAfter("👤 [Kontak]").trim(),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textColor
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Text(
+                        text = message.text,
+                        fontSize = 16.sp,
+                        lineHeight = 22.sp,
+                        color = textColor
+                    )
+                }
 
                 // Time & Status Row
                 Row(
@@ -396,6 +512,7 @@ fun ChatInputBar(
     onSend: () -> Unit,
     replyTo: Message?,
     onCancelReply: () -> Unit,
+    onAttachClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
@@ -455,8 +572,10 @@ fun ChatInputBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { /* Attachment picker */ },
-                modifier = Modifier.size(40.dp)
+                onClick = onAttachClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .testTag("attach_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.AttachFile,

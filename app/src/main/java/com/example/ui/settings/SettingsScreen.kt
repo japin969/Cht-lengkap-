@@ -30,8 +30,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mood
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Policy
@@ -94,6 +96,12 @@ fun SettingsScreen(
     onNotificationsClick: () -> Unit,
     onStorageClick: () -> Unit = {},
     onAssistantClick: () -> Unit = {},
+    onThemeClick: () -> Unit = {},
+    onLanguageClick: () -> Unit = {},
+    onStickersClick: () -> Unit = {},
+    onHelpClick: () -> Unit = {},
+    onPrivacyPolicyClick: () -> Unit = {},
+    onAboutClick: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     BackHandler { onBack() }
@@ -108,6 +116,12 @@ fun SettingsScreen(
         onNotificationsClick = onNotificationsClick,
         onStorageClick = onStorageClick,
         onAssistantClick = onAssistantClick,
+        onThemeClick = onThemeClick,
+        onLanguageClick = onLanguageClick,
+        onStickersClick = onStickersClick,
+        onHelpClick = onHelpClick,
+        onPrivacyPolicyClick = onPrivacyPolicyClick,
+        onAboutClick = onAboutClick,
         onThemeChange = viewModel::onThemeChange,
         onLanguageChange = viewModel::onLanguageChange
     )
@@ -122,6 +136,12 @@ fun SettingsContent(
     onNotificationsClick: () -> Unit,
     onStorageClick: () -> Unit,
     onAssistantClick: () -> Unit = {},
+    onThemeClick: () -> Unit = {},
+    onLanguageClick: () -> Unit = {},
+    onStickersClick: () -> Unit = {},
+    onHelpClick: () -> Unit = {},
+    onPrivacyPolicyClick: () -> Unit = {},
+    onAboutClick: () -> Unit = {},
     onThemeChange: (String) -> Unit,
     onLanguageChange: (String) -> Unit
 ) {
@@ -348,7 +368,7 @@ fun SettingsContent(
                                     )
                                 }
 
-                                // Card Settings 2 (Umum: Wallpaper & Bunyi, Bahasa, Tema)
+                                // Card Settings 2 (Umum: Stiker, Tema, Bahasa)
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -356,10 +376,18 @@ fun SettingsContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
-                                        icon = Icons.Default.Palette,
+                                        icon = Icons.Default.Mood,
                                         iconTint = TelegramOrange,
-                                        title = "Wallpaper & Bunyi",
-                                        onClick = {},
+                                        title = "Stiker dan GIF",
+                                        onClick = onStickersClick,
+                                        showSeparator = true
+                                    )
+                                    InfoSettingRow(
+                                        icon = Icons.Default.Palette,
+                                        iconTint = TelegramBlue,
+                                        title = "Tema & Tampilan",
+                                        valueText = uiState.appTheme,
+                                        onClick = onThemeClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
@@ -367,20 +395,12 @@ fun SettingsContent(
                                         iconTint = TelegramBlue,
                                         title = "Bahasa",
                                         valueText = uiState.language,
-                                        onClick = { showLanguageDialog = true },
-                                        showSeparator = true
-                                    )
-                                    InfoSettingRow(
-                                        icon = Icons.Default.DarkMode,
-                                        iconTint = TelegramSubtext,
-                                        title = "Tema",
-                                        valueText = uiState.appTheme,
-                                        onClick = { showThemeDialog = true },
+                                        onClick = onLanguageClick,
                                         showSeparator = false
                                     )
                                 }
 
-                                // Card Settings 3 (Lainnya: Bantuan, Kebijakan Privasi)
+                                // Card Settings 3 (Lainnya: Bantuan, Kebijakan Privasi, Tentang Jayra)
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -390,15 +410,22 @@ fun SettingsContent(
                                     InfoSettingRow(
                                         icon = Icons.Default.Help,
                                         iconTint = TelegramBlue,
-                                        title = "Bantuan",
-                                        onClick = {},
+                                        title = "Bantuan & FAQ",
+                                        onClick = onHelpClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
                                         icon = Icons.Default.Policy,
                                         iconTint = TelegramSubtext,
                                         title = "Kebijakan Privasi",
-                                        onClick = {},
+                                        onClick = onPrivacyPolicyClick,
+                                        showSeparator = true
+                                    )
+                                    InfoSettingRow(
+                                        icon = Icons.Default.Info,
+                                        iconTint = TelegramBlue,
+                                        title = "Tentang Jayra",
+                                        onClick = onAboutClick,
                                         showSeparator = false
                                     )
                                 }

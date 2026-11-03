@@ -164,6 +164,7 @@ data class User(
 @Immutable
 data class CallLog(
     val id: String = "",
+    val callId: String = id,
     val participantId: String = "",
     val participantName: String = "",
     val participantAvatar: String = "",
@@ -427,5 +428,278 @@ sealed interface StorageDetailUiState {
     data class Error(val message: String) : StorageDetailUiState
 }
 
+sealed interface CallUiState {
+    data class Connecting(
+        val participantName: String,
+        val participantAvatar: String = "",
+        val isVideoCall: Boolean = false
+    ) : CallUiState
 
+    data class Connected(
+        val participantName: String,
+        val participantAvatar: String = "",
+        val duration: String = "00:00",
+        val isVideoCall: Boolean = false,
+        val isMuted: Boolean = false,
+        val isVideoEnabled: Boolean = true,
+        val isSpeakerOn: Boolean = false,
+        val isRemoteVideoAvailable: Boolean = true
+    ) : CallUiState
+
+    data class Ended(
+        val participantName: String,
+        val duration: String
+    ) : CallUiState
+
+    data class Error(val message: String) : CallUiState
+}
+
+sealed interface CallHistoryUiState {
+    data object Loading : CallHistoryUiState
+    data class Success(val calls: List<CallLog>) : CallHistoryUiState
+    data object Empty : CallHistoryUiState
+    data class Error(val message: String) : CallHistoryUiState
+}
+
+@Immutable
+data class TwoStepData(
+    val isEnabled: Boolean = false,
+    val isBiometricEnabled: Boolean = false,
+    val recoveryEmail: String = "",
+    val hasPassword: Boolean = false
+)
+
+sealed interface TwoStepVerificationUiState {
+    data object Loading : TwoStepVerificationUiState
+    data class Success(val data: TwoStepData) : TwoStepVerificationUiState
+    data class Error(val message: String) : TwoStepVerificationUiState
+}
+
+@Immutable
+data class Session(
+    val id: String = "",
+    val deviceName: String = "",
+    val location: String = "",
+    val lastActive: String = "",
+    val isCurrent: Boolean = false,
+    val ipAddress: String = "",
+    val appVersion: String = "Jayra v1.0",
+    val isDesktop: Boolean = false
+)
+
+sealed interface ActiveSessionsUiState {
+    data object Loading : ActiveSessionsUiState
+    data class Success(val sessions: List<Session>) : ActiveSessionsUiState
+    data object Empty : ActiveSessionsUiState
+    data class Error(val message: String) : ActiveSessionsUiState
+}
+
+sealed interface PasscodeUiState {
+    data object Loading : PasscodeUiState
+    data class Entering(
+        val currentInput: String = "",
+        val isBiometricEnabled: Boolean = false,
+        val isLocked: Boolean = false,
+        val lockRemainingSeconds: Int = 0,
+        val errorMessage: String? = null
+    ) : PasscodeUiState
+    data object Success : PasscodeUiState
+    data class Error(val message: String) : PasscodeUiState
+}
+
+// ================= FASE 13: HELP, ABOUT, PRIVACY POLICY, STICKERS, THEME, LANGUAGE =================
+
+data class FAQ(
+    val id: String = "",
+    val question: String = "",
+    val answer: String = "",
+    val category: String = "Umum"
+)
+
+sealed interface HelpUiState {
+    data object Loading : HelpUiState
+    data class Success(
+        val faqs: List<FAQ> = emptyList(),
+        val searchQuery: String = "",
+        val filteredFaqs: List<FAQ> = emptyList(),
+        val supportEmail: String = "support@jayra.app",
+        val telegramFaqUrl: String = "https://telegram.org/faq"
+    ) : HelpUiState
+    data object Empty : HelpUiState
+    data class Error(val message: String) : HelpUiState
+}
+
+data class PrivacySection(
+    val id: String = "",
+    val title: String = "",
+    val content: String = ""
+)
+
+sealed interface PrivacyPolicyUiState {
+    data object Loading : PrivacyPolicyUiState
+    data class Success(
+        val title: String = "Kebijakan Privasi Jayra",
+        val lastUpdated: String = "November 2025",
+        val intro: String = "Jayra berkomitmen melindungi privasi data dan keamanan percakapan Anda dengan standar enkripsi end-to-end terverifikasi.",
+        val sections: List<PrivacySection> = emptyList()
+    ) : PrivacyPolicyUiState
+    data class Error(val message: String) : PrivacyPolicyUiState
+}
+
+sealed interface AboutUiState {
+    data object Loading : AboutUiState
+    data class Success(
+        val appName: String = "Jayra",
+        val version: String = "1.0.0",
+        val buildNumber: String = "100",
+        val releaseDate: String = "November 2025",
+        val developer: String = "Tim Pengembang Jayra",
+        val license: String = "GPL v3.0 / Open Source",
+        val githubUrl: String = "https://github.com/jayra/telegram-android",
+        val websiteUrl: String = "https://jayra.app"
+    ) : AboutUiState
+    data class Error(val message: String) : AboutUiState
+}
+
+data class Sticker(
+    val id: String = "",
+    val name: String = "",
+    val url: String = "",
+    val packName: String = "Populer",
+    val emoji: String = "😊",
+    val isAnimated: Boolean = false
+)
+
+data class Gif(
+    val id: String = "",
+    val title: String = "",
+    val url: String = "",
+    val previewUrl: String = "",
+    val width: Int = 150,
+    val height: Int = 150
+)
+
+sealed interface StickersUiState {
+    data object Loading : StickersUiState
+    data class Success(
+        val selectedTab: Int = 0, // 0: Stiker, 1: GIF
+        val stickerPacks: List<String> = emptyList(),
+        val selectedPack: String = "Semua",
+        val stickers: List<Sticker> = emptyList(),
+        val gifs: List<Gif> = emptyList(),
+        val searchQuery: String = ""
+    ) : StickersUiState
+    data object Empty : StickersUiState
+    data class Error(val message: String) : StickersUiState
+}
+
+data class ThemeOption(
+    val id: String,
+    val name: String,
+    val description: String
+)
+
+sealed interface ThemeUiState {
+    data object Loading : ThemeUiState
+    data class Success(
+        val currentTheme: String = "system", // "light", "dark", "system"
+        val availableThemes: List<ThemeOption> = emptyList(),
+        val dynamicColor: Boolean = true,
+        val accentColorHex: Long = 0xFF0088CC
+    ) : ThemeUiState
+    data class Error(val message: String) : ThemeUiState
+}
+
+data class LanguageItem(
+    val code: String,
+    val name: String,
+    val nativeName: String,
+    val isSelected: Boolean = false
+)
+
+sealed interface LanguageUiState {
+    data object Loading : LanguageUiState
+    data class Success(
+        val currentLanguageCode: String = "id",
+        val languages: List<LanguageItem> = emptyList(),
+        val searchQuery: String = ""
+    ) : LanguageUiState
+    data class Error(val message: String) : LanguageUiState
+}
+
+@Immutable
+data class PollOption(
+    val text: String = "",
+    val voteCount: Int = 0
+)
+
+@Immutable
+data class Vote(
+    val userId: String? = null,
+    val optionIndex: Int = 0
+)
+
+@Immutable
+data class Poll(
+    val id: String = "",
+    val question: String = "",
+    val options: List<PollOption> = emptyList(),
+    val isAnonymous: Boolean = true,
+    val allowMultiple: Boolean = false,
+    val isQuiz: Boolean = false,
+    val correctOptionIndex: Int? = null,
+    val votes: List<Vote> = emptyList()
+) {
+    val totalVotes: Int
+        get() = options.sumOf { it.voteCount }.coerceAtLeast(votes.size)
+
+    fun percentageFor(index: Int): Float {
+        val total = totalVotes
+        if (total == 0) return 0f
+        val count = options.getOrNull(index)?.voteCount ?: 0
+        return count.toFloat() / total
+    }
+}
+
+@Immutable
+data class LocationMessage(
+    val lat: Double = 0.0,
+    val lng: Double = 0.0,
+    val title: String = ""
+)
+
+@Immutable
+data class ContactMessage(
+    val name: String = "",
+    val phone: String = "",
+    val avatarUrl: String = ""
+)
+
+sealed interface CreatePollUiState {
+    data object Idle : CreatePollUiState
+    data object Loading : CreatePollUiState
+    data object Success : CreatePollUiState
+    data class Error(val message: String) : CreatePollUiState
+}
+
+sealed interface LocationUiState {
+    data object Loading : LocationUiState
+    data class Success(
+        val lat: Double,
+        val lng: Double,
+        val address: String = "",
+        val accuracyMeters: Float = 10f
+    ) : LocationUiState
+    data class Error(val message: String) : LocationUiState
+}
+
+sealed interface ContactSharingUiState {
+    data object Loading : ContactSharingUiState
+    data class Success(
+        val contacts: List<Contact>,
+        val searchQuery: String = ""
+    ) : ContactSharingUiState
+    data object Empty : ContactSharingUiState
+    data class Error(val message: String) : ContactSharingUiState
+}
 

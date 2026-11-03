@@ -148,5 +148,128 @@ class ExampleUnitTest {
         assertEquals(1, group.adminIds.size)
         assertTrue(group.adminIds.contains("u1"))
     }
+
+    @Test
+    fun testFaqAndPrivacyModels() {
+        val faq = com.example.model.FAQ(
+            id = "faq_test",
+            question = "Apakah Jayra aman?",
+            answer = "Sangat aman dengan AES-256-GCM.",
+            category = "Keamanan"
+        )
+        assertEquals("faq_test", faq.id)
+        assertEquals("Keamanan", faq.category)
+
+        val section = com.example.model.PrivacySection(
+            id = "p1",
+            title = "1. Prinsip Dasar",
+            content = "Privasi adalah hak asasi."
+        )
+        assertEquals("p1", section.id)
+        assertNotNull(section.content)
+    }
+
+    @Test
+    fun testStickerAndGifModels() {
+        val sticker = com.example.model.Sticker(
+            id = "s1",
+            name = "Senyum",
+            url = "https://example.com/s1.webp",
+            packName = "Populer",
+            emoji = "😊"
+        )
+        assertEquals("s1", sticker.id)
+        assertEquals("😊", sticker.emoji)
+        assertEquals("Populer", sticker.packName)
+
+        val gif = com.example.model.Gif(
+            id = "g1",
+            title = "Tepuk Tangan",
+            url = "https://example.com/g1.gif"
+        )
+        assertEquals("g1", gif.id)
+        assertEquals("Tepuk Tangan", gif.title)
+    }
+
+    @Test
+    fun testLanguageAndThemeModels() {
+        val lang = com.example.model.LanguageItem(
+            code = "id",
+            name = "Bahasa Indonesia",
+            nativeName = "Bahasa Indonesia",
+            isSelected = true
+        )
+        assertEquals("id", lang.code)
+        assertTrue(lang.isSelected)
+
+        val theme = com.example.model.ThemeOption(
+            id = "dark",
+            name = "Mode Gelap",
+            description = "Tema gelap hemat baterai"
+        )
+        assertEquals("dark", theme.id)
+    }
+
+    @Test
+    fun testPollModelAndPercentageCalculation() {
+        val options = listOf(
+            com.example.model.PollOption("Option A", 3),
+            com.example.model.PollOption("Option B", 1)
+        )
+        val poll = com.example.model.Poll(
+            id = "poll_1",
+            question = "Which language?",
+            options = options,
+            isAnonymous = true,
+            allowMultiple = false,
+            isQuiz = true,
+            correctOptionIndex = 0
+        )
+
+        assertEquals("poll_1", poll.id)
+        assertEquals(4, poll.totalVotes)
+        assertEquals(0.75f, poll.percentageFor(0), 0.001f)
+        assertEquals(0.25f, poll.percentageFor(1), 0.001f)
+        assertTrue(poll.isQuiz)
+        assertEquals(0, poll.correctOptionIndex)
+    }
+
+    @Test
+    fun testLocationMessageAndContactMessage() {
+        val loc = com.example.model.LocationMessage(
+            lat = -6.175392,
+            lng = 106.827153,
+            title = "Monas"
+        )
+        assertEquals(-6.175392, loc.lat, 0.0001)
+        assertEquals(106.827153, loc.lng, 0.0001)
+        assertEquals("Monas", loc.title)
+
+        val contact = com.example.model.ContactMessage(
+            name = "Pavel",
+            phone = "+1 555 0192",
+            avatarUrl = "https://example.com/avatar.jpg"
+        )
+        assertEquals("Pavel", contact.name)
+        assertEquals("+1 555 0192", contact.phone)
+    }
+
+    @Test
+    fun testUiStatesFase14() {
+        val pollState: com.example.model.CreatePollUiState = com.example.model.CreatePollUiState.Success
+        assertTrue(pollState is com.example.model.CreatePollUiState.Success)
+
+        val locState: com.example.model.LocationUiState = com.example.model.LocationUiState.Success(
+            lat = -6.175,
+            lng = 106.827,
+            address = "Jakarta",
+            accuracyMeters = 10f
+        )
+        assertTrue(locState is com.example.model.LocationUiState.Success)
+        assertEquals("Jakarta", (locState as com.example.model.LocationUiState.Success).address)
+
+        val emptyContact: com.example.model.ContactSharingUiState = com.example.model.ContactSharingUiState.Empty
+        assertTrue(emptyContact is com.example.model.ContactSharingUiState.Empty)
+    }
 }
 
