@@ -30,16 +30,22 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -88,6 +94,9 @@ fun ChatRoomScreen(
     chatId: String,
     onBack: () -> Unit,
     onContactInfoClick: (String) -> Unit,
+    onNavigateToCreatePoll: (String) -> Unit = {},
+    onNavigateToLocation: (String) -> Unit = {},
+    onNavigateToContact: (String) -> Unit = {},
     viewModel: ChatRoomViewModel = viewModel()
 ) {
     BackHandler { onBack() }
@@ -106,10 +115,14 @@ fun ChatRoomScreen(
         onSendMessage = viewModel::onSendMessage,
         onReaction = viewModel::onReaction,
         onReply = viewModel::onReply,
-        onDelete = viewModel::onDelete
+        onDelete = viewModel::onDelete,
+        onNavigateToCreatePoll = onNavigateToCreatePoll,
+        onNavigateToLocation = onNavigateToLocation,
+        onNavigateToContact = onNavigateToContact
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatRoomContent(
     chatId: String,
@@ -119,7 +132,10 @@ fun ChatRoomContent(
     onSendMessage: (String) -> Unit,
     onReaction: (String, String) -> Unit,
     onReply: (Message?) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onNavigateToCreatePoll: (String) -> Unit = {},
+    onNavigateToLocation: (String) -> Unit = {},
+    onNavigateToContact: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -129,6 +145,7 @@ fun ChatRoomContent(
 
     var messageInput by remember { mutableStateOf("") }
     var showTopMenu by remember { mutableStateOf(false) }
+    var showAttachmentSheet by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     val showScrollToBottom by remember {
@@ -289,7 +306,8 @@ fun ChatRoomContent(
                     }
                 },
                 replyTo = replyToMsg,
-                onCancelReply = { onReply(null) }
+                onCancelReply = { onReply(null) },
+                onAttachClick = { showAttachmentSheet = true }
             )
         }
     ) { innerPadding ->
@@ -420,6 +438,102 @@ fun ChatRoomContent(
                 }
             }
         }
+    }
+
+    if (showAttachmentSheet) {
+        val sheetState = rememberModalBottomSheetState()
+            ModalBottomSheet(
+                onDismissRequest = { showAttachmentSheet = false },
+                sheetState = sheetState,
+                containerColor = if (isDark) Color(0xFF242F3D) else Color.White
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = "Lampirkan",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = if (isDark) Color.White else Color.Black,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        AttachmentOptionItem(
+                            icon = Icons.Default.Poll,
+                            label = "Poling",
+                            backgroundColor = TelegramBlue,
+                            onClick = {
+                                showAttachmentSheet = false
+                                onNavigateToCreatePoll(chatId)
+                            }
+                        )
+                        AttachmentOptionItem(
+                            icon = Icons.Default.LocationOn,
+                            label = "Lokasi",
+                            backgroundColor = Color(0xFF4CAF50),
+                            onClick = {
+                                showAttachmentSheet = false
+                                onNavigateToLocation(chatId)
+                            }
+                        )
+                        AttachmentOptionItem(
+                            icon = Icons.Default.Person,
+                            label = "Kontak",
+                            backgroundColor = Color(0xFFFF9800),
+                            onClick = {
+                                showAttachmentSheet = false
+                                onNavigateToContact(chatId)
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentOptionItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    backgroundColor: Color,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(54.dp)
+                .clip(CircleShape)
+                .background(backgroundColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = TelegramSubtext
+        )
     }
 }
 

@@ -15,14 +15,25 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.model.SearchResultType
+import com.example.ui.about.AboutScreen
 import com.example.ui.addmember.AddMemberScreen
 import com.example.ui.assistant.AssistantScreen
+import com.example.ui.call.CallHistoryScreen
+import com.example.ui.call.CallScreen
 import com.example.ui.calls.CallsScreen
 import com.example.ui.channelinfo.ChannelInfoScreen
 import com.example.ui.chatlist.ChatListScreen
 import com.example.ui.chatroom.ChatRoomScreen
 import com.example.ui.contactinfo.ContactInfoScreen
 import com.example.ui.contacts.ContactsScreen
+import com.example.ui.contacts.ContactSharingScreen
+import com.example.ui.help.HelpScreen
+import com.example.ui.help.PrivacyPolicyScreen
+import com.example.ui.location.LocationSharingScreen
+import com.example.ui.poll.CreatePollScreen
+import com.example.ui.settings.LanguageScreen
+import com.example.ui.settings.ThemeScreen
+import com.example.ui.stickers.StickersScreen
 import com.example.ui.groupinfo.GroupInfoScreen
 import com.example.ui.groupmembers.GroupMembersScreen
 import com.example.ui.profile.EditProfileScreen
@@ -33,6 +44,9 @@ import com.example.ui.settings.DataStorageScreen
 import com.example.ui.settings.NotificationsScreen
 import com.example.ui.settings.PrivacyScreen
 import com.example.ui.settings.ProxyScreen
+import com.example.ui.security.ActiveSessionsScreen
+import com.example.ui.security.PasscodeScreen
+import com.example.ui.security.TwoStepVerificationScreen
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.settings.StorageDetailScreen
 import com.example.ui.theme.TelegramTheme
@@ -141,6 +155,15 @@ fun TelegramAppNavigation() {
                 onBack = { navController.popBackStack() },
                 onContactInfoClick = { cId ->
                     navigateToInfo(cId)
+                },
+                onNavigateToCreatePoll = { cId ->
+                    navController.navigate("create_poll/$cId")
+                },
+                onNavigateToLocation = { cId ->
+                    navController.navigate("location_sharing/$cId")
+                },
+                onNavigateToContact = { cId ->
+                    navController.navigate("contact_sharing/$cId")
                 }
             )
         }
@@ -217,7 +240,13 @@ fun TelegramAppNavigation() {
                 onPrivacyClick = { navController.navigate("privacy") },
                 onNotificationsClick = { navController.navigate("notifications") },
                 onStorageClick = { navController.navigate("data_storage") },
-                onAssistantClick = { navController.navigate("assistant") }
+                onAssistantClick = { navController.navigate("assistant") },
+                onThemeClick = { navController.navigate("theme") },
+                onLanguageClick = { navController.navigate("language") },
+                onStickersClick = { navController.navigate("stickers") },
+                onHelpClick = { navController.navigate("help") },
+                onPrivacyPolicyClick = { navController.navigate("privacy_policy") },
+                onAboutClick = { navController.navigate("about") }
             )
         }
 
@@ -276,12 +305,130 @@ fun TelegramAppNavigation() {
 
         composable("privacy") {
             PrivacyScreen(
+                onBack = { navController.popBackStack() },
+                onTwoStepClick = { navController.navigate("two_step_verification") },
+                onActiveDevicesClick = { navController.navigate("active_sessions") },
+                onPasscodeClick = { navController.navigate("passcode") }
+            )
+        }
+
+        composable("two_step_verification") {
+            TwoStepVerificationScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("active_sessions") {
+            ActiveSessionsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("passcode") {
+            PasscodeScreen(
+                onBack = { navController.popBackStack() },
+                onSuccessUnlock = { navController.popBackStack() }
             )
         }
 
         composable("notifications") {
             NotificationsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "call/{participantId}/{type}",
+            arguments = listOf(
+                navArgument("participantId") { type = NavType.StringType },
+                navArgument("type") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val participantId = backStackEntry.arguments?.getString("participantId") ?: ""
+            val type = backStackEntry.arguments?.getString("type") ?: "voice"
+            CallScreen(
+                participantId = participantId,
+                isVideo = (type == "video"),
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("call_history") {
+            CallHistoryScreen(
+                onBack = { navController.popBackStack() },
+                onCallClick = { participantId, type ->
+                    navController.navigate("call/$participantId/$type")
+                }
+            )
+        }
+
+        composable("help") {
+            HelpScreen(
+                onBack = { navController.popBackStack() },
+                onPrivacyClick = { navController.navigate("privacy_policy") }
+            )
+        }
+
+        composable("privacy_policy") {
+            PrivacyPolicyScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("about") {
+            AboutScreen(
+                onBack = { navController.popBackStack() },
+                onPrivacyClick = { navController.navigate("privacy_policy") }
+            )
+        }
+
+        composable("stickers") {
+            StickersScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("theme") {
+            ThemeScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("language") {
+            LanguageScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "create_poll/{chatId}",
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
+            CreatePollScreen(
+                chatId = chatId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "location_sharing/{chatId}",
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
+            LocationSharingScreen(
+                chatId = chatId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = "contact_sharing/{chatId}",
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
+            ContactSharingScreen(
+                chatId = chatId,
                 onBack = { navController.popBackStack() }
             )
         }

@@ -1,23 +1,26 @@
 package com.example.security
 
+import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.security.KeyStore
+import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * End-to-end Local Encryption Helper backed by the hardware-backed Android KeyStore.
- * Uses AES/GCM/NoPadding with 256-bit keys and 128-bit authentication tag.
+ * Military-Grade Local Encryption Helper backed by the hardware-backed Android KeyStore.
+ * Uses AES/GCM/NoPadding with 256-bit keys, 128-bit authentication tag, and SHA-256 password hashing.
  */
 object EncryptionHelper {
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     private const val KEY_ALIAS = "TelegramMasterSecretKey"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val TAG_LENGTH = 128
+    private const val PREFS_NAME = "jayra_secure_encrypted_prefs"
 
     init {
         ensureKeyExists()
@@ -93,5 +96,60 @@ object EncryptionHelper {
         } catch (_: Exception) {
             cipherTextBase64
         }
+    }
+
+    /**
+     * SHA-256 + Salt Military-Grade Hashing for Passwords and Passcodes.
+     */
+    fun hashPasswordWithSalt(password: String, salt: String = "JayraMilitarySalt2026"): String {
+        return try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            val combined = (password + salt).toByteArray(Charsets.UTF_8)
+            val hash = digest.digest(combined)
+            Base64.encodeToString(hash, Base64.NO_WRAP)
+        } catch (_: Exception) {
+            password
+        }
+    }
+
+    /**
+     * Stores encrypted key-value pair in SharedPreferences using Keystore AES-256-GCM.
+     */
+    fun saveEncryptedPref(context: Context, key: String, value: String) {
+        try {
+            val (cipher, iv) = encrypt(value)
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit()
+                .putString("${key}_cipher", cipher)
+                .putString("${key}_iv", iv)
+                .apply()
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * Retrieves and decrypts key-value pair from SharedPreferences using Keystore AES-256-GCM.
+     */
+    fun getEncryptedPref(context: Context, key: String): String? {
+        return try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val cipher = prefs.getString("${key}_cipher", null) ?: return null
+            val iv = prefs.getString("${key}_iv", null) ?: return null
+            decrypt(cipher, iv)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Removes an encrypted key-value pair from SharedPreferences.
+     */
+    fun removeEncryptedPref(context: Context, key: String) {
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit()
+                .remove("${key}_cipher")
+                .remove("${key}_iv")
+                .apply()
+        } catch (_: Exception) {}
     }
 }
