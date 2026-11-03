@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class GroupRepository(
-    private val firestore: FirebaseFirestore? = try { FirebaseFirestore.getInstance() } catch (_: Exception) { null }
+    private val firestore: FirebaseFirestore? = com.example.di.AppModule.firestore
 ) {
     private val _localGroups = MutableStateFlow<Map<String, Group>>(
         mapOf(

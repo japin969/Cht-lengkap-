@@ -29,8 +29,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Poll
@@ -43,7 +47,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -64,6 +72,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -71,10 +80,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.model.Chat
+import com.example.model.ChatTopic
 import com.example.model.Contact
 import com.example.model.Message
 import com.example.model.MessageStatus
 import com.example.model.Reaction
+import com.example.model.RichTextEditorConfig
+import com.example.model.RichTextFormatOption
 import com.example.model.ChatRoomUiState
 import com.example.security.SecurityRepository
 import com.example.ui.theme.TelegramBlue
@@ -82,11 +95,14 @@ import com.example.ui.theme.TelegramDarkChatBg
 import com.example.ui.theme.TelegramDarkTopBar
 import com.example.ui.theme.TelegramLightChatBg
 import com.example.ui.theme.TelegramLightTopBar
+import com.example.ui.theme.TelegramOrange
 import com.example.ui.theme.TelegramSearchDark
 import com.example.ui.theme.TelegramStatusOnline
 import com.example.ui.theme.TelegramSubtext
+import com.example.ui.theme.TelegramSuccessGreen
 import com.example.ui.theme.TelegramTheme
 import com.example.ui.viewmodel.ChatRoomViewModel
+import com.example.util.MarkdownParser
 import kotlinx.coroutines.launch
 
 @Composable
@@ -95,8 +111,11 @@ fun ChatRoomScreen(
     onBack: () -> Unit,
     onContactInfoClick: (String) -> Unit,
     onNavigateToCreatePoll: (String) -> Unit = {},
+    onNavigateToCreateChecklist: (String) -> Unit = {},
+    onNavigateToVoiceTrimmer: (String) -> Unit = {},
     onNavigateToLocation: (String) -> Unit = {},
     onNavigateToContact: (String) -> Unit = {},
+    onForwardMessage: (String, String) -> Unit = { _, _ -> },
     viewModel: ChatRoomViewModel = viewModel()
 ) {
     BackHandler { onBack() }
@@ -106,19 +125,36 @@ fun ChatRoomScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
+    val editorValue by viewModel.editorValue.collectAsState()
+    val editorConfig by viewModel.editorConfig.collectAsState()
+    val currentChat by viewModel.currentChat.collectAsState()
+    val topics by viewModel.topics.collectAsState()
+    val selectedTopicId by viewModel.selectedTopicId.collectAsState()
 
     ChatRoomContent(
         chatId = chatId,
         uiState = uiState,
+        currentChat = currentChat,
+        topics = topics,
+        selectedTopicId = selectedTopicId,
+        onSelectTopic = viewModel::onSelectTopic,
+        editorValue = editorValue,
+        editorConfig = editorConfig,
+        onEditorValueChange = viewModel::onEditorValueChange,
+        onApplyFormat = viewModel::onApplyFormat,
         onBack = onBack,
         onContactInfoClick = { onContactInfoClick(chatId) },
         onSendMessage = viewModel::onSendMessage,
         onReaction = viewModel::onReaction,
+        onToggleChecklistItem = viewModel::onToggleChecklistItem,
         onReply = viewModel::onReply,
         onDelete = viewModel::onDelete,
         onNavigateToCreatePoll = onNavigateToCreatePoll,
+        onNavigateToCreateChecklist = onNavigateToCreateChecklist,
+        onNavigateToVoiceTrimmer = onNavigateToVoiceTrimmer,
         onNavigateToLocation = onNavigateToLocation,
-        onNavigateToContact = onNavigateToContact
+        onNavigateToContact = onNavigateToContact,
+        onForwardMessage = onForwardMessage
     )
 }
 
@@ -133,9 +169,21 @@ fun ChatRoomContent(
     onReaction: (String, String) -> Unit,
     onReply: (Message?) -> Unit,
     onDelete: (String) -> Unit,
+    currentChat: Chat? = null,
+    topics: List<ChatTopic> = ChatTopic.DEFAULT_TOPICS,
+    selectedTopicId: String = ChatTopic.GENERAL_TOPIC_ID,
+    onSelectTopic: (String) -> Unit = {},
+    editorValue: TextFieldValue? = null,
+    editorConfig: RichTextEditorConfig = RichTextEditorConfig(),
+    onEditorValueChange: ((TextFieldValue) -> Unit)? = null,
+    onApplyFormat: ((RichTextFormatOption) -> Unit)? = null,
+    onToggleChecklistItem: (String, String) -> Unit = { _, _ -> },
     onNavigateToCreatePoll: (String) -> Unit = {},
+    onNavigateToCreateChecklist: (String) -> Unit = {},
+    onNavigateToVoiceTrimmer: (String) -> Unit = {},
     onNavigateToLocation: (String) -> Unit = {},
-    onNavigateToContact: (String) -> Unit = {}
+    onNavigateToContact: (String) -> Unit = {},
+    onForwardMessage: (String, String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -143,7 +191,15 @@ fun ChatRoomContent(
     val topBarBg = if (isDark) TelegramDarkTopBar else TelegramLightTopBar
     val chatBg = if (isDark) TelegramDarkChatBg else TelegramLightChatBg
 
-    var messageInput by remember { mutableStateOf("") }
+    var fallbackEditorValue by remember { mutableStateOf(TextFieldValue("")) }
+    val activeEditorValue = editorValue ?: fallbackEditorValue
+    val handleEditorChange: (TextFieldValue) -> Unit = onEditorValueChange ?: { updated ->
+        fallbackEditorValue = updated
+    }
+    val handleApplyFormat: (RichTextFormatOption) -> Unit = onApplyFormat ?: { option ->
+        fallbackEditorValue = MarkdownParser.applyFormatting(fallbackEditorValue, option)
+    }
+
     var showTopMenu by remember { mutableStateOf(false) }
     var showAttachmentSheet by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -160,19 +216,28 @@ fun ChatRoomContent(
     }
 
     val contact = (uiState as? ChatRoomUiState.Success)?.contact
-    val contactName = contact?.name ?: "Chat"
-    val contactStatus = contact?.status ?: "online"
+    val contactName = contact?.name ?: currentChat?.name ?: "Chat"
+    val contactStatus = contact?.status ?: if (currentChat?.isGroup == true) {
+        "${currentChat.participants.size.coerceAtLeast(2)} anggota"
+    } else {
+        "online"
+    }
+    val showTopicTabs = currentChat?.isGroup == true && currentChat.hasTopics
 
     Scaffold(
         topBar = {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
                     .background(topBarBg)
-                    .padding(end = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                 // Back Button (tap target 48dp)
                 IconButton(
                     onClick = onBack,
@@ -288,16 +353,64 @@ fun ChatRoomContent(
                         )
                     }
                 }
+                }
+
+                // Fase 22.3: Topic Tabs jika chat.isGroup && chat.hasTopics == true
+                if (showTopicTabs && topics.isNotEmpty()) {
+                    val selectedIndex = topics.indexOfFirst { it.id == selectedTopicId }
+                        .coerceAtLeast(0)
+                    ScrollableTabRow(
+                        selectedTabIndex = selectedIndex,
+                        containerColor = topBarBg,
+                        contentColor = Color(0xFFFFFFFF),
+                        edgePadding = 12.dp,
+                        indicator = { tabPositions ->
+                            if (selectedIndex < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
+                                    height = 3.dp,
+                                    color = Color(0xFFFFFFFF)
+                                )
+                            }
+                        },
+                        divider = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("chat_topic_tabs")
+                    ) {
+                        topics.forEach { topic ->
+                            val isSelected = topic.id == selectedTopicId
+                            Tab(
+                                selected = isSelected,
+                                onClick = { onSelectTopic(topic.id) },
+                                modifier = Modifier
+                                    .height(48.dp)
+                                    .testTag("topic_tab_${topic.id}"),
+                                selectedContentColor = Color(0xFFFFFFFF),
+                                unselectedContentColor = Color(0xFFFFFFFF).copy(alpha = 0.72f),
+                                text = {
+                                    Text(
+                                        text = "# ${topic.title}",
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        maxLines = 1
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
             }
         },
         bottomBar = {
             val replyToMsg = (uiState as? ChatRoomUiState.Success)?.replyTo
             ChatInputBar(
-                messageText = messageInput,
-                onMessageChange = { messageInput = it },
+                editorValue = activeEditorValue,
+                onEditorValueChange = handleEditorChange,
+                onApplyFormat = handleApplyFormat,
                 onSend = {
-                    val text = messageInput
-                    messageInput = ""
+                    val text = activeEditorValue.text
+                    handleEditorChange(TextFieldValue(""))
                     onSendMessage(text)
                     scope.launch {
                         listState.animateScrollToItem(
@@ -307,7 +420,8 @@ fun ChatRoomContent(
                 },
                 replyTo = replyToMsg,
                 onCancelReply = { onReply(null) },
-                onAttachClick = { showAttachmentSheet = true }
+                onAttachClick = { showAttachmentSheet = true },
+                config = editorConfig
             )
         }
     ) { innerPadding ->
@@ -389,6 +503,10 @@ fun ChatRoomContent(
                                         text = msg.text,
                                         scope = scope
                                     )
+                                },
+                                onForwardClick = { onForwardMessage(chatId, msg.id) },
+                                onToggleChecklistItem = { itemId ->
+                                    onToggleChecklistItem(msg.id, itemId)
                                 }
                             )
                         }
@@ -442,58 +560,79 @@ fun ChatRoomContent(
 
     if (showAttachmentSheet) {
         val sheetState = rememberModalBottomSheetState()
-            ModalBottomSheet(
-                onDismissRequest = { showAttachmentSheet = false },
-                sheetState = sheetState,
-                containerColor = if (isDark) Color(0xFF242F3D) else Color.White
+        ModalBottomSheet(
+            onDismissRequest = { showAttachmentSheet = false },
+            sheetState = sheetState,
+            containerColor = if (isDark) Color(0xFF242F3D) else Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
-                Column(
+                Text(
+                    text = "Lampirkan",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = if (isDark) Color.White else Color.Black,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "Lampirkan",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = if (isDark) Color.White else Color.Black,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                    AttachmentOptionItem(
+                        icon = Icons.Default.Poll,
+                        label = "Poling",
+                        backgroundColor = TelegramBlue,
+                        onClick = {
+                            showAttachmentSheet = false
+                            onNavigateToCreatePoll(chatId)
+                        }
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        AttachmentOptionItem(
-                            icon = Icons.Default.Poll,
-                            label = "Poling",
-                            backgroundColor = TelegramBlue,
-                            onClick = {
-                                showAttachmentSheet = false
-                                onNavigateToCreatePoll(chatId)
-                            }
-                        )
-                        AttachmentOptionItem(
-                            icon = Icons.Default.LocationOn,
-                            label = "Lokasi",
-                            backgroundColor = Color(0xFF4CAF50),
-                            onClick = {
-                                showAttachmentSheet = false
-                                onNavigateToLocation(chatId)
-                            }
-                        )
-                        AttachmentOptionItem(
-                            icon = Icons.Default.Person,
-                            label = "Kontak",
-                            backgroundColor = Color(0xFFFF9800),
-                            onClick = {
-                                showAttachmentSheet = false
-                                onNavigateToContact(chatId)
-                            }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
+                    // GANTI SVG TELEGRAM
+                    AttachmentOptionItem(
+                        icon = Icons.Default.Checklist,
+                        label = "Tugas",
+                        backgroundColor = TelegramSuccessGreen,
+                        onClick = {
+                            showAttachmentSheet = false
+                            onNavigateToCreateChecklist(chatId)
+                        }
+                    )
+                    // GANTI SVG TELEGRAM
+                    AttachmentOptionItem(
+                        icon = Icons.Default.Mic,
+                        label = "Suara",
+                        backgroundColor = TelegramOrange,
+                        onClick = {
+                            showAttachmentSheet = false
+                            onNavigateToVoiceTrimmer(chatId)
+                        }
+                    )
+                    AttachmentOptionItem(
+                        icon = Icons.Default.LocationOn,
+                        label = "Lokasi",
+                        backgroundColor = Color(0xFF4CAF50),
+                        onClick = {
+                            showAttachmentSheet = false
+                            onNavigateToLocation(chatId)
+                        }
+                    )
+                    AttachmentOptionItem(
+                        icon = Icons.Default.Person,
+                        label = "Kontak",
+                        backgroundColor = Color(0xFFFF9800),
+                        onClick = {
+                            showAttachmentSheet = false
+                            onNavigateToContact(chatId)
+                        }
+                    )
                 }
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -550,7 +689,7 @@ private fun ChatRoomLightPreview() {
                             id = "1",
                             senderId = "pavel",
                             senderName = "Pavel Durov",
-                            text = "Welcome to the Telegram Compose experience!",
+                            text = "Selamat datang di **Jayra**! Coba format __miring__, ~~coret~~, `kode`, dan https://jayra.app",
                             timestamp = "10:45 AM",
                             dateGroup = "Today",
                             status = MessageStatus.READ,
@@ -560,7 +699,7 @@ private fun ChatRoomLightPreview() {
                             id = "2",
                             senderId = "user_telegram_me",
                             senderName = "Me",
-                            text = "Looks 99% authentic to the native app!",
+                            text = "Tampilan **Rich Text Editor** terlihat sangat presisi!",
                             timestamp = "10:46 AM",
                             dateGroup = "Today",
                             status = MessageStatus.READ
@@ -593,7 +732,7 @@ private fun ChatRoomDarkPreview() {
                             id = "1",
                             senderId = "pavel",
                             senderName = "Pavel Durov",
-                            text = "End-to-end hardware encryption is active.",
+                            text = "Enkripsi `AES-256-GCM` aktif penuh di [Jayra Cloud](https://jayra.app).",
                             timestamp = "10:45 AM",
                             dateGroup = "Today",
                             status = MessageStatus.READ
@@ -602,6 +741,110 @@ private fun ChatRoomDarkPreview() {
                     isTyping = true,
                     contact = Contact(name = "Pavel Durov", status = "online")
                 ),
+                onBack = {},
+                onContactInfoClick = {},
+                onSendMessage = {},
+                onReaction = { _, _ -> },
+                onReply = {},
+                onDelete = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Telegram Group Topics Light", showBackground = true)
+@Composable
+private fun ChatRoomGroupTopicsLightPreview() {
+    TelegramTheme(darkTheme = false) {
+        Surface {
+            ChatRoomContent(
+                chatId = "chat_2",
+                uiState = ChatRoomUiState.Success(
+                    messages = listOf(
+                        Message(
+                            id = "t1",
+                            senderId = "sarah",
+                            senderName = "Sarah Connor",
+                            text = "Diskusi arsitektur modul **Topic Tabs** untuk rilis Jayra.",
+                            timestamp = "11:15 AM",
+                            dateGroup = "Today",
+                            status = MessageStatus.READ,
+                            topicId = "topik_1"
+                        ),
+                        Message(
+                            id = "t2",
+                            senderId = "user_telegram_me",
+                            senderName = "Me",
+                            text = "Filter pesan per topik sudah terhubung penuh ke `ChatRoomViewModel`.",
+                            timestamp = "11:16 AM",
+                            dateGroup = "Today",
+                            status = MessageStatus.READ,
+                            topicId = "topik_1"
+                        )
+                    ),
+                    isTyping = false,
+                    contact = Contact(
+                        id = "chat_2",
+                        name = "Android Developers ID",
+                        status = "142 anggota, 18 online"
+                    )
+                ),
+                currentChat = Chat(
+                    id = "chat_2",
+                    name = "Android Developers ID",
+                    isGroup = true,
+                    hasTopics = true
+                ),
+                topics = com.example.model.ChatTopic.DEFAULT_TOPICS,
+                selectedTopicId = "topik_1",
+                onSelectTopic = {},
+                onBack = {},
+                onContactInfoClick = {},
+                onSendMessage = {},
+                onReaction = { _, _ -> },
+                onReply = {},
+                onDelete = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "Telegram Group Topics Dark", showBackground = true)
+@Composable
+private fun ChatRoomGroupTopicsDarkPreview() {
+    TelegramTheme(darkTheme = true) {
+        Surface {
+            ChatRoomContent(
+                chatId = "chat_2",
+                uiState = ChatRoomUiState.Success(
+                    messages = listOf(
+                        Message(
+                            id = "t1",
+                            senderId = "sarah",
+                            senderName = "Sarah Connor",
+                            text = "Pengumuman rilis **Komunitas** tersedia di tab `General`.",
+                            timestamp = "11:20 AM",
+                            dateGroup = "Today",
+                            status = MessageStatus.READ,
+                            topicId = "general"
+                        )
+                    ),
+                    isTyping = false,
+                    contact = Contact(
+                        id = "chat_2",
+                        name = "Android Developers ID",
+                        status = "142 anggota, 18 online"
+                    )
+                ),
+                currentChat = Chat(
+                    id = "chat_2",
+                    name = "Android Developers ID",
+                    isGroup = true,
+                    hasTopics = true
+                ),
+                topics = com.example.model.ChatTopic.DEFAULT_TOPICS,
+                selectedTopicId = "general",
+                onSelectTopic = {},
                 onBack = {},
                 onContactInfoClick = {},
                 onSendMessage = {},

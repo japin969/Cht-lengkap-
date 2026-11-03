@@ -28,7 +28,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoAwesomeMotion
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
@@ -102,6 +105,9 @@ fun SettingsScreen(
     onHelpClick: () -> Unit = {},
     onPrivacyPolicyClick: () -> Unit = {},
     onAboutClick: () -> Unit = {},
+    onSavedMessagesClick: () -> Unit = {},
+    onCommunitiesClick: () -> Unit = {},
+    onStoriesClick: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     BackHandler { onBack() }
@@ -122,6 +128,9 @@ fun SettingsScreen(
         onHelpClick = onHelpClick,
         onPrivacyPolicyClick = onPrivacyPolicyClick,
         onAboutClick = onAboutClick,
+        onSavedMessagesClick = onSavedMessagesClick,
+        onCommunitiesClick = onCommunitiesClick,
+        onStoriesClick = onStoriesClick,
         onThemeChange = viewModel::onThemeChange,
         onLanguageChange = viewModel::onLanguageChange
     )
@@ -142,6 +151,9 @@ fun SettingsContent(
     onHelpClick: () -> Unit = {},
     onPrivacyPolicyClick: () -> Unit = {},
     onAboutClick: () -> Unit = {},
+    onSavedMessagesClick: () -> Unit = {},
+    onCommunitiesClick: () -> Unit = {},
+    onStoriesClick: () -> Unit = {},
     onThemeChange: (String) -> Unit,
     onLanguageChange: (String) -> Unit
 ) {
@@ -311,6 +323,27 @@ fun SettingsContent(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(cardBg)
                                 ) {
+                                    InfoSettingRow(
+                                        icon = Icons.Default.AutoAwesomeMotion, // GANTI SVG TELEGRAM
+                                        iconTint = TelegramBlue,
+                                        title = "Stories",
+                                        onClick = onStoriesClick,
+                                        showSeparator = true
+                                    )
+                                    InfoSettingRow(
+                                        icon = Icons.Default.Bookmark,
+                                        iconTint = TelegramBlue,
+                                        title = "Pesan Tersimpan",
+                                        onClick = onSavedMessagesClick,
+                                        showSeparator = true
+                                    )
+                                    InfoSettingRow(
+                                        icon = Icons.Default.Groups, // GANTI SVG TELEGRAM
+                                        iconTint = TelegramBlue,
+                                        title = "Komunitas",
+                                        onClick = onCommunitiesClick,
+                                        showSeparator = true
+                                    )
                                     InfoSettingRow(
                                         icon = Icons.Default.Lock,
                                         iconTint = TelegramBlue,

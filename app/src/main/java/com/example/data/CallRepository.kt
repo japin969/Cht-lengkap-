@@ -28,7 +28,7 @@ data class ActiveCallState(
 )
 
 class CallRepository(
-    private val firestore: FirebaseFirestore? = try { FirebaseFirestore.getInstance() } catch (_: Exception) { null },
+    private val firestore: FirebaseFirestore? = com.example.di.AppModule.firestore,
     private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
 ) {
     val currentUserId: String

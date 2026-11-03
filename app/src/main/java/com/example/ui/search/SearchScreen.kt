@@ -368,6 +368,7 @@ private fun SearchResultRow(
                         SearchResultType.CONTACT -> Icons.Default.Person
                         SearchResultType.MESSAGE -> Icons.Default.Forum
                         SearchResultType.CHAT -> Icons.Default.Person
+                        SearchResultType.FILE -> Icons.Default.Forum
                     },
                     contentDescription = null,
                     tint = Color.White,
@@ -490,6 +491,7 @@ private fun getAvatarColorForType(type: SearchResultType): Color {
         SearchResultType.GROUP -> Color(0xFF2ECC71)
         SearchResultType.CONTACT -> Color(0xFF9B59B6)
         SearchResultType.MESSAGE -> Color(0xFF1ABC9C)
+        SearchResultType.FILE -> Color(0xFF3498DB)
     }
 }
 

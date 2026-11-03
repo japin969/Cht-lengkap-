@@ -1,3 +1,34 @@
 <resources>
     <string name="app_name">Telegram</string>
+    <string name="auth_login_title">Masuk</string>
+    <string name="auth_register_title">Daftar</string>
+    <string name="auth_email_placeholder">Email</string>
+    <string name="auth_password_placeholder">Kata Sandi</string>
+    <string name="auth_select_country_label">Pilih Negara</string>
+    <string name="auth_auto_phone_placeholder">Nomor akan dibuat otomatis</string>
+    <string name="auth_register_button">Daftar</string>
+    <string name="auth_login_button">Masuk</string>
+    <string name="auth_google_sign_in_button">Masuk dengan Google</string>
+    <string name="auth_google_register_button">Daftar dengan Google</string>
+    <string name="auth_no_account_prompt">Belum punya akun? Daftar</string>
+    <string name="auth_country_dialog_title">Pilih Negara</string>
+    <string name="auth_cancel_button">Batal</string>
+    <string name="auth_back_cd">Kembali</string>
+    <string name="auth_country_flag_cd">Bendera negara</string>
+    <string name="auth_country_chevron_cd">Buka pilihan negara</string>
+    <string name="nav_tab_chats">Chat</string>
+    <string name="nav_tab_calls">Panggilan</string>
+    <string name="nav_tab_music">Musik</string>
+    <string name="nav_tab_settings">Pengaturan</string>
+    <string name="fcm_chat_channel_name">Chat Jayra</string>
+    <string name="fcm_chat_channel_desc">Notifikasi pesan obrolan baru di Jayra</string>
+    <string name="fcm_call_channel_name">Panggilan Jayra</string>
+    <string name="fcm_call_channel_desc">Notifikasi panggilan suara dan video masuk</string>
+    <string name="fcm_incoming_call_title">Panggilan Masuk</string>
+    <string name="saved_messages_title">Pesan Tersimpan</string>
+    <string name="saved_messages_subtitle">Penyimpanan cloud pribadi</string>
+    <string name="forward_screen_title">Teruskan Pesan</string>
+    <string name="forward_search_placeholder">Cari obrolan atau grup...</string>
+    <string name="forward_comment_placeholder">Tambahkan komentar (opsional)...</string>
+    <string name="forward_action_label">Teruskan</string>
 </resources>

@@ -29,10 +29,10 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
-class AssistantViewModel(
+class AssistantViewModel @JvmOverloads constructor(
     application: Application,
     private val siputzxApi: SiputzxApi = SiputzxApi.create(),
-    private val firestore: FirebaseFirestore? = try { FirebaseFirestore.getInstance() } catch (_: Exception) { null },
+    private val firestore: FirebaseFirestore? = com.example.di.AppModule.provideFirestore(application),
     private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
 ) : AndroidViewModel(application) {
 

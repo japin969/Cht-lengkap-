@@ -1,21 +1,35 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# proguardFiles setting in build.gradle.kts.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preserve source file & line numbers for readable crash stack traces via ErrorHandler/Timber
+-keepattributes SourceFile,LineNumberTable
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# 1. Jayra Data & Domain Models (Firestore POJO serialization & Moshi DTOs)
+-keep class com.example.model.** { *; }
+-keep class com.example.data.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# 2. WebRTC (JNI / native reflection callbacks if present)
+-keep class org.webrtc.** { *; }
+-dontwarn org.webrtc.**
+
+# 3. Moshi & Retrofit JSON Serialization
+-keep class com.squareup.moshi.** { *; }
+-keepclasseswithmembers class * {
+    @com.squareup.moshi.* <methods>;
+}
+-keep @com.squareup.moshi.JsonClass class * { *; }
+-dontwarn com.squareup.moshi.**
+
+# 4. Firebase (Auth, Firestore, Messaging, AI Logic, App Check)
+-keep class com.google.firebase.** { *; }
+-keepnames class * implements java.io.Serializable
+-keepclassmembers class * {
+    @com.google.firebase.firestore.PropertyName <fields>;
+    @com.google.firebase.firestore.PropertyName <methods>;
+}
+
+# 5. Kotlin Metadata & Coroutines
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlinx.coroutines.**

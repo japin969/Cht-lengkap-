@@ -28,10 +28,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.AutoAwesomeMotion
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -86,6 +89,9 @@ fun ChatListScreen(
     onContactsClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
     onCreateGroupClick: () -> Unit = {},
+    onSavedMessagesClick: () -> Unit = {},
+    onCommunitiesClick: () -> Unit = {},
+    onStoriesClick: () -> Unit = {},
     viewModel: ChatListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -105,6 +111,9 @@ fun ChatListScreen(
         onContactsClick = onContactsClick,
         onSearchClick = onSearchClick,
         onCreateGroupClick = onCreateGroupClick,
+        onSavedMessagesClick = onSavedMessagesClick,
+        onCommunitiesClick = onCommunitiesClick,
+        onStoriesClick = onStoriesClick,
         onSwipeArchive = viewModel::onSwipeArchive,
         onSwipeDelete = viewModel::onSwipeDelete,
         onPinToggle = viewModel::onPinToggle,
@@ -128,6 +137,9 @@ fun ChatListContent(
     onContactsClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
     onCreateGroupClick: () -> Unit = {},
+    onSavedMessagesClick: () -> Unit = {},
+    onCommunitiesClick: () -> Unit = {},
+    onStoriesClick: () -> Unit = {},
     onSwipeArchive: (String) -> Unit,
     onSwipeDelete: (String) -> Unit,
     onPinToggle: (String) -> Unit,
@@ -161,6 +173,18 @@ fun ChatListContent(
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
+                            onClick = onStoriesClick,
+                            modifier = Modifier.testTag("action_stories")
+                        ) {
+                            // GANTI SVG TELEGRAM
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesomeMotion,
+                                contentDescription = "Stories",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        IconButton(
                             onClick = onSearchClick,
                             modifier = Modifier.testTag("action_search")
                         ) {
@@ -187,6 +211,39 @@ fun ChatListContent(
                                 expanded = showTopMenu,
                                 onDismissRequest = { showTopMenu = false }
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text("Stories") },
+                                    leadingIcon = {
+                                        // GANTI SVG TELEGRAM
+                                        Icon(Icons.Default.AutoAwesomeMotion, contentDescription = null, tint = TelegramBlue)
+                                    },
+                                    onClick = {
+                                        showTopMenu = false
+                                        onStoriesClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Pesan Tersimpan") },
+                                    leadingIcon = {
+                                        // GANTI SVG TELEGRAM
+                                        Icon(Icons.Default.Bookmark, contentDescription = null, tint = TelegramBlue)
+                                    },
+                                    onClick = {
+                                        showTopMenu = false
+                                        onSavedMessagesClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Komunitas") },
+                                    leadingIcon = {
+                                        // GANTI SVG TELEGRAM
+                                        Icon(Icons.Default.Groups, contentDescription = null, tint = TelegramBlue)
+                                    },
+                                    onClick = {
+                                        showTopMenu = false
+                                        onCommunitiesClick()
+                                    }
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Panggilan") },
                                     leadingIcon = { Icon(Icons.Default.Call, contentDescription = null, tint = TelegramBlue) },

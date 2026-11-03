@@ -17,7 +17,7 @@ class ActiveSessionsViewModel(
 ) : AndroidViewModel(application) {
 
     private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
-    private val firestore: FirebaseFirestore? = try { FirebaseFirestore.getInstance() } catch (_: Exception) { null }
+    private val firestore: FirebaseFirestore? = com.example.di.AppModule.provideFirestore(application)
 
     private val currentUserId: String
         get() = auth?.currentUser?.uid ?: "user_telegram_me"
