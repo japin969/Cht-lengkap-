@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Telegram</string>
+    <string name="app_name">Jayra</string>
     <string name="auth_login_title">Masuk</string>
     <string name="auth_register_title">Daftar</string>
     <string name="auth_email_placeholder">Email</string>
