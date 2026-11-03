@@ -118,34 +118,6 @@ class AuthViewModel(
 
         // Google Sign-In dinonaktifkan (default_web_client_id tidak tersedia)
         return
-
-        val credentialManager = CredentialManager.create(context)
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(true)
-            .setServerClientId(clientId)
-            .setAutoSelectEnabled(true)
-            .build()
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
-            .build()
-
-        viewModelScope.launch {
-            try {
-                val result = credentialManager.getCredential(context, request)
-                val credential = result.credential
-                if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-                    val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
-                    auth.signInWithCredential(authCredential).await()
-                    persistEncryptedSession(context)
-                    _uiState.value = AuthUiState.Success
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                // Silent auto sign-in unavailable; remain in Idle state for interactive sign-in
-            }
-        }
     }
 
     fun onRegisterClick(
@@ -247,35 +219,6 @@ class AuthViewModel(
 
         _uiState.value = AuthUiState.Error("Login Google belum dikonfigurasi. Gunakan email/password.")
         return
-
-        val credentialManager = CredentialManager.create(context)
-        val signInOption = GetSignInWithGoogleOption.Builder(serverClientId = clientId).build()
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(signInOption)
-            .build()
-
-        viewModelScope.launch {
-            try {
-                val result = credentialManager.getCredential(activity, request)
-                val credential = result.credential
-                if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-                    val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
-                    auth.signInWithCredential(authCredential).await()
-                    onAuthenticated()
-                } else {
-                    _uiState.value = AuthUiState.Error("Tipe kredensial tidak dikenali")
-                }
-            } catch (e: GetCredentialCancellationException) {
-                Log.w(TAG, "Google Sign-In cancelled or dismissed: ${e.message}", e)
-                _uiState.value = AuthUiState.Idle
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "Google Sign-In failed", e)
-                _uiState.value = AuthUiState.Error(e.localizedMessage ?: "Email atau password salah")
-            }
-        }
     }
 
     private suspend fun ensureFirestoreAccountExists(fallbackEmail: String) {
