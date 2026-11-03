@@ -41,9 +41,8 @@ android {
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
-      // AI Studio.
-      signingConfig = signingConfigs.getByName("release")
+      // Pakai debug key untuk release build (testing/sideload, bukan Play Store)
+      signingConfig = signingConfigs.getByName("debug")
     }
   }
   compileOptions {
