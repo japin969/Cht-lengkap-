@@ -349,3 +349,83 @@ sealed interface AddMemberUiState {
     data class Error(val message: String) : AddMemberUiState
 }
 
+sealed interface AssistantUiState {
+    data object Loading : AssistantUiState
+    data class Success(
+        val messages: List<Message>,
+        val isLoading: Boolean = false
+    ) : AssistantUiState
+    data object Empty : AssistantUiState
+    data class Error(val message: String) : AssistantUiState
+}
+
+@Immutable
+data class AdvancedSettings(
+    val dataRoaming: Boolean = false,
+    val proxyEnabled: Boolean = false,
+    val callQuality: String = "Otomatis",
+    val uploadQuality: String = "HD",
+    val externalStorage: Boolean = false,
+    val cacheSize: String = "0 MB",
+    val cacheLimit: String = "5 GB",
+    val saveToGallery: Boolean = false,
+    val animationsEnabled: Boolean = true,
+    val typingVibration: Boolean = true,
+    val enterToSend: Boolean = false
+)
+
+@Immutable
+data class StorageInfo(
+    val totalSize: String = "0 MB",
+    val photoSize: String = "0 MB",
+    val videoSize: String = "0 MB",
+    val documentSize: String = "0 MB",
+    val musicSize: String = "0 MB",
+    val otherSize: String = "0 MB",
+    val autoDownloadCellular: Boolean = true,
+    val autoDownloadWifi: Boolean = true,
+    val autoDownloadRoaming: Boolean = false
+)
+
+@Immutable
+data class FileInfo(
+    val id: String = "",
+    val name: String = "",
+    val size: String = "",
+    val date: String = "",
+    val path: String = ""
+)
+
+sealed interface AdvancedSettingsUiState {
+    data object Loading : AdvancedSettingsUiState
+    data class Success(val settings: AdvancedSettings) : AdvancedSettingsUiState
+    data class Error(val message: String) : AdvancedSettingsUiState
+}
+
+sealed interface DataStorageUiState {
+    data object Loading : DataStorageUiState
+    data class Success(val storageInfo: StorageInfo) : DataStorageUiState
+    data class Error(val message: String) : DataStorageUiState
+}
+
+sealed interface ProxyUiState {
+    data object Loading : ProxyUiState
+    data class Success(
+        val isEnabled: Boolean = false,
+        val host: String = "",
+        val port: String = "",
+        val username: String = "",
+        val password: String = ""
+    ) : ProxyUiState
+    data class Error(val message: String) : ProxyUiState
+}
+
+sealed interface StorageDetailUiState {
+    data object Loading : StorageDetailUiState
+    data class Success(val files: List<FileInfo>) : StorageDetailUiState
+    data object Empty : StorageDetailUiState
+    data class Error(val message: String) : StorageDetailUiState
+}
+
+
+
