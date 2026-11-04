@@ -8,6 +8,12 @@ import android.os.Process
 import android.widget.Toast
 import com.jayra.app.JayraApp
 import com.jayra.app.MainActivity
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import java.io.File
+import java.io.FileWriter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import timber.log.Timber
 import kotlin.system.exitProcess
 
@@ -17,7 +23,17 @@ class ErrorHandler @JvmOverloads constructor(
 ) : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
-        // 1. Log error menggunakan Timber
+        // 1. Kirim ke Crashlytics
+        runCatching {
+            FirebaseCrashlytics.getInstance().recordException(throwable)
+        }
+
+        // 2. Tulis stack trace ke file lokal (bisa dibaca tanpa root)
+        runCatching {
+            writeCrashToFile(appContext, throwable)
+        }
+
+        // 3. Log error menggunakan Timber
         Timber.e(throwable, "Uncaught Exception")
 
         val context = appContext ?: JayraApp.appContextOrNull()
@@ -49,6 +65,18 @@ class ErrorHandler @JvmOverloads constructor(
         // 4. Hentikan proses aplikasi
         Process.killProcess(Process.myPid())
         exitProcess(10)
+    }
+
+    private fun writeCrashToFile(context: Context?, throwable: Throwable) {
+        if (context == null) return
+        val file = File(context.getExternalFilesDir(null), "crash.log")
+        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        FileWriter(file, true).use { writer ->
+            writer.append("\n===== CRASH $timestamp =====\n")
+            writer.append(throwable.stackTraceToString())
+            writer.append("\n")
+        }
+        Timber.d("Crash log ditulis ke: ${file.absolutePath}")
     }
 
     private fun showCrashToastSafely(context: Context) {

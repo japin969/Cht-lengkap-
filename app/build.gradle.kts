@@ -7,11 +7,12 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
+  alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
   namespace = "com.jayra.app"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+  compileSdk = 36
 
   defaultConfig {
     applicationId = "com.jayra.app"
@@ -86,6 +87,7 @@ dependencies {
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.fragment.ktx)
+  implementation(libs.firebase.crashlytics)
   // implementation(libs.androidx.camera.camera2)
   // implementation(libs.androidx.camera.core)
   // implementation(libs.androidx.camera.lifecycle)

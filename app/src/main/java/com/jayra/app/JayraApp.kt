@@ -14,6 +14,12 @@ class JayraApp : Application() {
         super.onCreate()
         instance = this
 
+        // Inisialisasi Crashlytics (opsional, tidak crash kalau Firebase belum siap)
+        runCatching {
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
+                .setCrashlyticsCollectionEnabled(true)
+        }
+
         // Inisialisasi Timber terlebih dahulu
         initTimber()
 
