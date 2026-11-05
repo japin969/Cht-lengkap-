@@ -1,4 +1,4 @@
-package com.example.base
+package com.jayra.app.base
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider

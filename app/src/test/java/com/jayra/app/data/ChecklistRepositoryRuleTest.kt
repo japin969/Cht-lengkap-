@@ -1,9 +1,9 @@
-package com.example.data
+package com.jayra.app.data
 
-import com.example.base.FirestoreEmulatorTestBase
-import com.example.model.ChecklistItem
-import com.example.model.Message
-import com.example.security.EncryptionHelper
+import com.jayra.app.base.FirestoreEmulatorTestBase
+import com.jayra.app.model.ChecklistItem
+import com.jayra.app.model.Message
+import com.jayra.app.security.EncryptionHelper
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking

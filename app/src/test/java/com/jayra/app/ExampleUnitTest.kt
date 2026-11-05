@@ -1,14 +1,14 @@
-package com.example
+package com.jayra.app
 
-import com.example.model.Channel
-import com.example.model.Chat
-import com.example.model.Group
-import com.example.model.Message
-import com.example.model.MessageStatus
-import com.example.model.NotificationSettings
-import com.example.model.PrivacySettings
-import com.example.model.Reaction
-import com.example.model.User
+import com.jayra.app.model.Channel
+import com.jayra.app.model.Chat
+import com.jayra.app.model.Group
+import com.jayra.app.model.Message
+import com.jayra.app.model.MessageStatus
+import com.jayra.app.model.NotificationSettings
+import com.jayra.app.model.PrivacySettings
+import com.jayra.app.model.Reaction
+import com.jayra.app.model.User
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -122,16 +122,16 @@ class ExampleUnitTest {
 
     @Test
     fun testSearchResultModel() {
-        val result = com.example.model.SearchResult(
+        val result = com.jayra.app.model.SearchResult(
             id = "res_1",
             title = "Android Developers Community",
             subtitle = "Jetpack Compose discussion",
-            type = com.example.model.SearchResultType.GROUP,
+            type = com.jayra.app.model.SearchResultType.GROUP,
             memberCount = 5
         )
         assertEquals("res_1", result.id)
         assertEquals("Android Developers Community", result.title)
-        assertEquals(com.example.model.SearchResultType.GROUP, result.type)
+        assertEquals(com.jayra.app.model.SearchResultType.GROUP, result.type)
         assertEquals(5, result.memberCount)
     }
 
@@ -151,7 +151,7 @@ class ExampleUnitTest {
 
     @Test
     fun testFaqAndPrivacyModels() {
-        val faq = com.example.model.FAQ(
+        val faq = com.jayra.app.model.FAQ(
             id = "faq_test",
             question = "Apakah Jayra aman?",
             answer = "Sangat aman dengan AES-256-GCM.",
@@ -160,7 +160,7 @@ class ExampleUnitTest {
         assertEquals("faq_test", faq.id)
         assertEquals("Keamanan", faq.category)
 
-        val section = com.example.model.PrivacySection(
+        val section = com.jayra.app.model.PrivacySection(
             id = "p1",
             title = "1. Prinsip Dasar",
             content = "Privasi adalah hak asasi."
@@ -171,7 +171,7 @@ class ExampleUnitTest {
 
     @Test
     fun testStickerAndGifModels() {
-        val sticker = com.example.model.Sticker(
+        val sticker = com.jayra.app.model.Sticker(
             id = "s1",
             name = "Senyum",
             url = "https://example.com/s1.webp",
@@ -182,7 +182,7 @@ class ExampleUnitTest {
         assertEquals("😊", sticker.emoji)
         assertEquals("Populer", sticker.packName)
 
-        val gif = com.example.model.Gif(
+        val gif = com.jayra.app.model.Gif(
             id = "g1",
             title = "Tepuk Tangan",
             url = "https://example.com/g1.gif"
@@ -193,7 +193,7 @@ class ExampleUnitTest {
 
     @Test
     fun testLanguageAndThemeModels() {
-        val lang = com.example.model.LanguageItem(
+        val lang = com.jayra.app.model.LanguageItem(
             code = "id",
             name = "Bahasa Indonesia",
             nativeName = "Bahasa Indonesia",
@@ -202,7 +202,7 @@ class ExampleUnitTest {
         assertEquals("id", lang.code)
         assertTrue(lang.isSelected)
 
-        val theme = com.example.model.ThemeOption(
+        val theme = com.jayra.app.model.ThemeOption(
             id = "dark",
             name = "Mode Gelap",
             description = "Tema gelap hemat baterai"
@@ -213,10 +213,10 @@ class ExampleUnitTest {
     @Test
     fun testPollModelAndPercentageCalculation() {
         val options = listOf(
-            com.example.model.PollOption("Option A", 3),
-            com.example.model.PollOption("Option B", 1)
+            com.jayra.app.model.PollOption("Option A", 3),
+            com.jayra.app.model.PollOption("Option B", 1)
         )
-        val poll = com.example.model.Poll(
+        val poll = com.jayra.app.model.Poll(
             id = "poll_1",
             question = "Which language?",
             options = options,
@@ -236,7 +236,7 @@ class ExampleUnitTest {
 
     @Test
     fun testLocationMessageAndContactMessage() {
-        val loc = com.example.model.LocationMessage(
+        val loc = com.jayra.app.model.LocationMessage(
             lat = -6.175392,
             lng = 106.827153,
             title = "Monas"
@@ -245,7 +245,7 @@ class ExampleUnitTest {
         assertEquals(106.827153, loc.lng, 0.0001)
         assertEquals("Monas", loc.title)
 
-        val contact = com.example.model.ContactMessage(
+        val contact = com.jayra.app.model.ContactMessage(
             name = "Pavel",
             phone = "+1 555 0192",
             avatarUrl = "https://example.com/avatar.jpg"
@@ -256,41 +256,41 @@ class ExampleUnitTest {
 
     @Test
     fun testUiStatesFase14() {
-        val pollState: com.example.model.CreatePollUiState = com.example.model.CreatePollUiState.Success
-        assertTrue(pollState is com.example.model.CreatePollUiState.Success)
+        val pollState: com.jayra.app.model.CreatePollUiState = com.jayra.app.model.CreatePollUiState.Success
+        assertTrue(pollState is com.jayra.app.model.CreatePollUiState.Success)
 
-        val locState: com.example.model.LocationUiState = com.example.model.LocationUiState.Success(
+        val locState: com.jayra.app.model.LocationUiState = com.jayra.app.model.LocationUiState.Success(
             lat = -6.175,
             lng = 106.827,
             address = "Jakarta",
             accuracyMeters = 10f
         )
-        assertTrue(locState is com.example.model.LocationUiState.Success)
-        assertEquals("Jakarta", (locState as com.example.model.LocationUiState.Success).address)
+        assertTrue(locState is com.jayra.app.model.LocationUiState.Success)
+        assertEquals("Jakarta", (locState as com.jayra.app.model.LocationUiState.Success).address)
 
-        val emptyContact: com.example.model.ContactSharingUiState = com.example.model.ContactSharingUiState.Empty
-        assertTrue(emptyContact is com.example.model.ContactSharingUiState.Empty)
+        val emptyContact: com.jayra.app.model.ContactSharingUiState = com.jayra.app.model.ContactSharingUiState.Empty
+        assertTrue(emptyContact is com.jayra.app.model.ContactSharingUiState.Empty)
     }
 
     @Test
     fun testAllViewModelConstructorsForDefaultFactory() {
         val androidViewModelClasses = listOf(
-            com.example.ui.music.MusicViewModel::class.java,
-            com.example.ui.assistant.AssistantViewModel::class.java,
-            com.example.ui.call.CallViewModel::class.java,
-            com.example.ui.call.CallHistoryViewModel::class.java,
-            com.example.ui.viewmodel.ChatRoomViewModel::class.java,
-            com.example.ui.location.LocationViewModel::class.java,
-            com.example.ui.security.PasscodeViewModel::class.java,
-            com.example.ui.security.TwoStepVerificationViewModel::class.java,
-            com.example.ui.security.ActiveSessionsViewModel::class.java,
-            com.example.ui.settings.LanguageViewModel::class.java,
-            com.example.ui.settings.ThemeViewModel::class.java,
-            com.example.ui.settings.StorageDetailViewModel::class.java,
-            com.example.ui.settings.DataStorageViewModel::class.java,
-            com.example.ui.settings.AdvancedSettingsViewModel::class.java,
-            com.example.ui.settings.ProxyViewModel::class.java,
-            com.example.ui.voicetrimmer.VoiceTrimmerViewModel::class.java
+            com.jayra.app.ui.music.MusicViewModel::class.java,
+            com.jayra.app.ui.assistant.AssistantViewModel::class.java,
+            com.jayra.app.ui.call.CallViewModel::class.java,
+            com.jayra.app.ui.call.CallHistoryViewModel::class.java,
+            com.jayra.app.ui.viewmodel.ChatRoomViewModel::class.java,
+            com.jayra.app.ui.location.LocationViewModel::class.java,
+            com.jayra.app.ui.security.PasscodeViewModel::class.java,
+            com.jayra.app.ui.security.TwoStepVerificationViewModel::class.java,
+            com.jayra.app.ui.security.ActiveSessionsViewModel::class.java,
+            com.jayra.app.ui.settings.LanguageViewModel::class.java,
+            com.jayra.app.ui.settings.ThemeViewModel::class.java,
+            com.jayra.app.ui.settings.StorageDetailViewModel::class.java,
+            com.jayra.app.ui.settings.DataStorageViewModel::class.java,
+            com.jayra.app.ui.settings.AdvancedSettingsViewModel::class.java,
+            com.jayra.app.ui.settings.ProxyViewModel::class.java,
+            com.jayra.app.ui.voicetrimmer.VoiceTrimmerViewModel::class.java
         )
 
         for (vmClass in androidViewModelClasses) {
@@ -299,37 +299,37 @@ class ExampleUnitTest {
         }
 
         val zeroArgViewModelClasses = listOf(
-            com.example.ui.main.MainViewModel::class.java,
-            com.example.ui.viewmodel.ChatListViewModel::class.java,
-            com.example.ui.search.SearchViewModel::class.java,
-            com.example.ui.viewmodel.SettingsViewModel::class.java,
-            com.example.ui.viewmodel.ContactsViewModel::class.java,
-            com.example.ui.viewmodel.MyProfileViewModel::class.java,
-            com.example.ui.viewmodel.EditProfileViewModel::class.java,
-            com.example.ui.viewmodel.NotificationsViewModel::class.java,
-            com.example.ui.viewmodel.PrivacyViewModel::class.java,
-            com.example.ui.viewmodel.ContactInfoViewModel::class.java,
-            com.example.ui.viewmodel.GroupInfoViewModel::class.java,
-            com.example.ui.viewmodel.ChannelInfoViewModel::class.java,
-            com.example.ui.addmember.AddMemberViewModel::class.java,
-            com.example.ui.memberpermissions.MemberPermissionsViewModel::class.java,
-            com.example.ui.groupsettings.GroupSettingsViewModel::class.java,
-            com.example.ui.creategroup.CreateGroupViewModel::class.java,
-            com.example.ui.contacts.ContactSharingViewModel::class.java,
-            com.example.ui.poll.CreatePollViewModel::class.java,
-            com.example.ui.groupmembers.GroupMembersViewModel::class.java,
-            com.example.ui.about.AboutViewModel::class.java,
-            com.example.ui.stickers.StickersViewModel::class.java,
-            com.example.ui.help.HelpViewModel::class.java,
-            com.example.ui.help.PrivacyPolicyViewModel::class.java,
-            com.example.ui.saved.SavedMessagesViewModel::class.java,
-            com.example.ui.forward.ForwardViewModel::class.java,
-            com.example.ui.search.GlobalSearchViewModel::class.java,
-            com.example.ui.splash.SplashViewModel::class.java,
-            com.example.ui.communities.CommunitiesViewModel::class.java,
-            com.example.ui.story.StoryViewModel::class.java,
-            com.example.ui.story.StoryViewerViewModel::class.java,
-            com.example.ui.checklist.CreateChecklistViewModel::class.java
+            com.jayra.app.ui.main.MainViewModel::class.java,
+            com.jayra.app.ui.viewmodel.ChatListViewModel::class.java,
+            com.jayra.app.ui.search.SearchViewModel::class.java,
+            com.jayra.app.ui.viewmodel.SettingsViewModel::class.java,
+            com.jayra.app.ui.viewmodel.ContactsViewModel::class.java,
+            com.jayra.app.ui.viewmodel.MyProfileViewModel::class.java,
+            com.jayra.app.ui.viewmodel.EditProfileViewModel::class.java,
+            com.jayra.app.ui.viewmodel.NotificationsViewModel::class.java,
+            com.jayra.app.ui.viewmodel.PrivacyViewModel::class.java,
+            com.jayra.app.ui.viewmodel.ContactInfoViewModel::class.java,
+            com.jayra.app.ui.viewmodel.GroupInfoViewModel::class.java,
+            com.jayra.app.ui.viewmodel.ChannelInfoViewModel::class.java,
+            com.jayra.app.ui.addmember.AddMemberViewModel::class.java,
+            com.jayra.app.ui.memberpermissions.MemberPermissionsViewModel::class.java,
+            com.jayra.app.ui.groupsettings.GroupSettingsViewModel::class.java,
+            com.jayra.app.ui.creategroup.CreateGroupViewModel::class.java,
+            com.jayra.app.ui.contacts.ContactSharingViewModel::class.java,
+            com.jayra.app.ui.poll.CreatePollViewModel::class.java,
+            com.jayra.app.ui.groupmembers.GroupMembersViewModel::class.java,
+            com.jayra.app.ui.about.AboutViewModel::class.java,
+            com.jayra.app.ui.stickers.StickersViewModel::class.java,
+            com.jayra.app.ui.help.HelpViewModel::class.java,
+            com.jayra.app.ui.help.PrivacyPolicyViewModel::class.java,
+            com.jayra.app.ui.saved.SavedMessagesViewModel::class.java,
+            com.jayra.app.ui.forward.ForwardViewModel::class.java,
+            com.jayra.app.ui.search.GlobalSearchViewModel::class.java,
+            com.jayra.app.ui.splash.SplashViewModel::class.java,
+            com.jayra.app.ui.communities.CommunitiesViewModel::class.java,
+            com.jayra.app.ui.story.StoryViewModel::class.java,
+            com.jayra.app.ui.story.StoryViewerViewModel::class.java,
+            com.jayra.app.ui.checklist.CreateChecklistViewModel::class.java
         )
 
         for (vmClass in zeroArgViewModelClasses) {
@@ -341,40 +341,40 @@ class ExampleUnitTest {
     @Test
     fun testGlobalSearchSanitizationAndFilters() {
         val raw = "  Jayra <script>\"alert\";\\`   test  "
-        val sanitized = com.example.ui.search.GlobalSearchViewModel.sanitizeSearchQuery(raw)
+        val sanitized = com.jayra.app.ui.search.GlobalSearchViewModel.sanitizeSearchQuery(raw)
         assertEquals("Jayra script alert test", sanitized)
-        assertEquals("", com.example.ui.search.GlobalSearchViewModel.sanitizeSearchQuery("   \"';<>\\`  "))
+        assertEquals("", com.jayra.app.ui.search.GlobalSearchViewModel.sanitizeSearchQuery("   \"';<>\\`  "))
 
-        val chips = com.example.model.SearchFilter.GLOBAL_SEARCH_FILTERS.map { it.globalChipLabel }
+        val chips = com.jayra.app.model.SearchFilter.GLOBAL_SEARCH_FILTERS.map { it.globalChipLabel }
         assertEquals(listOf("Semua", "Chat", "Pesan", "Kontak", "File"), chips)
 
-        val fileResult = com.example.model.SearchResult(
+        val fileResult = com.jayra.app.model.SearchResult(
             id = "f1",
             title = "Jayra_Spec.pdf",
             subtitle = "2.4 MB",
-            type = com.example.model.SearchResultType.FILE
+            type = com.jayra.app.model.SearchResultType.FILE
         )
-        assertTrue(com.example.ui.search.GlobalSearchViewModel.matchesFilter(fileResult, com.example.model.SearchFilter.ALL))
-        assertTrue(com.example.ui.search.GlobalSearchViewModel.matchesFilter(fileResult, com.example.model.SearchFilter.FILES))
-        assertTrue(!com.example.ui.search.GlobalSearchViewModel.matchesFilter(fileResult, com.example.model.SearchFilter.MESSAGES))
+        assertTrue(com.jayra.app.ui.search.GlobalSearchViewModel.matchesFilter(fileResult, com.jayra.app.model.SearchFilter.ALL))
+        assertTrue(com.jayra.app.ui.search.GlobalSearchViewModel.matchesFilter(fileResult, com.jayra.app.model.SearchFilter.FILES))
+        assertTrue(!com.jayra.app.ui.search.GlobalSearchViewModel.matchesFilter(fileResult, com.jayra.app.model.SearchFilter.MESSAGES))
     }
 
     @Test
     fun testFase20SplashAndErrorHandler() {
-        val splashState = com.example.model.SplashUiState()
+        val splashState = com.jayra.app.model.SplashUiState()
         assertEquals("Jayra", splashState.appTitle)
         assertEquals("Modern, Cepat, Aman", splashState.tagline)
         assertEquals(1500L, splashState.splashDelayMillis)
         assertEquals(
             "Terjadi kesalahan tak terduga. Aplikasi akan dimulai ulang.",
-            com.example.util.ErrorHandler.CRASH_TOAST_MESSAGE
+            com.jayra.app.util.ErrorHandler.CRASH_TOAST_MESSAGE
         )
     }
 
     @Test
     fun testFase21MarkdownParserAndRichTextFormatting() {
         val raw = "Halo **Tebal** __Miring__ ~~Coret~~ `Kode` dan https://jayra.app!"
-        val parsed = com.example.util.MarkdownParser.parse(raw)
+        val parsed = com.jayra.app.util.MarkdownParser.parse(raw)
         assertEquals("Halo Tebal Miring Coret Kode dan https://jayra.app!", parsed.text)
 
         val boldStyle = parsed.spanStyles.firstOrNull {
@@ -402,7 +402,7 @@ class ExampleUnitTest {
         assertEquals("Kode", parsed.text.substring(codeStyle!!.start, codeStyle.end))
 
         val urlAnnotations = parsed.getStringAnnotations(
-            tag = com.example.util.MarkdownParser.URL_ANNOTATION_TAG,
+            tag = com.jayra.app.util.MarkdownParser.URL_ANNOTATION_TAG,
             start = 0,
             end = parsed.length
         )
@@ -410,10 +410,10 @@ class ExampleUnitTest {
         assertEquals("https://jayra.app", urlAnnotations.first().item)
 
         // Uji Markdown link [label](url)
-        val mdLinkParsed = com.example.util.MarkdownParser.parse("Buka [Portal Jayra](https://jayra.app/docs).")
+        val mdLinkParsed = com.jayra.app.util.MarkdownParser.parse("Buka [Portal Jayra](https://jayra.app/docs).")
         assertEquals("Buka Portal Jayra.", mdLinkParsed.text)
         val mdLinkAnn = mdLinkParsed.getStringAnnotations(
-            tag = com.example.util.MarkdownParser.URL_ANNOTATION_TAG,
+            tag = com.jayra.app.util.MarkdownParser.URL_ANNOTATION_TAG,
             start = 0,
             end = mdLinkParsed.length
         )
@@ -421,19 +421,19 @@ class ExampleUnitTest {
         assertEquals("https://jayra.app/docs", mdLinkAnn.first().item)
 
         // Uji penyisipan kursor & seleksi pada RichTextEditor
-        val config = com.example.model.RichTextEditorConfig()
+        val config = com.jayra.app.model.RichTextEditorConfig()
         assertEquals("Ketik pesan...", config.placeholderText)
         assertEquals(5, config.formatOptions.size)
 
-        val boldOption = config.formatOptions.first { it.type == com.example.model.RichTextFormatType.BOLD }
-        val emptyFormatted = com.example.util.MarkdownParser.applyFormatting(
+        val boldOption = config.formatOptions.first { it.type == com.jayra.app.model.RichTextFormatType.BOLD }
+        val emptyFormatted = com.jayra.app.util.MarkdownParser.applyFormatting(
             androidx.compose.ui.text.input.TextFieldValue("", androidx.compose.ui.text.TextRange(0)),
             boldOption
         )
         assertEquals("****", emptyFormatted.text)
         assertEquals(2, emptyFormatted.selection.start)
 
-        val selectionFormatted = com.example.util.MarkdownParser.applyFormatting(
+        val selectionFormatted = com.jayra.app.util.MarkdownParser.applyFormatting(
             androidx.compose.ui.text.input.TextFieldValue("Halo Jayra", androidx.compose.ui.text.TextRange(5, 10)),
             boldOption
         )
@@ -444,7 +444,7 @@ class ExampleUnitTest {
 
     @Test
     fun testFase22CommunitiesAndTopicTabs() {
-        val community = com.example.model.Community(
+        val community = com.jayra.app.model.Community(
             id = "comm_1",
             name = "Komunitas Developer Jayra",
             description = "Diskusi Kotlin & Compose",
@@ -456,12 +456,12 @@ class ExampleUnitTest {
         assertEquals("comm_1", community.id)
         assertEquals(2, community.groupIds.size)
 
-        val uiState: com.example.model.CommunityUiState =
-            com.example.model.CommunityUiState.Success(listOf(community))
-        assertTrue(uiState is com.example.model.CommunityUiState.Success)
-        assertEquals(1, (uiState as com.example.model.CommunityUiState.Success).communities.size)
+        val uiState: com.jayra.app.model.CommunityUiState =
+            com.jayra.app.model.CommunityUiState.Success(listOf(community))
+        assertTrue(uiState is com.jayra.app.model.CommunityUiState.Success)
+        assertEquals(1, (uiState as com.jayra.app.model.CommunityUiState.Success).communities.size)
 
-        val groupWithTopics = com.example.model.Chat(
+        val groupWithTopics = com.jayra.app.model.Chat(
             id = "chat_2",
             name = "Android Developers ID",
             isGroup = true,
@@ -469,11 +469,11 @@ class ExampleUnitTest {
         )
         assertTrue(groupWithTopics.isGroup && groupWithTopics.hasTopics)
 
-        val defaultTopics = com.example.model.ChatTopic.DEFAULT_TOPICS
+        val defaultTopics = com.jayra.app.model.ChatTopic.DEFAULT_TOPICS
         assertEquals(listOf("General", "Topik 1", "Topik 2"), defaultTopics.map { it.title })
         assertEquals(listOf("general", "topik_1", "topik_2"), defaultTopics.map { it.id })
 
-        val topicMessage = com.example.model.Message(
+        val topicMessage = com.jayra.app.model.Message(
             id = "msg_topic_1",
             senderId = "sarah",
             senderName = "Sarah",
@@ -487,7 +487,7 @@ class ExampleUnitTest {
 
     @Test
     fun testFase23StoryAlbumsAndViewer() {
-        val story = com.example.model.Story(
+        val story = com.jayra.app.model.Story(
             id = "story_1",
             userId = "user_pavel",
             imageUrl = "https://example.com/story1.jpg",
@@ -504,33 +504,33 @@ class ExampleUnitTest {
         assertEquals(false, story.isViewed)
         assertEquals("album_rilis", story.albumId)
 
-        val albumUiState: com.example.model.StoryUiState =
-            com.example.model.StoryUiState.Success(
+        val albumUiState: com.jayra.app.model.StoryUiState =
+            com.jayra.app.model.StoryUiState.Success(
                 stories = listOf(story),
                 selectedAlbumId = "album_rilis"
             )
-        assertTrue(albumUiState is com.example.model.StoryUiState.Success)
-        assertEquals(1, (albumUiState as com.example.model.StoryUiState.Success).stories.size)
+        assertTrue(albumUiState is com.jayra.app.model.StoryUiState.Success)
+        assertEquals(1, (albumUiState as com.jayra.app.model.StoryUiState.Success).stories.size)
 
-        val viewerUiState: com.example.model.StoryViewerUiState =
-            com.example.model.StoryViewerUiState.Success(
+        val viewerUiState: com.jayra.app.model.StoryViewerUiState =
+            com.jayra.app.model.StoryViewerUiState.Success(
                 stories = listOf(story),
                 currentIndex = 0
             )
-        assertTrue(viewerUiState is com.example.model.StoryViewerUiState.Success)
-        assertEquals(5000, com.example.ui.story.StoryViewerViewModel.STORY_DURATION_MS)
-        assertEquals("Stories", com.example.model.StoryStrings().screenTitle)
+        assertTrue(viewerUiState is com.jayra.app.model.StoryViewerUiState.Success)
+        assertEquals(5000, com.jayra.app.ui.story.StoryViewerViewModel.STORY_DURATION_MS)
+        assertEquals("Stories", com.jayra.app.model.StoryStrings().screenTitle)
     }
 
     @Test
     fun testFase24ContactNotesAndBirthdays() {
         val birthdayMillis = 466214400000L // 1984-10-10 00:00:00 UTC
-        val formatted = com.example.data.ContactNoteRepository.formatBirthdayMillis(birthdayMillis)
+        val formatted = com.jayra.app.data.ContactNoteRepository.formatBirthdayMillis(birthdayMillis)
         assertTrue("Expected 1984 in formatted date: $formatted", formatted.contains("1984"))
         assertTrue("Expected day 10 in formatted date: $formatted", formatted.startsWith("10 "))
-        assertEquals("", com.example.data.ContactNoteRepository.formatBirthdayMillis(null))
+        assertEquals("", com.jayra.app.data.ContactNoteRepository.formatBirthdayMillis(null))
 
-        val note = com.example.model.ContactNote(
+        val note = com.jayra.app.model.ContactNote(
             contactId = "pavel_durov",
             ownerId = "user_me",
             note = "Catatan rahasia kontak",
@@ -541,7 +541,7 @@ class ExampleUnitTest {
         assertEquals("Catatan rahasia kontak", note.note)
         assertEquals(birthdayMillis, note.birthdayMillis)
 
-        val strings = com.example.model.ContactNoteStrings()
+        val strings = com.jayra.app.model.ContactNoteStrings()
         assertEquals("Catatan Pribadi", strings.personalNoteCardTitle)
         assertEquals("Ulang Tahun", strings.birthdayCardTitle)
     }
@@ -549,11 +549,11 @@ class ExampleUnitTest {
     @Test
     fun testFase25Checklists() {
         val items = listOf(
-            com.example.model.ChecklistItem(id = "t1", text = "Susun UI Checklist", isDone = true),
-            com.example.model.ChecklistItem(id = "t2", text = "Uji Firestore Rules", isDone = false),
-            com.example.model.ChecklistItem(id = "t3", text = "Verifikasi Dark Mode", isDone = true)
+            com.jayra.app.model.ChecklistItem(id = "t1", text = "Susun UI Checklist", isDone = true),
+            com.jayra.app.model.ChecklistItem(id = "t2", text = "Uji Firestore Rules", isDone = false),
+            com.jayra.app.model.ChecklistItem(id = "t3", text = "Verifikasi Dark Mode", isDone = true)
         )
-        val checklist = com.example.model.Checklist(
+        val checklist = com.jayra.app.model.Checklist(
             id = "cl_1",
             title = "Rilis Fase 25",
             items = items,
@@ -563,12 +563,12 @@ class ExampleUnitTest {
         assertEquals(3, checklist.totalCount)
         assertEquals(2f / 3f, checklist.progressFraction, 0.001f)
 
-        val summary = com.example.data.ChatRepository.buildChecklistSummaryText("Rilis Fase 25", items)
+        val summary = com.jayra.app.data.ChatRepository.buildChecklistSummaryText("Rilis Fase 25", items)
         assertTrue(summary.contains("☑️ Daftar Tugas: Rilis Fase 25"))
         assertTrue(summary.contains("[x] Susun UI Checklist"))
         assertTrue(summary.contains("[ ] Uji Firestore Rules"))
 
-        val parsed = com.example.data.ChatRepository.parseChecklistItemsFromRaw(
+        val parsed = com.jayra.app.data.ChatRepository.parseChecklistItemsFromRaw(
             listOf(
                 mapOf("id" to "t1", "text" to "Susun UI Checklist", "isDone" to true),
                 mapOf("id" to "t2", "text" to "Uji Firestore Rules", "isDone" to false)
@@ -578,7 +578,7 @@ class ExampleUnitTest {
         assertTrue(parsed[0].isDone)
         assertEquals("Uji Firestore Rules", parsed[1].text)
 
-        val strings = com.example.model.ChecklistStrings()
+        val strings = com.jayra.app.model.ChecklistStrings()
         assertEquals("Daftar Tugas Baru", strings.screenTitle)
         assertEquals("BUAT", strings.createActionLabel)
     }
@@ -590,7 +590,7 @@ class ExampleUnitTest {
             val srcFile = java.io.File(tempDir, "source_10s.wav")
             val outFile = java.io.File(tempDir, "trimmed_3_5s.wav")
 
-            val sourceWave = com.example.util.AudioWaveTrimmer.generateSampleVoiceWav(
+            val sourceWave = com.jayra.app.util.AudioWaveTrimmer.generateSampleVoiceWav(
                 targetFile = srcFile,
                 durationMillis = 10_000L,
                 barCount = 40
@@ -599,7 +599,7 @@ class ExampleUnitTest {
             assertTrue("Source WAV must exceed header size", srcFile.length() > 100_000L)
             assertEquals(40, sourceWave.size)
 
-            val trimResult = com.example.util.AudioWaveTrimmer.trimAudioFile(
+            val trimResult = com.jayra.app.util.AudioWaveTrimmer.trimAudioFile(
                 sourceFile = srcFile,
                 outputFile = outFile,
                 startMs = 2_000L,
@@ -611,11 +611,11 @@ class ExampleUnitTest {
             assertEquals(28, trimResult.waveform.size)
             assertTrue("Trimmed WAV must be smaller than 10s source", trimResult.sizeBytes < srcFile.length())
 
-            assertEquals("00:03.5", com.example.util.AudioWaveTrimmer.formatDurationMillis(3_500L))
-            assertEquals("0:04", com.example.util.AudioWaveTrimmer.formatCompactDurationMillis(3_500L))
-            assertEquals("🎤 [Voice Note 0:04]", com.example.data.ChatRepository.buildVoiceNoteSummaryText(3_500L))
+            assertEquals("00:03.5", com.jayra.app.util.AudioWaveTrimmer.formatDurationMillis(3_500L))
+            assertEquals("0:04", com.jayra.app.util.AudioWaveTrimmer.formatCompactDurationMillis(3_500L))
+            assertEquals("🎤 [Voice Note 0:04]", com.jayra.app.data.ChatRepository.buildVoiceNoteSummaryText(3_500L))
 
-            val readyState = com.example.model.VoiceTrimmerUiState.Ready(
+            val readyState = com.jayra.app.model.VoiceTrimmerUiState.Ready(
                 sourceFilePath = srcFile.absolutePath,
                 totalDurationMillis = 10_000L,
                 startFraction = 0.2f,
@@ -625,8 +625,8 @@ class ExampleUnitTest {
             assertEquals(2_000L, readyState.startMillis)
             assertEquals(5_500L, readyState.endMillis)
             assertEquals(3_500L, readyState.trimmedDurationMillis)
-            assertEquals("Potong Voice Note", com.example.model.VoiceTrimmerStrings().screenTitle)
-            assertEquals("Simpan", com.example.model.VoiceTrimmerStrings().saveButtonLabel)
+            assertEquals("Potong Voice Note", com.jayra.app.model.VoiceTrimmerStrings().screenTitle)
+            assertEquals("Simpan", com.jayra.app.model.VoiceTrimmerStrings().saveButtonLabel)
         } finally {
             tempDir.deleteRecursively()
         }

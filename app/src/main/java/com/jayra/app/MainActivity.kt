@@ -36,6 +36,7 @@ import com.jayra.app.di.AppModule
 import com.jayra.app.model.NavItem
 import com.jayra.app.service.MyFirebaseMessagingService
 import com.jayra.app.util.ErrorHandler
+import com.jayra.app.util.CrashReportActivity
 import com.jayra.app.ui.main.JayraBottomNavigationBar
 import com.jayra.app.ui.main.MainScreen
 import com.jayra.app.ui.theme.JayraTheme
@@ -44,6 +45,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
+import java.io.File
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 class MainActivity : ComponentActivity() {
@@ -65,6 +67,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Kalau ada laporan crash dari startup sebelumnya, tampilkan dulu
+        val crashFile = File(filesDir, ErrorHandler.REPORT_FILE)
+        if (crashFile.exists()) {
+            val report = runCatching { crashFile.readText() }.getOrNull()
+            if (!report.isNullOrBlank()) {
+                val intent = Intent(this, CrashReportActivity::class.java).apply {
+                    putExtra(CrashReportActivity.EXTRA_REPORT, report.take(60_000))
+                }
+                startActivity(intent)
+                crashFile.delete()
+                finish()
+                return
+            }
+        }
         ErrorHandler.mark("activity.onCreate.start")
 
         safely("AppModule.init") { AppModule.init(applicationContext) }
