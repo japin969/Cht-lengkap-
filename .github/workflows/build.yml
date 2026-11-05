@@ -30,7 +30,20 @@ jobs:
       - name: Decode Google Services JSON
         env:
           DATA: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: echo "$DATA" | base64 -di > app/google-services.json
+        run: |
+          if [ -z "$DATA" ]; then
+            echo "ERROR: GOOGLE_SERVICES_JSON secret kosong!"
+            exit 1
+          fi
+          echo "$DATA" | base64 -di > app/google-services.json
+          if [ ! -s app/google-services.json ]; then
+            echo "ERROR: google-services.json kosong setelah decode!"
+            exit 1
+          fi
+          echo "=== Ukuran google-services.json ==="
+          ls -lh app/google-services.json
+          echo "=== Package name ==="
+          grep -o '"package_name": "[^"]*"' app/google-services.json || echo "package_name TIDAK ADA"
 
       - name: Generate debug keystore + Print SHA-1
         run: |
