@@ -1,10 +1,12 @@
 package com.jayra.app.util
 
+import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.os.Build
+import android.os.Environment
 import android.os.Process
 import android.os.SystemClock
+import android.provider.MediaStore
 import com.google.firebase.FirebaseApp
 import com.jayra.app.BuildConfig
 import com.jayra.app.JayraApp
@@ -17,16 +19,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.exitProcess
 
 /**
- * UncaughtExceptionHandler yang dipasang di JayraApp.attachBaseContext().
+ * Handler yang dipasang di JayraApp.attachBaseContext().
+ * TIDAK restart aplikasi (menghindari crash loop).
+ * TIDAK startActivity dari background (Android 10+ batasi).
  *
- * Alur saat crash:
- * 1. Susun laporan (stack trace + info perangkat + fase startup + status Firebase).
- * 2. Simpan ke filesDir internal (bukan Android/data, jadi aman di Android 11+).
- * 3. Buka CrashReportActivity (proses ":crash") yang menampilkan laporan di layar.
- * 4. Matikan proses utama.
- *
- * Jika Crashlytics sudah aktif, ia membungkus handler ini: laporan fatal ditulis
- * Crashlytics dulu, baru diteruskan ke sini.
+ * Alur:
+ * 1. Susun laporan (stack trace + info perangkat + fase startup).
+ * 2. Simpan ke filesDir (internal) DAN Downloads/ (MediaStore, bisa dibaca tanpa root).
+ * 3. Serahkan ke previousHandler (Android tampilkan crash dialog).
  */
 class ErrorHandler @JvmOverloads constructor(
     private val appContext: Context? = JayraApp.appContextOrNull(),
@@ -43,24 +43,22 @@ class ErrorHandler @JvmOverloads constructor(
         val report = runCatching { buildReport(context, thread, throwable) }
             .getOrElse { "Gagal menyusun laporan: $it\n${throwable.stackTraceToString()}" }
 
+        // Simpan ke filesDir internal
         runCatching { File(context.filesDir, REPORT_FILE).writeText(report) }
 
-        val shown = runCatching {
-            val intent = Intent(context, CrashReportActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                putExtra(CrashReportActivity.EXTRA_REPORT, report.take(MAX_EXTRA_CHARS))
+        // Simpan ke getExternalFilesDir (bisa dibaca file manager di Android 7-9)
+        runCatching {
+            val extDir = context.getExternalFilesDir(null)
+            if (extDir != null) {
+                File(extDir, REPORT_FILE).writeText(report)
             }
-            context.startActivity(intent)
-        }.isSuccess
-
-        if (!shown) {
-            handling.set(false)
-            fallback(thread, throwable)
-            return
         }
 
-        Process.killProcess(Process.myPid())
-        exitProcess(10)
+        // Simpan ke Downloads/ via MediaStore (Android 10+)
+        runCatching { saveToDownloads(context, report) }
+
+        // Kembalikan ke handler default Android (tampilkan dialog crash, jangan restart)
+        fallback(thread, throwable)
     }
 
     private fun fallback(thread: Thread, throwable: Throwable) {
@@ -70,6 +68,20 @@ class ErrorHandler @JvmOverloads constructor(
         } else {
             Process.killProcess(Process.myPid())
             exitProcess(10)
+        }
+    }
+
+    private fun saveToDownloads(context: Context, report: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        val fileName = "jayra_crash_${System.currentTimeMillis()}.txt"
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+        val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
+        context.contentResolver.openOutputStream(uri)?.use { os ->
+            os.write(report.toByteArray())
         }
     }
 
@@ -105,19 +117,16 @@ class ErrorHandler @JvmOverloads constructor(
         val hasDbId = runCatching {
             context.resources.getIdentifier("firestore_database_id", "string", context.packageName) != 0
         }.getOrDefault(false)
-        return "FirebaseApp terdaftar=$appCount, resource google_app_id ada=$hasGoogleAppId, " +
-            "firestore_database_id ada=$hasDbId"
+        return "FirebaseApp terdaftar=$appCount, google_app_id=$hasGoogleAppId, firestore_database_id=$hasDbId"
     }
 
     companion object {
-        const val CRASH_TOAST_MESSAGE = "Terjadi kesalahan tak terduga. Aplikasi akan dimulai ulang."
+        const val CRASH_TOAST_MESSAGE = "Terjadi kesalahan tak terduga."
         const val REPORT_FILE = "last_crash.txt"
-        private const val MAX_EXTRA_CHARS = 60_000
 
         private val handling = AtomicBoolean(false)
         private val phases: MutableList<String> = Collections.synchronizedList(ArrayList())
 
-        /** Penanda fase startup; ikut dicetak di laporan crash untuk melihat sampai mana app berjalan. */
         @JvmStatic
         fun mark(phase: String) {
             val t = runCatching { SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime() }
