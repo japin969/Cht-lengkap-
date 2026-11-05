@@ -10,9 +10,22 @@ import timber.log.Timber
 
 class JayraApp : Application() {
 
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        // Pasang handler sedini mungkin, sebelum ContentProvider Firebase jalan
+        if (!isRunningUnitTest()) {
+            val previous = Thread.getDefaultUncaughtExceptionHandler()
+            Thread.setDefaultUncaughtExceptionHandler(
+                ErrorHandler(appContext = base.applicationContext, previousHandler = previous)
+            )
+        }
+        ErrorHandler.mark("attachBaseContext.done")
+    }
+
     override fun onCreate() {
         super.onCreate()
         instance = this
+        ErrorHandler.mark("app.onCreate.start")
 
         // Inisialisasi Crashlytics (opsional, tidak crash kalau Firebase belum siap)
         runCatching {
@@ -30,16 +43,7 @@ class JayraApp : Application() {
             Timber.w(error, "AppModule.init gagal pada startup awal")
         }
 
-        // Daftarkan Global UncaughtExceptionHandler pada runtime perangkat nyata
-        if (!isRunningUnitTest()) {
-            val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
-            Thread.setDefaultUncaughtExceptionHandler(
-                ErrorHandler(
-                    appContext = applicationContext,
-                    previousHandler = previousHandler
-                )
-            )
-        }
+        ErrorHandler.mark("app.onCreate.done")
     }
 
     private fun initTimber() {

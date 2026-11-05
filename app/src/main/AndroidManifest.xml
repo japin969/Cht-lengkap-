@@ -53,6 +53,12 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        <activity
+            android:name=".util.CrashReportActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:taskAffinity="com.jayra.app.crash"
+            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
     </application>
 
 </manifest>

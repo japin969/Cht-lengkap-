@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,6 +35,7 @@ import com.jayra.app.data.handleFirestoreError
 import com.jayra.app.di.AppModule
 import com.jayra.app.model.NavItem
 import com.jayra.app.service.MyFirebaseMessagingService
+import com.jayra.app.util.ErrorHandler
 import com.jayra.app.ui.main.JayraBottomNavigationBar
 import com.jayra.app.ui.main.MainScreen
 import com.jayra.app.ui.theme.JayraTheme
@@ -42,6 +44,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 class MainActivity : ComponentActivity() {
 
@@ -62,17 +65,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ErrorHandler.mark("activity.onCreate.start")
 
-        AppModule.init(applicationContext)
-        extractNotificationExtras(intent)
-        observeAuthForTokenSync()
-        requestNotificationPermissionAndSetupFCM()
+        safely("AppModule.init") { AppModule.init(applicationContext) }
+        safely("extractNotificationExtras") { extractNotificationExtras(intent) }
+        safely("edgeToEdge") {
+            enableEdgeToEdge()
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
 
-        // Mandatory Edge-to-Edge display
-        enableEdgeToEdge()
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Screen Security: Prevent screenshots and recents screen sniffing in release builds
+        // Screen Security
         if (!BuildConfig.DEBUG) {
             window.setFlags(
                 WindowManager.LayoutParams.FLAG_SECURE,
@@ -80,21 +82,47 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        setContent {
-            JayraTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MainScreen(
-                        initialChatId = pendingChatId,
-                        initialCallParticipantId = pendingCallParticipantId,
-                        initialCallType = pendingCallType,
-                        initialOpenGlobalSearch = pendingOpenGlobalSearch,
-                        onNotificationNavigationHandled = {
-                            pendingChatId = null
-                            pendingCallParticipantId = null
-                            pendingOpenGlobalSearch = false
-                        }
-                    )
+        safely("setContent") {
+            setContent {
+                JayraTheme {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        MainScreen(
+                            initialChatId = pendingChatId,
+                            initialCallParticipantId = pendingCallParticipantId,
+                            initialCallType = pendingCallType,
+                            initialOpenGlobalSearch = pendingOpenGlobalSearch,
+                            onNotificationNavigationHandled = {
+                                pendingChatId = null
+                                pendingCallParticipantId = null
+                                pendingOpenGlobalSearch = false
+                            }
+                        )
+                    }
                 }
+            }
+        }
+        ErrorHandler.mark("activity.setContent.done")
+
+        // Firebase/FCM setelah UI, agar crash UI tertangkap duluan
+        window.decorView.post {
+            safely("observeAuthForTokenSync") { observeAuthForTokenSync() }
+            safely("requestNotificationPermissionAndSetupFCM") { requestNotificationPermissionAndSetupFCM() }
+            ErrorHandler.mark("activity.postInit.done")
+        }
+    }
+
+    private inline fun safely(tag: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (t: Throwable) {
+            ErrorHandler.mark("FAILED:$tag:${t.javaClass.simpleName}")
+            runCatching { FirebaseCrashlytics.getInstance().recordException(t) }
+            runCatching {
+                Toast.makeText(
+                    this,
+                    "Init gagal [$tag]: ${t.javaClass.simpleName} ${t.message.orEmpty().take(80)}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }

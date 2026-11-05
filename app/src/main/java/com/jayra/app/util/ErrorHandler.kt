@@ -2,127 +2,127 @@ package com.jayra.app.util
 
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
+import android.os.Build
 import android.os.Process
-import android.widget.Toast
+import android.os.SystemClock
+import com.google.firebase.FirebaseApp
+import com.jayra.app.BuildConfig
 import com.jayra.app.JayraApp
-import com.jayra.app.MainActivity
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import java.io.File
-import java.io.FileWriter
 import java.text.SimpleDateFormat
+import java.util.Collections
 import java.util.Date
 import java.util.Locale
-import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.system.exitProcess
 
+/**
+ * UncaughtExceptionHandler yang dipasang di JayraApp.attachBaseContext().
+ *
+ * Alur saat crash:
+ * 1. Susun laporan (stack trace + info perangkat + fase startup + status Firebase).
+ * 2. Simpan ke filesDir internal (bukan Android/data, jadi aman di Android 11+).
+ * 3. Buka CrashReportActivity (proses ":crash") yang menampilkan laporan di layar.
+ * 4. Matikan proses utama.
+ *
+ * Jika Crashlytics sudah aktif, ia membungkus handler ini: laporan fatal ditulis
+ * Crashlytics dulu, baru diteruskan ke sini.
+ */
 class ErrorHandler @JvmOverloads constructor(
     private val appContext: Context? = JayraApp.appContextOrNull(),
     private val previousHandler: Thread.UncaughtExceptionHandler? = null
 ) : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
-        // 1. Kirim ke Crashlytics
-        runCatching {
-            FirebaseCrashlytics.getInstance().recordException(throwable)
-        }
-
-        // 2. Tulis stack trace ke file lokal (bisa dibaca tanpa root)
-        runCatching {
-            writeCrashToFile(appContext, throwable)
-        }
-
-        // 3. Log error menggunakan Timber
-        Timber.e(throwable, "Uncaught Exception")
-
         val context = appContext ?: JayraApp.appContextOrNull()
-        if (context == null || isCrashLoopDetected(context)) {
-            previousHandler?.uncaughtException(thread, throwable)
+        if (context == null || !handling.compareAndSet(false, true)) {
+            fallback(thread, throwable)
             return
         }
 
-        // 2. Tampilkan Toast pada main/prepared Looper
-        showCrashToastSafely(context)
+        val report = runCatching { buildReport(context, thread, throwable) }
+            .getOrElse { "Gagal menyusun laporan: $it\n${throwable.stackTraceToString()}" }
 
-        // Beri waktu singkat agar Toast sempat dirender oleh WindowManager sebelum proses dihentikan
-        try {
-            Thread.sleep(450L)
-        } catch (_: InterruptedException) {
-            Thread.currentThread().interrupt()
-        }
+        runCatching { File(context.filesDir, REPORT_FILE).writeText(report) }
 
-        // 3. Restart MainActivity menggunakan Intent baru & bersihkan task stack
-        try {
-            val restartIntent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val shown = runCatching {
+            val intent = Intent(context, CrashReportActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(CrashReportActivity.EXTRA_REPORT, report.take(MAX_EXTRA_CHARS))
             }
-            context.startActivity(restartIntent)
-        } catch (restartError: Exception) {
-            Timber.e(restartError, "Gagal memulai ulang MainActivity")
+            context.startActivity(intent)
+        }.isSuccess
+
+        if (!shown) {
+            handling.set(false)
+            fallback(thread, throwable)
+            return
         }
 
-        // 4. Hentikan proses aplikasi
         Process.killProcess(Process.myPid())
         exitProcess(10)
     }
 
-    private fun writeCrashToFile(context: Context?, throwable: Throwable) {
-        if (context == null) return
-        val file = File(context.getExternalFilesDir(null), "crash.log")
-        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        FileWriter(file, true).use { writer ->
-            writer.append("\n===== CRASH $timestamp =====\n")
-            writer.append(throwable.stackTraceToString())
-            writer.append("\n")
-        }
-        Timber.d("Crash log ditulis ke: ${file.absolutePath}")
-    }
-
-    private fun showCrashToastSafely(context: Context) {
-        try {
-            if (Looper.myLooper() == Looper.getMainLooper()) {
-                Toast.makeText(context, CRASH_TOAST_MESSAGE, Toast.LENGTH_LONG).show()
-            } else {
-                val mainLooper = Looper.getMainLooper()
-                if (mainLooper != null) {
-                    Handler(mainLooper).post {
-                        runCatching {
-                            Toast.makeText(context, CRASH_TOAST_MESSAGE, Toast.LENGTH_LONG).show()
-                        }
-                    }
-                } else {
-                    Thread {
-                        runCatching {
-                            Looper.prepare()
-                            Toast.makeText(context, CRASH_TOAST_MESSAGE, Toast.LENGTH_LONG).show()
-                            Looper.loop()
-                        }
-                    }.start()
-                }
-            }
-        } catch (_: Exception) {
-            // Abaikan bila sistem UI tidak lagi menerima Toast
+    private fun fallback(thread: Thread, throwable: Throwable) {
+        val previous = previousHandler
+        if (previous != null) {
+            previous.uncaughtException(thread, throwable)
+        } else {
+            Process.killProcess(Process.myPid())
+            exitProcess(10)
         }
     }
 
-    private fun isCrashLoopDetected(context: Context): Boolean {
-        return try {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val now = System.currentTimeMillis()
-            val lastCrashAt = prefs.getLong(KEY_LAST_CRASH_TIMESTAMP, 0L)
-            prefs.edit().putLong(KEY_LAST_CRASH_TIMESTAMP, now).commit()
-            (now - lastCrashAt) in 1L..CRASH_LOOP_COOLDOWN_MS
-        } catch (_: Exception) {
-            false
+    private fun buildReport(context: Context, thread: Thread, throwable: Throwable): String {
+        val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+        val uptime = SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime()
+        val phaseText = synchronized(phases) { phases.joinToString(" > ") }
+
+        return buildString {
+            appendLine("JAYRA CRASH REPORT")
+            appendLine("Waktu     : $time")
+            appendLine("Versi app : ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            appendLine("Thread    : ${thread.name}")
+            appendLine("Umur proses: $uptime ms")
+            appendLine("Fase      : ${phaseText.ifEmpty { "(belum ada)" }}")
+            appendLine(
+                "Perangkat : ${Build.MANUFACTURER} ${Build.MODEL}, " +
+                    "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
+            )
+            appendLine("ABI       : ${Build.SUPPORTED_ABIS.joinToString()}")
+            appendLine("Firebase  : ${firebaseStatus(context)}")
+            appendLine()
+            appendLine(throwable.stackTraceToString())
         }
+    }
+
+    private fun firebaseStatus(context: Context): String {
+        val appCount = runCatching { FirebaseApp.getApps(context).size.toString() }
+            .getOrElse { "error(${it.javaClass.simpleName})" }
+        val hasGoogleAppId = runCatching {
+            context.resources.getIdentifier("google_app_id", "string", context.packageName) != 0
+        }.getOrDefault(false)
+        val hasDbId = runCatching {
+            context.resources.getIdentifier("firestore_database_id", "string", context.packageName) != 0
+        }.getOrDefault(false)
+        return "FirebaseApp terdaftar=$appCount, resource google_app_id ada=$hasGoogleAppId, " +
+            "firestore_database_id ada=$hasDbId"
     }
 
     companion object {
-        const val CRASH_TOAST_MESSAGE =
-            "Terjadi kesalahan tak terduga. Aplikasi akan dimulai ulang."
-        private const val PREFS_NAME = "jayra_crash_guard_prefs"
-        private const val KEY_LAST_CRASH_TIMESTAMP = "last_crash_timestamp"
-        private const val CRASH_LOOP_COOLDOWN_MS = 4_000L
+        const val CRASH_TOAST_MESSAGE = "Terjadi kesalahan tak terduga. Aplikasi akan dimulai ulang."
+        const val REPORT_FILE = "last_crash.txt"
+        private const val MAX_EXTRA_CHARS = 60_000
+
+        private val handling = AtomicBoolean(false)
+        private val phases: MutableList<String> = Collections.synchronizedList(ArrayList())
+
+        /** Penanda fase startup; ikut dicetak di laporan crash untuk melihat sampai mana app berjalan. */
+        @JvmStatic
+        fun mark(phase: String) {
+            val t = runCatching { SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime() }
+                .getOrDefault(0L)
+            phases.add("${t}ms:$phase")
+        }
     }
 }
