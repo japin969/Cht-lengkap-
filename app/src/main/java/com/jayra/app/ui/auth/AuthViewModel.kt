@@ -174,27 +174,41 @@ class AuthViewModel(
         }
 
         _uiState.value = AuthUiState.Loading
-        authenticateAndComplete(
-            context = context,
-            onAuthenticated = {
-                val saveResult = authRepository.saveRegisteredUser(
-                    email = cleanEmail,
-                    phoneNumber = phone,
-                    countryName = country.name
-                )
-                saveResult.fold(
-                    onSuccess = {
-                        persistEncryptedSession(context, phoneNumber = phone, countryName = country.name)
-                        _uiState.value = AuthUiState.Success
-                    },
-                    onFailure = { error ->
-                        _uiState.value = AuthUiState.Error(
-                            error.localizedMessage ?: "Gagal menyimpan profil registrasi"
+        viewModelScope.launch {
+            authRepository.signUp(cleanEmail, passwordInput).fold(
+                onSuccess = {
+                    try {
+                        val saveResult = authRepository.saveRegisteredUser(
+                            email = cleanEmail,
+                            phoneNumber = phone,
+                            countryName = country.name
                         )
+                        saveResult.fold(
+                            onSuccess = {
+                                persistEncryptedSession(
+                                    context,
+                                    phoneNumber = phone,
+                                    countryName = country.name
+                                )
+                                _uiState.value = AuthUiState.Success
+                            },
+                            onFailure = { error ->
+                                _uiState.value = AuthUiState.Error(
+                                    error.localizedMessage ?: "Akun dibuat, tapi gagal menyimpan profil"
+                                )
+                            }
+                        )
+                    } catch (e: Exception) {
+                        _uiState.value = AuthUiState.Error(e.localizedMessage ?: "Gagal menyimpan profil")
                     }
-                )
-            }
-        )
+                },
+                onFailure = { error ->
+                    _uiState.value = AuthUiState.Error(
+                        error.localizedMessage ?: "Registrasi gagal"
+                    )
+                }
+            )
+        }
     }
 
     fun onLoginClick(
@@ -209,16 +223,27 @@ class AuthViewModel(
         }
 
         _uiState.value = AuthUiState.Loading
-        authenticateAndComplete(
-            context = context,
-            onAuthenticated = {
-                ensureFirestoreAccountExists(fallbackEmail = cleanEmail)
-                persistEncryptedSession(context)
-                _uiState.value = AuthUiState.Success
-            }
-        )
+        viewModelScope.launch {
+            authRepository.signIn(cleanEmail, passwordInput).fold(
+                onSuccess = {
+                    try {
+                        ensureFirestoreAccountExists(fallbackEmail = cleanEmail)
+                        persistEncryptedSession(context)
+                        _uiState.value = AuthUiState.Success
+                    } catch (e: Exception) {
+                        _uiState.value = AuthUiState.Error(e.localizedMessage ?: "Gagal memuat profil pengguna")
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.value = AuthUiState.Error(
+                        error.localizedMessage ?: "Email atau password salah"
+                    )
+                }
+            )
+        }
     }
 
+    @Suppress("unused")
     fun onGoogleSignInClick(context: Context) {
         _uiState.value = AuthUiState.Loading
         authenticateAndComplete(

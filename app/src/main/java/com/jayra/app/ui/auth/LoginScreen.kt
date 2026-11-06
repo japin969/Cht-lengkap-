@@ -86,10 +86,6 @@ fun LoginScreen(
     val password by viewModel.password.collectAsStateWithLifecycle()
     val subtitle by viewModel.loginHeaderSubtitle.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
-        viewModel.attemptSilentAutoSignIn(context)
-    }
-
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
             onLoginSuccess()
@@ -104,7 +100,6 @@ fun LoginScreen(
         onEmailChange = viewModel::onEmailChange,
         onPasswordChange = viewModel::onPasswordChange,
         onLoginClick = { viewModel.onLoginClick(context, email, password) },
-        onGoogleSignInClick = { viewModel.onGoogleSignInClick(context) },
         onNavigateToRegister = onNavigateToRegister
     )
 }
@@ -118,7 +113,6 @@ fun LoginContent(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onLoginClick: () -> Unit,
-    onGoogleSignInClick: () -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
@@ -359,7 +353,6 @@ private fun LoginScreenLightPreview() {
                 onEmailChange = {},
                 onPasswordChange = {},
                 onLoginClick = {},
-                onGoogleSignInClick = {},
                 onNavigateToRegister = {}
             )
         }
@@ -379,7 +372,6 @@ private fun LoginScreenDarkPreview() {
                 onEmailChange = {},
                 onPasswordChange = {},
                 onLoginClick = {},
-                onGoogleSignInClick = {},
                 onNavigateToRegister = {}
             )
         }
