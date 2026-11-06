@@ -156,6 +156,11 @@ class MainViewModel(
             icon = Icons.Default.MusicNote
         ),
         NavItem(
+            route = ROUTE_DRAMA_HOME,
+            icon = Icons.Default.PlayArrow,
+            label = "Drama"
+        ),
+        NavItem(
             route = ROUTE_SETTINGS,
             label = "Pengaturan",
             icon = Icons.Default.Settings
@@ -191,6 +196,8 @@ class MainViewModel(
         const val ROUTE_CHAT_LIST = "chat_list"
         const val ROUTE_CALLS = "calls"
         const val ROUTE_MUSIC_HOME = "music_home"
+    const val ROUTE_DRAMA_HOME = "drama_home"
+    const val ROUTE_DRAMA_DETAIL = "drama_detail?url={url}"
         const val ROUTE_SETTINGS = "settings"
         const val ROUTE_GLOBAL_SEARCH = "global_search"
         const val ROUTE_COMMUNITIES = "communities"
@@ -592,6 +599,23 @@ private fun MainNavigationGraph(
                 onBack = { navController.popBackStack() },
                 viewModel = sharedMusicViewModel
             )
+        }
+
+        composable(MainViewModel.ROUTE_DRAMA_HOME) {
+            com.jayra.app.ui.drama.DramaScreen(
+                onDramaClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("drama_detail?url=$encoded")
+                }
+            )
+        }
+
+        composable(
+            route = MainViewModel.ROUTE_DRAMA_DETAIL,
+            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+        ) { backStackEntry ->
+            val url = backStackEntry.arguments?.getString("url") ?: ""
+            com.jayra.app.ui.drama.DramaDetailScreen(dramaUrl = java.net.URLDecoder.decode(url, "UTF-8"))
         }
 
         composable(MainViewModel.ROUTE_SETTINGS) {

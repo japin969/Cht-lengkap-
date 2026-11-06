@@ -68,44 +68,6 @@ class MusicViewModel @JvmOverloads constructor(
             artist = "The Weeknd, Daft Punk",
             album = "Starboy",
             duration = "3:50",
-            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300",
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-        ),
-        Song(
-            id = "seed_2",
-            title = "Blinding Lights",
-            artist = "The Weeknd",
-            album = "After Hours",
-            duration = "3:20",
-            coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300",
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
-        ),
-        Song(
-            id = "seed_3",
-            title = "Shape of You",
-            artist = "Ed Sheeran",
-            album = "÷ (Divide)",
-            duration = "3:53",
-            coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300",
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
-        ),
-        Song(
-            id = "seed_4",
-            title = "Levitating",
-            artist = "Dua Lipa",
-            album = "Future Nostalgia",
-            duration = "3:23",
-            coverUrl = "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300",
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
-        ),
-        Song(
-            id = "seed_5",
-            title = "Stay",
-            artist = "The Kid LAROI, Justin Bieber",
-            album = "F*CK LOVE 3: OVER YOU",
-            duration = "2:21",
-            coverUrl = "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300",
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
         )
     )
 
@@ -129,35 +91,33 @@ class MusicViewModel @JvmOverloads constructor(
     }
 
     private suspend fun executeSearch(query: String) {
-        val trimmed = query.trim()
-        lastQuery = trimmed
-        if (trimmed.isEmpty()) {
-            _uiState.value = MusicUiState.Success(curatedSongs)
-            return
-        }
-
-        _uiState.value = MusicUiState.Loading
-
         try {
-            val response = withContext(Dispatchers.IO) {
-                nexadevApi.searchSpotify(trimmed)
-            }
-
-            if (response.isSuccessful && response.body() != null) {
+            val response = SiputzxApi.create().searchMusic(query)
+            if (response.isSuccessful && response.body()?.status == true) {
                 val body = response.body()!!
-                val songData = body.data ?: body.result
-                if (songData != null) {
-                    val song = songData.toSong()
-                    _uiState.value = MusicUiState.Success(listOf(song))
-                } else {
-                    // Try fallback search via YouTube
-                    searchYouTubeFallback(trimmed)
-                }
+                val song = Song(
+                    id = body.id ?: System.currentTimeMillis().toString(),
+                    title = body.title ?: "Unknown",
+                    artist = body.channel ?: "YouTube",
+                    coverUrl = body.thumbnail ?: "",
+                    audioUrl = body.data?.url ?: "",
+                    durationMs = (body.duration_seconds ?: 0) * 1000L
+                )
+                _uiState.value = _uiState.value.copy(
+                    searchResults = listOf(song),
+                    isSearching = false
+                )
             } else {
-                searchYouTubeFallback(trimmed)
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Lagu tidak ditemukan",
+                    isSearching = false
+                )
             }
         } catch (e: Exception) {
-            searchYouTubeFallback(trimmed)
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Gagal mencari: ${e.localizedMessage}",
+                isSearching = false
+            )
         }
     }
 

@@ -19,8 +19,16 @@ interface SiputzxApi {
         @Query("temperature") temperature: Float = 0.7f
     ): Response<AIResponse>
 
+    @GET("api/ytplay")
+    suspend fun searchMusic(
+        @Query("q") query: String
+    ): Response<NexaMusicResponse>
+
     companion object {
-        private const val BASE_URL = "https://api.siputzx.my.id/"
+        private const val BASE_URL = "https://api.nexadev.my.id/"
+        
+        // API AI tetap pakai domain lama
+        private const val AI_BASE_URL = "https://api.siputzx.my.id/"
 
         fun create(): SiputzxApi {
             val okHttpClient = OkHttpClient.Builder()
@@ -35,6 +43,26 @@ interface SiputzxApi {
 
             return Retrofit.Builder()
                 .baseUrl(BASE_URL)
+                .client(okHttpClient)
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(SiputzxApi::class.java)
+        }
+        
+        // Fungsi pembuat API AI terpisah
+        fun createAI(): SiputzxApi {
+            val okHttpClient = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build()
+
+            val moshi = Moshi.Builder()
+                .addLast(KotlinJsonAdapterFactory())
+                .build()
+
+            return Retrofit.Builder()
+                .baseUrl(AI_BASE_URL)
                 .client(okHttpClient)
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build()
