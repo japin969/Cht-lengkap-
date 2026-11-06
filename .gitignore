@@ -22,3 +22,4 @@ backup_before_package_change/
 .gradle/
 build/
 .idea/
+safe_push.sh
