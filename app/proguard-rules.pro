@@ -7,8 +7,8 @@
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
 # 1. Jayra Data & Domain Models (Firestore POJO serialization & Moshi DTOs)
--keep class com.example.model.** { *; }
--keep class com.example.data.** { *; }
+-keep class com.jayra.app.model.** { *; }
+-keep class com.jayra.app.data.** { *; }
 
 # 2. WebRTC (JNI / native reflection callbacks if present)
 -keep class org.webrtc.** { *; }
