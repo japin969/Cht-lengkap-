@@ -30,7 +30,11 @@ jobs:
       - name: Decode Google Services JSON
         env:
           DATA: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: echo "$DATA" | base64 -di > app/google-services.json
+        run: |
+          echo "$DATA" | base64 -di > app/google-services.json
+          ls -la app/google-services.json
+          head -c 50 app/google-services.json || true
+          echo ""
 
       - name: Build Debug APK
         run: ./gradlew clean assembleDebug --no-daemon --stacktrace
