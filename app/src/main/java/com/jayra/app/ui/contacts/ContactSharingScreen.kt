@@ -1,5 +1,6 @@
 package com.jayra.app.ui.contacts
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,9 +78,9 @@ fun ContactSharingScreen(
 ) {
     BackHandler { onBack() }
 
-    val uiState by viewModel.uiState.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val isSharing by viewModel.isSharing.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val isSharing by viewModel.isSharing.collectAsStateWithLifecycle()
 
     val isDark = isSystemInDarkTheme()
     val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar

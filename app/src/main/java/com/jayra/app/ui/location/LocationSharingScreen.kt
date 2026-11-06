@@ -1,5 +1,6 @@
 package com.jayra.app.ui.location
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -47,7 +48,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,9 +78,9 @@ fun LocationSharingScreen(
 ) {
     BackHandler { onBack() }
 
-    val uiState by viewModel.uiState.collectAsState()
-    val locationTitle by viewModel.locationTitle.collectAsState()
-    val isSending by viewModel.isSending.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val locationTitle by viewModel.locationTitle.collectAsStateWithLifecycle()
+    val isSending by viewModel.isSending.collectAsStateWithLifecycle()
 
     val isDark = isSystemInDarkTheme()
     val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar

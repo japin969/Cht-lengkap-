@@ -19,3 +19,6 @@ debug.keystore
 *-debug.log
 app/google-services.json
 backup_before_package_change/
+.gradle/
+build/
+.idea/

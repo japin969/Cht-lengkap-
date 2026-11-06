@@ -1,5 +1,6 @@
 package com.jayra.app.ui.chatroom
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -56,7 +57,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -124,12 +124,12 @@ fun ChatRoomScreen(
         viewModel.initChat(chatId)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
-    val editorValue by viewModel.editorValue.collectAsState()
-    val editorConfig by viewModel.editorConfig.collectAsState()
-    val currentChat by viewModel.currentChat.collectAsState()
-    val topics by viewModel.topics.collectAsState()
-    val selectedTopicId by viewModel.selectedTopicId.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editorValue by viewModel.editorValue.collectAsStateWithLifecycle()
+    val editorConfig by viewModel.editorConfig.collectAsStateWithLifecycle()
+    val currentChat by viewModel.currentChat.collectAsStateWithLifecycle()
+    val topics by viewModel.topics.collectAsStateWithLifecycle()
+    val selectedTopicId by viewModel.selectedTopicId.collectAsStateWithLifecycle()
 
     ChatRoomContent(
         chatId = chatId,

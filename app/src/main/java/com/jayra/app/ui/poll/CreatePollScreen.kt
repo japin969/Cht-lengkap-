@@ -1,5 +1,6 @@
 package com.jayra.app.ui.poll
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -45,7 +46,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,13 +75,13 @@ fun CreatePollScreen(
 ) {
     BackHandler { onBack() }
 
-    val question by viewModel.question.collectAsState()
-    val options by viewModel.options.collectAsState()
-    val isAnonymous by viewModel.isAnonymous.collectAsState()
-    val allowMultiple by viewModel.allowMultiple.collectAsState()
-    val isQuiz by viewModel.isQuiz.collectAsState()
-    val correctIndex by viewModel.correctOptionIndex.collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
+    val question by viewModel.question.collectAsStateWithLifecycle()
+    val options by viewModel.options.collectAsStateWithLifecycle()
+    val isAnonymous by viewModel.isAnonymous.collectAsStateWithLifecycle()
+    val allowMultiple by viewModel.allowMultiple.collectAsStateWithLifecycle()
+    val isQuiz by viewModel.isQuiz.collectAsStateWithLifecycle()
+    val correctIndex by viewModel.correctOptionIndex.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val isDark = isSystemInDarkTheme()
     val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
