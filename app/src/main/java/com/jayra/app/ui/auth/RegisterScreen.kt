@@ -128,7 +128,6 @@ fun RegisterScreen(
         onPasswordChange = viewModel::onPasswordChange,
         onCountrySelected = viewModel::onCountrySelected,
         onRegisterClick = { viewModel.onRegisterClick(context, email, password) },
-        onGoogleRegisterClick = { viewModel.onGoogleSignInClick(context) }
     )
 }
 
@@ -146,7 +145,6 @@ fun RegisterContent(
     onPasswordChange: (String) -> Unit,
     onCountrySelected: (Country) -> Unit,
     onRegisterClick: () -> Unit,
-    onGoogleRegisterClick: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
     val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
@@ -519,7 +517,6 @@ private fun RegisterScreenLightPreview() {
                 onPasswordChange = {},
                 onCountrySelected = {},
                 onRegisterClick = {},
-                onGoogleRegisterClick = {}
             )
         }
     }
@@ -547,7 +544,6 @@ private fun RegisterScreenDarkPreview() {
                 onPasswordChange = {},
                 onCountrySelected = {},
                 onRegisterClick = {},
-                onGoogleRegisterClick = {}
             )
         }
     }

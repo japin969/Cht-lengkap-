@@ -6,6 +6,7 @@ import com.jayra.app.model.UserAccount
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
+import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -31,6 +32,32 @@ class AuthRepository(
     private fun requireUserId(): String {
         return auth.currentUser?.uid
             ?: throw IllegalStateException("Pengguna harus terautentikasi sebelum mengakses Firestore.")
+    }
+
+    suspend fun signIn(email: String, password: String): Result<String> {
+        return try {
+            val result = auth.signInWithEmailAndPassword(email, password).await()
+            val uid = result.user?.uid
+                ?: return Result.failure(IllegalStateException("Firebase Auth tidak mengembalikan user"))
+            Result.success(uid)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signUp(email: String, password: String): Result<String> {
+        return try {
+            val result = auth.createUserWithEmailAndPassword(email, password).await()
+            val uid = result.user?.uid
+                ?: return Result.failure(IllegalStateException("Firebase Auth tidak mengembalikan user"))
+            Result.success(uid)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun saveRegisteredUser(
