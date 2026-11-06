@@ -296,38 +296,6 @@ fun LoginContent(
                     }
                 }
 
-                item {
-                    val isLoading = uiState is AuthUiState.Loading
-                    OutlinedButton(
-                        onClick = onGoogleSignInClick,
-                        enabled = !isLoading,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, JayraBlue),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = cardBg,
-                            contentColor = JayraBlue
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .testTag("login_google_button")
-                    ) {
-                        // GANTI SVG TELEGRAM
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = stringResource(id = R.string.auth_google_sign_in_button),
-                            tint = JayraBlue,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = stringResource(id = R.string.auth_google_sign_in_button),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = JayraBlue
-                        )
-                    }
-                }
 
                 item {
                     Box(
