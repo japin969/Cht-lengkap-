@@ -95,6 +95,7 @@ fun ChatListScreen(
     viewModel: ChatListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
 
@@ -269,11 +270,25 @@ fun ChatListContent(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("New Secret Chat") },
-                                    onClick = { showTopMenu = false }
+                                    onClick = {
+                                        showTopMenu = false
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Fitur Secret Chat akan segera hadir",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("New Channel") },
-                                    onClick = { showTopMenu = false }
+                                    onClick = {
+                                        showTopMenu = false
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Fitur Channel akan segera hadir",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Settings / Profil Saya") },
@@ -307,18 +322,41 @@ fun ChatListContent(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onContactsClick,
-                containerColor = JayraBlue,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.testTag("fab_new_chat")
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "New Message",
-                    modifier = Modifier.size(24.dp)
-                )
+                // Jayra AI Pill (Meta AI Style)
+                FloatingActionButton(
+                    onClick = { /* Arahkan ke AssistantScreen nanti */ },
+                    containerColor = Color(0xFF6E48AA),
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .shadow(4.dp, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "Jayra AI",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // FAB Chat Baru
+                FloatingActionButton(
+                    onClick = onContactsClick,
+                    containerColor = JayraBlue,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.testTag("fab_new_chat")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "New Message",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     ) { innerPadding ->

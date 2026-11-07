@@ -325,6 +325,33 @@ class ChatRepository(
         awaitClose { job.cancel() }
     }
 
+
+    suspend fun setTyping(chatId: String, userId: String, isTyping: Boolean) {
+        try {
+            val typingRef = firestore.collection("chats").document(chatId).collection("typing").document(userId)
+            if (isTyping) {
+                typingRef.set(mapOf("timestamp" to System.currentTimeMillis())).await()
+            } else {
+                typingRef.delete().await()
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun observeTyping(chatId: String): Flow<List<String>> = callbackFlow {
+        val typingRef = firestore.collection("chats").document(chatId).collection("typing")
+        val listener = typingRef.addSnapshotListener { snapshot, _ ->
+            if (snapshot != null) {
+                val now = System.currentTimeMillis()
+                // Filter hanya yang aktif dalam 5 detik terakhir
+                val activeUsers = snapshot.documents
+                    .filter { (it.getLong("timestamp") ?: 0) > (now - 5000) }
+                    .mapNotNull { it.id }
+                trySend(activeUsers)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
     suspend fun sendMessage(
         chatId: String,
         text: String,

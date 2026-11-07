@@ -68,6 +68,7 @@ class ChatRoomViewModel @JvmOverloads constructor(
     fun initChat(chatId: String) {
         if (currentChatId == chatId && (_uiState.value is ChatRoomUiState.Success || _uiState.value is ChatRoomUiState.Empty)) return
         currentChatId = chatId
+        listenToTyping(chatId)
         _selectedTopicId.value = ChatTopic.GENERAL_TOPIC_ID
         _currentChat.value = chatRepository.getChatSnapshotById(chatId)
         observeChatMetadata(chatId)
@@ -330,15 +331,26 @@ class ChatRoomViewModel @JvmOverloads constructor(
     }
 
     fun onTyping() {
+        val chatId = (currentChat?.id ?: return)
+        val uid = auth.currentUser?.uid ?: return
+        
         typingJob?.cancel()
         typingJob = viewModelScope.launch {
-            delay(2000L)
+            chatRepository.setTyping(chatId, uid, true)
+            delay(3000L)
+            chatRepository.setTyping(chatId, uid, false)
         }
     }
 
-    fun setTyping(isTyping: Boolean) {
-        _uiState.update { state ->
-            if (state is ChatRoomUiState.Success) state.copy(isTyping = isTyping) else state
+    // Listener diletakkan di init block ViewModel
+    private fun listenToTyping(chatId: String) {
+        viewModelScope.launch {
+            chatRepository.observeTyping(chatId).collect { typingUsers ->
+                val othersTyping = typingUsers.filter { it != auth.currentUser?.uid }
+                _uiState.update { state ->
+                    if (state is ChatRoomUiState.Success) state.copy(isTyping = othersTyping.isNotEmpty()) else state
+                }
+            }
         }
     }
 
