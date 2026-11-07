@@ -92,16 +92,17 @@ class MusicViewModel @JvmOverloads constructor(
 
     private suspend fun executeSearch(query: String) {
         try {
-            val response = SiputzxApi.create().searchMusic(query)
+            val response = NexadevApi.create().searchYouTube(query)
             if (response.isSuccessful && response.body()?.status == true) {
                 val body = response.body()!!
                 val song = Song(
-                    id = body.id ?: System.currentTimeMillis().toString(),
+                    id = System.currentTimeMillis().toString(),
                     title = body.title ?: "Unknown",
-                    artist = body.channel ?: "YouTube",
+                    artist = "YouTube Music",
+                    album = "YouTube Stream",
+                    duration = body.duration ?: "0:00",
                     coverUrl = body.thumbnail ?: "",
-                    audioUrl = body.data?.url ?: "",
-                    durationMs = (body.duration_seconds ?: 0) * 1000L
+                    audioUrl = body.data?.url ?: ""
                 )
                 _uiState.value = _uiState.value.copy(
                     searchResults = listOf(song),
