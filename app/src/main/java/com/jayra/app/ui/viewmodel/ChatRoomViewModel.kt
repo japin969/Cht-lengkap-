@@ -332,6 +332,25 @@ class ChatRoomViewModel @JvmOverloads constructor(
         }
     }
 
+    fun setTyping(isTyping: Boolean) {
+        // Update local state
+        _uiState.update { state ->
+            if (state is ChatRoomUiState.Success) state.copy(isTyping = isTyping) else state
+        }
+        // Sync ke Firestore
+        val chatId = currentChatId
+        val uid = auth.currentUser?.uid
+        if (chatId.isNotBlank() && uid != null) {
+            viewModelScope.launch {
+                try {
+                    chatRepository.setTyping(chatId, uid, isTyping)
+                } catch (_: Exception) {
+                    // Ignore typing sync failure
+                }
+            }
+        }
+    }
+
     fun onTyping() {
         val chatId = (currentChat.value?.id ?: currentChatId ?: return)
         val uid = auth.currentUser?.uid ?: return
