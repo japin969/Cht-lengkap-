@@ -159,7 +159,7 @@ class MainViewModel(
         NavItem(
             route = ROUTE_DRAMA_HOME,
             icon = Icons.Default.PlayArrow,
-            label = "Drama"
+            label = "VidHub"
         ),
         NavItem(
             route = ROUTE_SETTINGS,
@@ -199,6 +199,8 @@ class MainViewModel(
         const val ROUTE_MUSIC_HOME = "music_home"
     const val ROUTE_DRAMA_HOME = "drama_home"
     const val ROUTE_DRAMA_DETAIL = "drama_detail?url={url}"
+    const val ROUTE_KOMIK_DETAIL = "komik_detail?slug={slug}"
+    const val ROUTE_KOMIK_READER = "komik_reader?slug={slug}"
         const val ROUTE_SETTINGS = "settings"
         const val ROUTE_GLOBAL_SEARCH = "global_search"
         const val ROUTE_COMMUNITIES = "communities"
@@ -603,12 +605,53 @@ private fun MainNavigationGraph(
         }
 
         composable(MainViewModel.ROUTE_DRAMA_HOME) {
-            com.jayra.app.ui.drama.DramaScreen(
+            com.jayra.app.ui.VidHubScreen(
                 onDramaClick = { url ->
                     val encoded = java.net.URLEncoder.encode(url, "UTF-8")
                     navController.navigate("drama_detail?url=$encoded")
+                },
+                onAnimeClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
                 }
             )
+        }
+
+        composable(
+            route = "anime_detail?url={url}",
+            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+        ) { backStackEntry ->
+            val url = backStackEntry.arguments?.getString("url") ?: ""
+            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
+            com.jayra.app.ui.anime.AnimeDetailScreen(
+                animeUrl = decoded,
+                onPlayEpisode = { epUrl ->
+                    val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
+                    navController.navigate("anime_player?url=$epEncoded")
+                }
+            )
+        }
+
+        composable(
+            route = "anime_player?url={url}",
+            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+        ) { backStackEntry ->
+            val url = backStackEntry.arguments?.getString("url") ?: ""
+            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
+            val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+            val state by vm.uiState.collectAsState()
+            LaunchedEffect(decoded) { vm.loadStream(decoded) }
+            val stream = state.streamUrl
+            if (stream.isNullOrBlank()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream)
+            }
         }
 
         composable(
@@ -617,6 +660,28 @@ private fun MainNavigationGraph(
         ) { backStackEntry ->
             val url = backStackEntry.arguments?.getString("url") ?: ""
             com.jayra.app.ui.drama.DramaDetailScreen(dramaUrl = java.net.URLDecoder.decode(url, "UTF-8"))
+        }
+
+        
+        composable(
+            route = MainViewModel.ROUTE_KOMIK_DETAIL,
+            arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+        ) { backStackEntry ->
+            val slug = backStackEntry.arguments?.getString("slug") ?: ""
+            com.jayra.app.ui.komik.KomikDetailScreen(
+                slug = slug,
+                onChapterClick = { chapterSlug ->
+                    navController.navigate("komik_reader?slug=$chapterSlug")
+                }
+            )
+        }
+
+        composable(
+            route = MainViewModel.ROUTE_KOMIK_READER,
+            arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+        ) { backStackEntry ->
+            val slug = backStackEntry.arguments?.getString("slug") ?: ""
+            com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
         }
 
         composable(MainViewModel.ROUTE_SETTINGS) {
