@@ -37,6 +37,8 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -646,11 +648,11 @@ private fun MainNavigationGraph(
             LaunchedEffect(decoded) { vm.loadStream(decoded) }
             val stream = state.streamUrl
             if (stream.isNullOrBlank()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
-                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream)
+                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream ?: "")
             }
         }
 
