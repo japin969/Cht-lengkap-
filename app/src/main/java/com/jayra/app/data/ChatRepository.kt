@@ -328,7 +328,7 @@ class ChatRepository(
 
     suspend fun setTyping(chatId: String, userId: String, isTyping: Boolean) {
         try {
-            val typingRef = firestore.collection("chats").document(chatId).collection("typing").document(userId)
+            val typingRef = firestore?.collection("chats")?.document(chatId)?.collection("typing")?.document(userId) ?: return
             if (isTyping) {
                 typingRef.set(mapOf("timestamp" to System.currentTimeMillis())).await()
             } else {
@@ -338,7 +338,8 @@ class ChatRepository(
     }
 
     fun observeTyping(chatId: String): Flow<List<String>> = callbackFlow {
-        val typingRef = firestore.collection("chats").document(chatId).collection("typing")
+        val fs = firestore ?: return@callbackFlow
+        val typingRef = fs.collection("chats").document(chatId).collection("typing")
         val listener = typingRef.addSnapshotListener { snapshot, _ ->
             if (snapshot != null) {
                 val now = System.currentTimeMillis()

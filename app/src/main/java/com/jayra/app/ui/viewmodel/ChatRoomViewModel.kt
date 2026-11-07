@@ -19,6 +19,7 @@ import com.jayra.app.security.EncryptionHelper
 import com.jayra.app.util.LocalNotificationManager
 import com.jayra.app.util.MarkdownParser
 import com.google.firebase.firestore.DocumentChange
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
@@ -34,7 +35,8 @@ class ChatRoomViewModel @JvmOverloads constructor(
     application: Application,
     private val chatRepository: ChatRepository = AppModule.chatRepository,
     private val contactRepository: ContactRepository = AppModule.contactRepository,
-    private val firestore: FirebaseFirestore? = AppModule.provideFirestore(application)
+    private val firestore: FirebaseFirestore? = AppModule.provideFirestore(application),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<ChatRoomUiState>(ChatRoomUiState.Loading)
@@ -331,7 +333,7 @@ class ChatRoomViewModel @JvmOverloads constructor(
     }
 
     fun onTyping() {
-        val chatId = (currentChat?.id ?: return)
+        val chatId = (currentChat.value?.id ?: currentChatId ?: return)
         val uid = auth.currentUser?.uid ?: return
         
         typingJob?.cancel()

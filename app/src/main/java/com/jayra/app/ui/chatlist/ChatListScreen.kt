@@ -95,7 +95,6 @@ fun ChatListScreen(
     viewModel: ChatListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
 
@@ -270,25 +269,11 @@ fun ChatListContent(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("New Secret Chat") },
-                                    onClick = {
-                                        showTopMenu = false
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "Fitur Secret Chat akan segera hadir",
-                                            android.widget.Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                    onClick = { showTopMenu = false }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("New Channel") },
-                                    onClick = {
-                                        showTopMenu = false
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "Fitur Channel akan segera hadir",
-                                            android.widget.Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                    onClick = { showTopMenu = false }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Settings / Profil Saya") },
@@ -334,10 +319,9 @@ fun ChatListContent(
                     shape = CircleShape,
                     modifier = Modifier
                         .size(48.dp)
-                        .shadow(4.dp, CircleShape)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AutoAwesome,
+                        imageVector = Icons.Default.AutoAwesomeMotion,
                         contentDescription = "Jayra AI",
                         modifier = Modifier.size(24.dp)
                     )
