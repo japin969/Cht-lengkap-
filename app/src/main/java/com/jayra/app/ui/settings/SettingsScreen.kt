@@ -324,7 +324,7 @@ fun SettingsContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
-                                        icon = Icons.Default.AutoAwesomeMotion
+                                        icon = Icons.Default.AutoAwesomeMotion,
                                         iconTint = JayraBlue,
                                         title = "Stories",
                                         onClick = onStoriesClick,
@@ -338,7 +338,7 @@ fun SettingsContent(
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Groups
+                                        icon = Icons.Default.Groups,
                                         iconTint = JayraBlue,
                                         title = "Komunitas",
                                         onClick = onCommunitiesClick,
