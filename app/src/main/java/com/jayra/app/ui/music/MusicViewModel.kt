@@ -104,21 +104,12 @@ class MusicViewModel @JvmOverloads constructor(
                     coverUrl = body.thumbnail ?: "",
                     audioUrl = body.data?.url ?: ""
                 )
-                _uiState.value = _uiState.value.copy(
-                    searchResults = listOf(song),
-                    isSearching = false
-                )
+                _uiState.value = MusicUiState.Success(listOf(song))
             } else {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Lagu tidak ditemukan",
-                    isSearching = false
-                )
+                _uiState.value = MusicUiState.Error("Lagu tidak ditemukan")
             }
         } catch (e: Exception) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Gagal mencari: ${e.localizedMessage}",
-                isSearching = false
-            )
+            _uiState.value = MusicUiState.Error("Gagal mencari: ${e.localizedMessage}")
         }
     }
 
