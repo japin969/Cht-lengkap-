@@ -366,7 +366,6 @@ fun SavedMessagesTopBar(
                     .background(JayraBlue),
                 contentAlignment = Alignment.Center
             ) {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = Icons.Default.Bookmark,
                     contentDescription = title,
@@ -490,7 +489,6 @@ fun SavedMessagesEmptyCard(
                 .background(JayraBlue.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center
         ) {
-            // GANTI SVG TELEGRAM
             Icon(
                 imageVector = Icons.Default.Bookmark,
                 contentDescription = title,
@@ -517,7 +515,6 @@ fun SavedMessagesEmptyCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.Default.CheckCircleOutline,
                         contentDescription = null,

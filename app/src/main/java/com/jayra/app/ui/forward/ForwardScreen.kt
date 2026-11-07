@@ -413,7 +413,6 @@ fun ForwardSourcePreviewBanner(sourceMessage: Message) {
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // GANTI SVG TELEGRAM
         Icon(
             imageVector = Icons.AutoMirrored.Filled.Forward,
             contentDescription = null,
@@ -485,7 +484,6 @@ fun ForwardChatItemRow(
         ) {
             when {
                 isSavedMessages -> {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.Default.Bookmark,
                         contentDescription = chat.name,

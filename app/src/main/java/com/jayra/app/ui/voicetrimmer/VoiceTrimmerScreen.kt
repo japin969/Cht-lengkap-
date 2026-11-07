@@ -595,7 +595,6 @@ fun VoiceTrimmerContent(
                     color = Color(0xFFFFFFFF),
                     modifier = Modifier.weight(1f)
                 )
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = Icons.Default.ContentCut,
                     contentDescription = null,
@@ -702,7 +701,6 @@ fun VoiceTrimmerContent(
                                         .background(JayraBlue.copy(alpha = 0.14f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    // GANTI SVG TELEGRAM
                                     Icon(
                                         imageVector = Icons.Default.GraphicEq,
                                         contentDescription = null,
@@ -953,7 +951,6 @@ fun VoiceTrimmerContent(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // GANTI SVG TELEGRAM
                                 Icon(
                                     imageVector = if (uiState.isRecordingMic) {
                                         Icons.Default.Stop

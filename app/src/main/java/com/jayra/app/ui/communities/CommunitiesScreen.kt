@@ -247,7 +247,6 @@ fun CommunitiesContent(
                         .size(48.dp)
                         .testTag("communities_back_button")
                 ) {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = strings.backContentDescription,
@@ -274,7 +273,6 @@ fun CommunitiesContent(
                         .size(48.dp)
                         .testTag("communities_add_button")
                 ) {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = strings.addContentDescription,
@@ -321,7 +319,6 @@ fun CommunitiesContent(
                                 .background(JayraBlue.copy(alpha = 0.14f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            // GANTI SVG TELEGRAM
                             Icon(
                                 imageVector = Icons.Default.Groups,
                                 contentDescription = null,
@@ -526,7 +523,6 @@ fun CommunitiesContent(
                                 .background(JayraBlue.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            // GANTI SVG TELEGRAM
                             Icon(
                                 imageVector = Icons.Default.Forum,
                                 contentDescription = null,
@@ -628,7 +624,6 @@ fun CommunityItemRow(
         Spacer(modifier = Modifier.width(8.dp))
 
         // Chevron kanan
-        // GANTI SVG TELEGRAM
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,

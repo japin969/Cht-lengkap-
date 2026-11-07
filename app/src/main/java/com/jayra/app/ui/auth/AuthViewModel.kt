@@ -178,6 +178,7 @@ class AuthViewModel(
             authRepository.signUp(cleanEmail, passwordInput).fold(
                 onSuccess = {
                     try {
+                        auth.currentUser?.getIdToken(true)?.await()
                         val saveResult = authRepository.saveRegisteredUser(
                             email = cleanEmail,
                             phoneNumber = phone,
@@ -227,6 +228,8 @@ class AuthViewModel(
             authRepository.signIn(cleanEmail, passwordInput).fold(
                 onSuccess = {
                     try {
+                        // Tunggu Auth state benar-benar terpropagasi ke Firestore
+                        auth.currentUser?.getIdToken(true)?.await()
                         ensureFirestoreAccountExists(fallbackEmail = cleanEmail)
                         persistEncryptedSession(context)
                         _uiState.value = AuthUiState.Success

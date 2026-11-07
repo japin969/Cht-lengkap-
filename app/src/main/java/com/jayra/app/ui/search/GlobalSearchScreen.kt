@@ -295,7 +295,6 @@ fun GlobalSearchTopBar(
                     .size(48.dp)
                     .testTag("global_search_back_button")
             ) {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Kembali",
@@ -360,7 +359,6 @@ fun GlobalSearchTopBar(
                             .testTag("global_search_clear_button"),
                         contentAlignment = Alignment.Center
                     ) {
-                        // GANTI SVG TELEGRAM
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Hapus teks pencarian",
@@ -737,7 +735,6 @@ fun GlobalSearchContactItemRow(
                 .size(48.dp)
                 .testTag("global_search_contact_message_btn_${result.id}")
         ) {
-            // GANTI SVG TELEGRAM
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Message,
                 contentDescription = "Kirim pesan ke ${result.title}",
@@ -774,7 +771,6 @@ fun GlobalSearchFileItemRow(
                 .background(JayraBlue.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center
         ) {
-            // GANTI SVG TELEGRAM
             Icon(
                 imageVector = Icons.Default.Description,
                 contentDescription = result.title,
@@ -854,7 +850,6 @@ private fun GlobalSearchAvatar(
                     color = Color(0xFFFFFFFF)
                 )
             } else {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = when (type) {
                         SearchResultType.CHANNEL -> Icons.Default.VolumeUp
@@ -890,7 +885,6 @@ fun GlobalSearchIdleView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // GANTI SVG TELEGRAM
         Icon(
             imageVector = Icons.Default.Search,
             contentDescription = null,
@@ -938,7 +932,6 @@ fun GlobalSearchEmptyView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // GANTI SVG TELEGRAM
         Icon(
             imageVector = Icons.Default.SearchOff,
             contentDescription = null,
@@ -1081,7 +1074,6 @@ fun GlobalSearchErrorView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // GANTI SVG TELEGRAM
         Icon(
             imageVector = Icons.Default.WarningAmber,
             contentDescription = "Peringatan kesalahan pencarian",

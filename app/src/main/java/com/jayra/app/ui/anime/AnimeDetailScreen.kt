@@ -101,7 +101,6 @@ fun AnimePlayerScreen(videoUrl: String) {
                         val js = """
                             var ads = document.querySelectorAll('[class*="ads"], [id*="ads"], [class*="banner"], [class*="popup"], .overlay, .ad-container, iframe[src*="ads"]');
                             ads.forEach(function(el) { el.style.display = 'none'; });
-                            // Hapus elemen dengan teks iklan
                             document.querySelectorAll('a').forEach(function(a) {
                                 if (a.href.includes('ads') || a.href.includes('click')) {
                                     a.style.display = 'none';

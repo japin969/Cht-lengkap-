@@ -593,7 +593,6 @@ fun ChatRoomContent(
                             onNavigateToCreatePoll(chatId)
                         }
                     )
-                    // GANTI SVG TELEGRAM
                     AttachmentOptionItem(
                         icon = Icons.Default.Checklist,
                         label = "Tugas",
@@ -603,7 +602,6 @@ fun ChatRoomContent(
                             onNavigateToCreateChecklist(chatId)
                         }
                     )
-                    // GANTI SVG TELEGRAM
                     AttachmentOptionItem(
                         icon = Icons.Default.Mic,
                         label = "Suara",

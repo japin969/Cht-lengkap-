@@ -215,7 +215,6 @@ fun VoiceNoteBubble(
                     .background(buttonBg),
                 contentAlignment = Alignment.Center
             ) {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) strings.previewPauseLabel else strings.previewPlayLabel,

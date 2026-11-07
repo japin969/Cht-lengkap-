@@ -14,17 +14,14 @@ class JayraApp : Application() {
         super.onCreate()
         instance = this
 
-        // Inisialisasi Timber terlebih dahulu
         initTimber()
 
-        // Inisialisasi modul dependensi aplikasi (Firestore named DB, dsb.)
         runCatching {
             AppModule.init(applicationContext)
         }.onFailure { error ->
             Timber.w(error, "AppModule.init gagal pada startup awal")
         }
 
-        // Daftarkan Global UncaughtExceptionHandler pada runtime perangkat nyata
         if (!isRunningUnitTest()) {
             val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
             Thread.setDefaultUncaughtExceptionHandler(

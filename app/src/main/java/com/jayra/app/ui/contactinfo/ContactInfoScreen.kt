@@ -602,7 +602,6 @@ private fun PersonalNoteCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = Icons.Default.EditNote,
                     contentDescription = noteStrings.personalNoteCardTitle,
@@ -624,7 +623,6 @@ private fun PersonalNoteCard(
                 exit = fadeOut(animationSpec = tween(durationMillis = 180))
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = noteStrings.savedBadgeLabel,
@@ -722,7 +720,6 @@ private fun BirthdayCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // GANTI SVG TELEGRAM
             Icon(
                 imageVector = Icons.Default.Cake,
                 contentDescription = noteStrings.birthdayCardTitle,

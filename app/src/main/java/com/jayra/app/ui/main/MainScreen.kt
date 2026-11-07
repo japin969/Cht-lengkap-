@@ -421,7 +421,6 @@ fun JayraBottomNavigationBar(
                                             }
                                         }
                                     ) {
-                                        // GANTI SVG TELEGRAM
                                         Icon(
                                             imageVector = item.icon,
                                             contentDescription = item.label,
@@ -430,7 +429,6 @@ fun JayraBottomNavigationBar(
                                         )
                                     }
                                 } else {
-                                    // GANTI SVG TELEGRAM
                                     Icon(
                                         imageVector = item.icon,
                                         contentDescription = item.label,

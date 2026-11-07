@@ -278,7 +278,6 @@ fun StoryAlbumsContent(
                         .size(48.dp)
                         .testTag("stories_back_button")
                 ) {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = strings.backContentDescription,
@@ -303,7 +302,6 @@ fun StoryAlbumsContent(
                         .size(48.dp)
                         .testTag("stories_add_button")
                 ) {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = strings.addStoryContentDescription,
@@ -350,7 +348,6 @@ fun StoryAlbumsContent(
                             },
                             leadingIcon = if (isSelected) {
                                 {
-                                    // GANTI SVG TELEGRAM
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = null,
@@ -409,7 +406,6 @@ fun StoryAlbumsContent(
                                     .background(JayraBlue.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                // GANTI SVG TELEGRAM
                                 Icon(
                                     imageVector = Icons.Default.AutoAwesomeMotion,
                                     contentDescription = strings.screenTitle,
@@ -458,7 +454,6 @@ fun StoryAlbumsContent(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            // GANTI SVG TELEGRAM
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = strings.retryButtonLabel,
@@ -633,7 +628,6 @@ private fun StoryGridItemCard(
                     .padding(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = Icons.Default.Visibility,
                     contentDescription = viewsSuffix,
