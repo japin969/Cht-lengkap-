@@ -148,7 +148,6 @@ fun CountryRowItem(
                     .background(JayraBlue.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = Icons.Default.Flag,
                     contentDescription = stringResource(id = R.string.auth_country_flag_cd),

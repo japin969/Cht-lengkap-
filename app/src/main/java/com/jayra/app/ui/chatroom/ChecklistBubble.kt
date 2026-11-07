@@ -108,7 +108,6 @@ fun ChecklistBubble(
                         .background(accentColor),
                     contentAlignment = Alignment.Center
                 ) {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.Default.Checklist,
                         contentDescription = strings.bubbleBadgeLabel,

@@ -241,7 +241,6 @@ fun CreateChecklistContent(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // GANTI SVG TELEGRAM
                         Icon(
                             imageVector = Icons.Default.Checklist,
                             contentDescription = null,

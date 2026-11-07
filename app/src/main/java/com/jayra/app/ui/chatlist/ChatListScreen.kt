@@ -176,7 +176,6 @@ fun ChatListContent(
                             onClick = onStoriesClick,
                             modifier = Modifier.testTag("action_stories")
                         ) {
-                            // GANTI SVG TELEGRAM
                             Icon(
                                 imageVector = Icons.Default.AutoAwesomeMotion,
                                 contentDescription = "Stories",
@@ -214,7 +213,6 @@ fun ChatListContent(
                                 DropdownMenuItem(
                                     text = { Text("Stories") },
                                     leadingIcon = {
-                                        // GANTI SVG TELEGRAM
                                         Icon(Icons.Default.AutoAwesomeMotion, contentDescription = null, tint = JayraBlue)
                                     },
                                     onClick = {
@@ -225,7 +223,6 @@ fun ChatListContent(
                                 DropdownMenuItem(
                                     text = { Text("Pesan Tersimpan") },
                                     leadingIcon = {
-                                        // GANTI SVG TELEGRAM
                                         Icon(Icons.Default.Bookmark, contentDescription = null, tint = JayraBlue)
                                     },
                                     onClick = {
@@ -236,7 +233,6 @@ fun ChatListContent(
                                 DropdownMenuItem(
                                     text = { Text("Komunitas") },
                                     leadingIcon = {
-                                        // GANTI SVG TELEGRAM
                                         Icon(Icons.Default.Groups, contentDescription = null, tint = JayraBlue)
                                     },
                                     onClick = {

@@ -176,7 +176,6 @@ fun MessageBubble(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.padding(bottom = 3.dp)
                     ) {
-                        // GANTI SVG TELEGRAM
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Forward,
                             contentDescription = null,

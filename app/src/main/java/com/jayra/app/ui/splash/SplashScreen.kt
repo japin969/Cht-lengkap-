@@ -67,7 +67,7 @@ class SplashViewModel(
 
     fun isUserAuthenticated(): Boolean {
         return try {
-            authProvider()?.currentUser != null
+            FirebaseAuth.getInstance().currentUser != null
         } catch (_: Exception) {
             false
         }
@@ -170,7 +170,6 @@ fun SplashLogoBadge(
             .testTag("splash_logo_badge"),
         contentAlignment = Alignment.Center
     ) {
-        // GANTI SVG TELEGRAM
         Icon(
             imageVector = Icons.AutoMirrored.Filled.Send,
             contentDescription = "Logo Jayra",

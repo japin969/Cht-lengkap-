@@ -451,7 +451,6 @@ fun StoryViewerContent(
                                 .size(48.dp)
                                 .testTag("story_viewer_close_button")
                         ) {
-                            // GANTI SVG TELEGRAM
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = strings.closeViewerContentDescription,
@@ -491,7 +490,6 @@ fun StoryViewerContent(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // GANTI SVG TELEGRAM
                         Icon(
                             imageVector = Icons.Default.Visibility,
                             contentDescription = strings.viewsSuffix,

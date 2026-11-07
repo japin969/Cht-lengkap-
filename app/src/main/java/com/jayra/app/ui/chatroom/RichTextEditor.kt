@@ -99,7 +99,6 @@ fun RichTextFormattingToolbar(
                     .size(48.dp)
                     .testTag(tag)
             ) {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = iconVector,
                     contentDescription = option.label,
@@ -208,7 +207,6 @@ fun RichTextEditor(
                     .size(48.dp)
                     .testTag("attach_button")
             ) {
-                // GANTI SVG TELEGRAM
                 Icon(
                     imageVector = Icons.Default.AttachFile,
                     contentDescription = config.attachContentDescription,
@@ -266,7 +264,6 @@ fun RichTextEditor(
                         .size(48.dp)
                         .testTag("send_button")
                 ) {
-                    // GANTI SVG TELEGRAM
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = config.sendContentDescription,
@@ -280,7 +277,6 @@ fun RichTextEditor(
 }
 
 private fun iconForFormatType(type: RichTextFormatType): ImageVector {
-    // GANTI SVG TELEGRAM
     return when (type) {
         RichTextFormatType.BOLD -> Icons.Default.FormatBold
         RichTextFormatType.ITALIC -> Icons.Default.FormatItalic
