@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -54,7 +56,7 @@ fun LoginScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.Send,
+                        imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Logo",
                         tint = Color.White,
                         modifier = Modifier.size(36.dp)
