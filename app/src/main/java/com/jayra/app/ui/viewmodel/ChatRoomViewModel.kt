@@ -298,9 +298,9 @@ class ChatRoomViewModel @JvmOverloads constructor(
         simulatedResponseJob?.cancel()
         simulatedResponseJob = viewModelScope.launch {
             delay(1200L)
-            setTyping(true)
+            this@ChatRoomViewModel.setTyping(true)
             delay(2400L)
-            setTyping(false)
+            this@ChatRoomViewModel.setTyping(false)
 
             val contactName = contactRepository.getContactById(currentChatId).name
             val replies = listOf(
