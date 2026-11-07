@@ -196,7 +196,7 @@ class AssistantViewModel @JvmOverloads constructor(
 
                 if (response.isSuccessful && response.body() != null) {
                     val aiBody: AIResponse = response.body()!!
-                    val aiText = aiBody.getText()
+                    val aiText = aiBody.getExtractedText()
                     val aiTime = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
                     val aiMsg = Message(
                         id = UUID.randomUUID().toString(),
