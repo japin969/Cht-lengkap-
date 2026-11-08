@@ -38,13 +38,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CallMade
 import androidx.compose.material.icons.automirrored.filled.CallMissed
 import androidx.compose.material.icons.automirrored.filled.CallReceived
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -246,7 +246,7 @@ fun CallsScreenContent(
                             modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Clear,
+                                imageVector = Icons.Rounded.Clear,
                                 contentDescription = "Tutup Pencarian",
                                 tint = Color.White
                             )
@@ -269,7 +269,7 @@ fun CallsScreenContent(
                                 .testTag("calls_search_icon")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Search,
+                                imageVector = Icons.Rounded.Search,
                                 contentDescription = "Cari",
                                 tint = Color.White
                             )
@@ -283,7 +283,7 @@ fun CallsScreenContent(
                                     .testTag("calls_more_options")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.MoreVert,
+                                    imageVector = Icons.Rounded.MoreVert,
                                     contentDescription = "Opsi Lainnya",
                                     tint = Color.White
                                 )
@@ -324,7 +324,7 @@ fun CallsScreenContent(
                     .testTag("fab_new_call")
             ) {
                 Icon(
-                    imageVector = Icons.Default.Call,
+                    imageVector = Icons.Rounded.Call,
                     contentDescription = "Panggilan Baru",
                     modifier = Modifier.size(24.dp)
                 )
@@ -524,7 +524,7 @@ fun CallItemRow(
                         Text("Hapus", color = Color.White, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            imageVector = Icons.Rounded.Delete,
                             contentDescription = "Hapus Riwayat",
                             tint = Color.White
                         )
@@ -532,7 +532,7 @@ fun CallItemRow(
                 } else if (direction == SwipeToDismissBoxValue.StartToEnd) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.Call,
+                            imageVector = Icons.Rounded.Call,
                             contentDescription = "Panggil",
                             tint = Color.White
                         )
@@ -632,7 +632,7 @@ fun CallItemRow(
                         if (call.isVideo) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(
-                                imageVector = Icons.Default.Videocam,
+                                imageVector = Icons.Rounded.Videocam,
                                 contentDescription = "Video Call",
                                 tint = JayraSubtext,
                                 modifier = Modifier.size(16.dp)
@@ -649,7 +649,7 @@ fun CallItemRow(
                         .testTag("call_action_button_${call.id}")
                 ) {
                     Icon(
-                        imageVector = if (call.isVideo) Icons.Default.Videocam else Icons.Default.Call,
+                        imageVector = if (call.isVideo) Icons.Rounded.Videocam else Icons.Rounded.Call,
                         contentDescription = "Panggil Balik",
                         tint = JayraBlue,
                         modifier = Modifier.size(24.dp)
@@ -662,7 +662,7 @@ fun CallItemRow(
                 ) {
                     DropdownMenuItem(
                         text = { Text("Panggil Suara") },
-                        leadingIcon = { Icon(Icons.Default.Call, contentDescription = null, tint = JayraBlue) },
+                        leadingIcon = { Icon(Icons.Rounded.Call, contentDescription = null, tint = JayraBlue) },
                         onClick = {
                             showMenu = false
                             onVoiceCall()
@@ -670,7 +670,7 @@ fun CallItemRow(
                     )
                     DropdownMenuItem(
                         text = { Text("Panggil Video") },
-                        leadingIcon = { Icon(Icons.Default.Videocam, contentDescription = null, tint = JayraBlue) },
+                        leadingIcon = { Icon(Icons.Rounded.Videocam, contentDescription = null, tint = JayraBlue) },
                         onClick = {
                             showMenu = false
                             onVideoCall()
@@ -678,7 +678,7 @@ fun CallItemRow(
                     )
                     DropdownMenuItem(
                         text = { Text("Info Kontak") },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = null) },
                         onClick = {
                             showMenu = false
                             onContactInfo()
@@ -687,7 +687,7 @@ fun CallItemRow(
                     HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("Hapus dari Riwayat", color = JayraDangerRed) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = JayraDangerRed) },
+                        leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = JayraDangerRed) },
                         onClick = {
                             showMenu = false
                             onDeleteCall()
@@ -782,7 +782,7 @@ fun CallsEmptyState() {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Call,
+                imageVector = Icons.Rounded.Call,
                 contentDescription = null,
                 tint = JayraBlue,
                 modifier = Modifier.size(40.dp)
@@ -901,10 +901,10 @@ fun NewCallDialog(
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(onClick = { onCallVoice(id, name) }) {
-                                Icon(Icons.Default.Call, contentDescription = "Voice", tint = JayraBlue)
+                                Icon(Icons.Rounded.Call, contentDescription = "Voice", tint = JayraBlue)
                             }
                             IconButton(onClick = { onCallVideo(id, name) }) {
-                                Icon(Icons.Default.Videocam, contentDescription = "Video", tint = JayraBlue)
+                                Icon(Icons.Rounded.Videocam, contentDescription = "Video", tint = JayraBlue)
                             }
                         }
                     }

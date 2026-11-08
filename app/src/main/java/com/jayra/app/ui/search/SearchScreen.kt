@@ -28,14 +28,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -206,7 +206,7 @@ fun SearchContent(
                                 .testTag("search_btn_clear")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = "Hapus",
                                 tint = Color.White,
                                 modifier = Modifier.size(22.dp)
@@ -363,12 +363,12 @@ private fun SearchResultRow(
                 // Fallback icon based on type
                 Icon(
                     imageVector = when (result.type) {
-                        SearchResultType.CHANNEL -> Icons.Default.VolumeUp
-                        SearchResultType.GROUP -> Icons.Default.Group
-                        SearchResultType.CONTACT -> Icons.Default.Person
-                        SearchResultType.MESSAGE -> Icons.Default.Forum
-                        SearchResultType.CHAT -> Icons.Default.Person
-                        SearchResultType.FILE -> Icons.Default.Forum
+                        SearchResultType.CHANNEL -> Icons.Rounded.VolumeUp
+                        SearchResultType.GROUP -> Icons.Rounded.Group
+                        SearchResultType.CONTACT -> Icons.Rounded.Person
+                        SearchResultType.MESSAGE -> Icons.Rounded.Forum
+                        SearchResultType.CHAT -> Icons.Rounded.Person
+                        SearchResultType.FILE -> Icons.Rounded.Forum
                     },
                     contentDescription = null,
                     tint = Color.White,
@@ -508,7 +508,7 @@ private fun SearchEmptyView(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.SearchOff,
+            imageVector = Icons.Rounded.SearchOff,
             contentDescription = null,
             tint = JayraSubtext.copy(alpha = 0.5f),
             modifier = Modifier.size(72.dp)
@@ -543,7 +543,7 @@ private fun SearchErrorView(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Warning,
+            imageVector = Icons.Rounded.Warning,
             contentDescription = null,
             tint = Color(0xFFE74C3C),
             modifier = Modifier.size(56.dp)

@@ -25,12 +25,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.FormatBold
-import androidx.compose.material.icons.filled.FormatItalic
-import androidx.compose.material.icons.filled.FormatStrikethrough
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.rounded.AttachFile
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.FormatBold
+import androidx.compose.material.icons.rounded.FormatItalic
+import androidx.compose.material.icons.rounded.FormatStrikethrough
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -208,7 +208,7 @@ fun RichTextEditor(
                     .testTag("attach_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.AttachFile,
+                    imageVector = Icons.Rounded.AttachFile,
                     contentDescription = config.attachContentDescription,
                     tint = JayraSubtext,
                     modifier = Modifier.size(24.dp)
@@ -278,11 +278,11 @@ fun RichTextEditor(
 
 private fun iconForFormatType(type: RichTextFormatType): ImageVector {
     return when (type) {
-        RichTextFormatType.BOLD -> Icons.Default.FormatBold
-        RichTextFormatType.ITALIC -> Icons.Default.FormatItalic
-        RichTextFormatType.STRIKETHROUGH -> Icons.Default.FormatStrikethrough
-        RichTextFormatType.CODE -> Icons.Default.Code
-        RichTextFormatType.LINK -> Icons.Default.Link
+        RichTextFormatType.BOLD -> Icons.Rounded.FormatBold
+        RichTextFormatType.ITALIC -> Icons.Rounded.FormatItalic
+        RichTextFormatType.STRIKETHROUGH -> Icons.Rounded.FormatStrikethrough
+        RichTextFormatType.CODE -> Icons.Rounded.Code
+        RichTextFormatType.LINK -> Icons.Rounded.Link
     }
 }
 

@@ -26,11 +26,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Forward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.DoneAll
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -303,7 +303,7 @@ fun MessageBubble(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.LocationOn,
+                                    imageVector = Icons.Rounded.LocationOn,
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(20.dp)
@@ -342,7 +342,7 @@ fun MessageBubble(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Person,
+                                    imageVector = Icons.Rounded.Person,
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(22.dp)
@@ -401,7 +401,7 @@ fun MessageBubble(
                             }
                             MessageStatus.SENT -> {
                                 Icon(
-                                    imageVector = Icons.Default.Done,
+                                    imageVector = Icons.Rounded.Done,
                                     contentDescription = "Sent",
                                     tint = JayraSubtext,
                                     modifier = Modifier.size(14.dp)
@@ -409,7 +409,7 @@ fun MessageBubble(
                             }
                             MessageStatus.READ, MessageStatus.DELIVERED -> {
                                 Icon(
-                                    imageVector = Icons.Default.DoneAll,
+                                    imageVector = Icons.Rounded.DoneAll,
                                     contentDescription = "Read",
                                     tint = JayraBlue,
                                     modifier = Modifier.size(14.dp)
@@ -622,7 +622,7 @@ fun ChatInputBar(
                         .testTag("cancel_reply_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = Icons.Rounded.Close,
                         contentDescription = config.cancelReplyContentDescription,
                         tint = JayraSubtext,
                         modifier = Modifier.size(18.dp)

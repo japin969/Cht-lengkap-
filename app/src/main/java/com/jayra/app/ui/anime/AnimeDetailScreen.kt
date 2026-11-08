@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -64,7 +64,7 @@ fun AnimeDetailScreen(
             items(state.episodes) { ep ->
                 ListItem(
                     headlineContent = { Text(ep.title ?: "Episode ${ep.episode}") },
-                    leadingContent = { Icon(Icons.Default.PlayArrow, null) },
+                    leadingContent = { Icon(Icons.Rounded.PlayArrow, null) },
                     modifier = Modifier.clickable {
                         ep.episodeUrl?.let { onPlayEpisode(it) }
                     }

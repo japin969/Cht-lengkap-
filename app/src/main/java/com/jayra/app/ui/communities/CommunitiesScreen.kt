@@ -26,10 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -274,7 +274,7 @@ fun CommunitiesContent(
                         .testTag("communities_add_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        imageVector = Icons.Rounded.Add,
                         contentDescription = strings.addContentDescription,
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(24.dp)
@@ -320,7 +320,7 @@ fun CommunitiesContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Groups,
+                                imageVector = Icons.Rounded.Groups,
                                 contentDescription = null,
                                 tint = JayraBlue,
                                 modifier = Modifier.size(36.dp)
@@ -372,7 +372,7 @@ fun CommunitiesContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = null,
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -524,7 +524,7 @@ fun CommunitiesContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Forum,
+                                imageVector = Icons.Rounded.Forum,
                                 contentDescription = null,
                                 tint = JayraBlue,
                                 modifier = Modifier.size(20.dp)

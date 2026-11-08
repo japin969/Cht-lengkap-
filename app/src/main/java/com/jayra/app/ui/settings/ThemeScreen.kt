@@ -23,10 +23,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.SettingsBrightness
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.SettingsBrightness
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -246,9 +246,9 @@ fun ThemeContent(
                             uiState.availableThemes.forEachIndexed { index, option ->
                                 val isSelected = uiState.currentTheme == option.id
                                 val icon = when (option.id) {
-                                    "light" -> Icons.Default.LightMode
-                                    "dark" -> Icons.Default.DarkMode
-                                    else -> Icons.Default.SettingsBrightness
+                                    "light" -> Icons.Rounded.LightMode
+                                    "dark" -> Icons.Rounded.DarkMode
+                                    else -> Icons.Rounded.SettingsBrightness
                                 }
 
                                 ThemeRadioRow(
@@ -299,7 +299,7 @@ fun ThemeContent(
                                 ) {
                                     if (isSelected) {
                                         Icon(
-                                            imageVector = Icons.Default.Check,
+                                            imageVector = Icons.Rounded.Check,
                                             contentDescription = "Dipilih",
                                             tint = Color.White,
                                             modifier = Modifier.size(24.dp)

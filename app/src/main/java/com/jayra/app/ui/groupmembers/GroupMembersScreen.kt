@@ -29,18 +29,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.AdminPanelSettings
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Chat
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -226,7 +226,7 @@ fun GroupMembersContent(
                             modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = "Tutup",
                                 tint = Color.White,
                                 modifier = Modifier.size(22.dp)
@@ -261,7 +261,7 @@ fun GroupMembersContent(
                                 .testTag("group_members_action_search")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Search,
+                                imageVector = Icons.Rounded.Search,
                                 contentDescription = "Cari",
                                 tint = Color.White,
                                 modifier = Modifier.size(24.dp)
@@ -276,7 +276,7 @@ fun GroupMembersContent(
                                     .testTag("group_members_action_add")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.PersonAdd,
+                                    imageVector = Icons.Rounded.PersonAdd,
                                     contentDescription = "Tambah Anggota",
                                     tint = Color.White,
                                     modifier = Modifier.size(24.dp)
@@ -296,7 +296,7 @@ fun GroupMembersContent(
                     modifier = Modifier.testTag("fab_add_group_member")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PersonAdd,
+                        imageVector = Icons.Rounded.PersonAdd,
                         contentDescription = "Tambah Anggota"
                     )
                 }
@@ -461,7 +461,7 @@ private fun MemberItemRow(
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = "Hapus Anggota",
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
@@ -562,7 +562,7 @@ private fun MemberItemRow(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        imageVector = Icons.Rounded.MoreVert,
                         contentDescription = "Opsi Anggota",
                         tint = JayraSubtext,
                         modifier = Modifier.size(20.dp)
@@ -576,7 +576,7 @@ private fun MemberItemRow(
                     DropdownMenuItem(
                         text = { Text("Kirim Pesan") },
                         leadingIcon = {
-                            Icon(Icons.Default.Chat, contentDescription = null, tint = JayraBlue)
+                            Icon(Icons.Rounded.Chat, contentDescription = null, tint = JayraBlue)
                         },
                         onClick = {
                             showMenu = false
@@ -586,7 +586,7 @@ private fun MemberItemRow(
                     DropdownMenuItem(
                         text = { Text("Panggilan Suara") },
                         leadingIcon = {
-                            Icon(Icons.Default.Call, contentDescription = null, tint = JayraBlue)
+                            Icon(Icons.Rounded.Call, contentDescription = null, tint = JayraBlue)
                         },
                         onClick = {
                             showMenu = false
@@ -596,7 +596,7 @@ private fun MemberItemRow(
                     DropdownMenuItem(
                         text = { Text("Panggilan Video") },
                         leadingIcon = {
-                            Icon(Icons.Default.Videocam, contentDescription = null, tint = JayraBlue)
+                            Icon(Icons.Rounded.Videocam, contentDescription = null, tint = JayraBlue)
                         },
                         onClick = {
                             showMenu = false
@@ -607,7 +607,7 @@ private fun MemberItemRow(
                         DropdownMenuItem(
                             text = { Text(if (isAdmin) "Hapus dari Admin" else "Jadikan Admin") },
                             leadingIcon = {
-                                Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = JayraBlue)
+                                Icon(Icons.Rounded.AdminPanelSettings, contentDescription = null, tint = JayraBlue)
                             },
                             onClick = {
                                 showMenu = false
@@ -617,7 +617,7 @@ private fun MemberItemRow(
                         DropdownMenuItem(
                             text = { Text("Hapus dari Grup", color = JayraDangerRed) },
                             leadingIcon = {
-                                Icon(Icons.Default.Delete, contentDescription = null, tint = JayraDangerRed)
+                                Icon(Icons.Rounded.Delete, contentDescription = null, tint = JayraDangerRed)
                             },
                             onClick = {
                                 showMenu = false
@@ -641,7 +641,7 @@ private fun GroupMembersEmptyView() {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.SearchOff,
+            imageVector = Icons.Rounded.SearchOff,
             contentDescription = null,
             tint = JayraSubtext.copy(alpha = 0.5f),
             modifier = Modifier.size(72.dp)
@@ -669,7 +669,7 @@ private fun GroupMembersErrorView(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Warning,
+            imageVector = Icons.Rounded.Warning,
             contentDescription = null,
             tint = JayraDangerRed,
             modifier = Modifier.size(56.dp)

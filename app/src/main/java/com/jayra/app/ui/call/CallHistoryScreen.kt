@@ -24,9 +24,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CallMade
 import androidx.compose.material.icons.automirrored.filled.CallMissed
 import androidx.compose.material.icons.automirrored.filled.CallReceived
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -220,7 +220,7 @@ fun CallHistoryContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Call,
+                                imageVector = Icons.Rounded.Call,
                                 contentDescription = null,
                                 tint = JayraBlue,
                                 modifier = Modifier.size(44.dp)
@@ -262,7 +262,7 @@ fun CallHistoryContent(
                             modifier = Modifier.testTag("call_history_retry_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                imageVector = Icons.Rounded.Refresh,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -398,7 +398,7 @@ fun CallItemRow(
             modifier = Modifier.testTag("call_action_${call.id}")
         ) {
             Icon(
-                imageVector = if (call.isVideo) Icons.Default.Videocam else Icons.Default.Call,
+                imageVector = if (call.isVideo) Icons.Rounded.Videocam else Icons.Rounded.Call,
                 contentDescription = if (call.isVideo) "Panggilan Video" else "Panggilan Suara",
                 tint = JayraSubtext,
                 modifier = Modifier.size(24.dp)

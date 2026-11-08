@@ -33,11 +33,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesomeMotion
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesomeMotion
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -303,7 +303,7 @@ fun StoryAlbumsContent(
                         .testTag("stories_add_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        imageVector = Icons.Rounded.Add,
                         contentDescription = strings.addStoryContentDescription,
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(24.dp)
@@ -349,7 +349,7 @@ fun StoryAlbumsContent(
                             leadingIcon = if (isSelected) {
                                 {
                                     Icon(
-                                        imageVector = Icons.Default.Check,
+                                        imageVector = Icons.Rounded.Check,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -407,7 +407,7 @@ fun StoryAlbumsContent(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.AutoAwesomeMotion,
+                                    imageVector = Icons.Rounded.AutoAwesomeMotion,
                                     contentDescription = strings.screenTitle,
                                     tint = JayraBlue,
                                     modifier = Modifier.size(36.dp)
@@ -455,7 +455,7 @@ fun StoryAlbumsContent(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Warning,
+                                imageVector = Icons.Rounded.Warning,
                                 contentDescription = strings.retryButtonLabel,
                                 tint = JayraDangerRed,
                                 modifier = Modifier.size(48.dp)

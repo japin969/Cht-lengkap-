@@ -23,15 +23,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -176,7 +176,7 @@ fun PrivacyContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = "Error",
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -223,7 +223,7 @@ fun PrivacyContent(
                                             .background(cardBg)
                                     ) {
                                         InfoSwitchRow(
-                                            icon = Icons.Default.Lock,
+                                            icon = Icons.Rounded.Lock,
                                             iconTint = JayraBlue,
                                             title = "Kunci Aplikasi",
                                             checked = settings.isAppLockEnabled,
@@ -231,7 +231,7 @@ fun PrivacyContent(
                                             showSeparator = true
                                         )
                                         InfoSettingRow(
-                                            icon = Icons.Default.Security,
+                                            icon = Icons.Rounded.Security,
                                             iconTint = JayraSuccessGreen,
                                             title = "Verifikasi Dua Langkah",
                                             valueText = if (settings.isTwoStepVerificationEnabled) "Aktif" else "Mati",
@@ -239,7 +239,7 @@ fun PrivacyContent(
                                             showSeparator = true
                                         )
                                         InfoSettingRow(
-                                            icon = Icons.Default.Devices,
+                                            icon = Icons.Rounded.Devices,
                                             iconTint = JayraOrange,
                                             title = "Perangkat Aktif",
                                             valueText = "${settings.activeDevicesCount}",
@@ -265,7 +265,7 @@ fun PrivacyContent(
                                             .background(cardBg)
                                     ) {
                                         InfoSettingRow(
-                                            icon = Icons.Default.Phone,
+                                            icon = Icons.Rounded.Phone,
                                             iconTint = JayraBlue,
                                             title = "Nomor Telepon",
                                             valueText = settings.phoneNumberPrivacy,
@@ -281,7 +281,7 @@ fun PrivacyContent(
                                             showSeparator = true
                                         )
                                         InfoSettingRow(
-                                            icon = Icons.Default.AccountCircle,
+                                            icon = Icons.Rounded.AccountCircle,
                                             iconTint = JayraOrange,
                                             title = "Foto Profil",
                                             valueText = settings.profilePhotoPrivacy,
@@ -289,7 +289,7 @@ fun PrivacyContent(
                                             showSeparator = true
                                         )
                                         InfoSettingRow(
-                                            icon = Icons.Default.Timer,
+                                            icon = Icons.Rounded.Timer,
                                             iconTint = JayraBlue,
                                             title = "Pesan Sementara",
                                             valueText = settings.disappearingDuration,
@@ -297,7 +297,7 @@ fun PrivacyContent(
                                             showSeparator = true
                                         )
                                         InfoSettingRow(
-                                            icon = Icons.Default.Key,
+                                            icon = Icons.Rounded.Key,
                                             iconTint = JayraSubtext,
                                             title = "Kunci Sandi",
                                             onClick = onPasscodeClick,

@@ -33,13 +33,13 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -182,7 +182,7 @@ fun MusicHomeContent(
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = Icons.Rounded.Search,
                         contentDescription = "Cari",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
@@ -196,7 +196,7 @@ fun MusicHomeContent(
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = Icons.Rounded.MoreVert,
                             contentDescription = "Menu Lainnya",
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
@@ -252,7 +252,7 @@ fun MusicHomeContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Search,
+                    imageVector = Icons.Rounded.Search,
                     contentDescription = "Search",
                     tint = JayraSubtext,
                     modifier = Modifier.size(16.dp)
@@ -286,7 +286,7 @@ fun MusicHomeContent(
 
                 if (searchQuery.isNotEmpty()) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = Icons.Rounded.Close,
                         contentDescription = "Hapus teks",
                         tint = JayraSubtext,
                         modifier = Modifier
@@ -399,7 +399,7 @@ private fun MusicSongItem(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.MusicNote,
+                        imageVector = Icons.Rounded.MusicNote,
                         contentDescription = "Cover",
                         tint = JayraSubtext,
                         modifier = Modifier.size(28.dp)
@@ -443,7 +443,7 @@ private fun MusicSongItem(
                     .testTag("play_song_${song.id}")
             ) {
                 Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = if (isPlaying) "Jeda" else "Putar",
                     tint = JayraBlue,
                     modifier = Modifier.size(24.dp)
@@ -513,7 +513,7 @@ private fun MusicMiniPlayer(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.MusicNote,
+                        imageVector = Icons.Rounded.MusicNote,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
@@ -546,7 +546,7 @@ private fun MusicMiniPlayer(
                 modifier = Modifier.size(44.dp)
             ) {
                 Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
                     tint = JayraBlue,
                     modifier = Modifier.size(28.dp)
@@ -569,7 +569,7 @@ private fun MusicEmptyState(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.MusicNote,
+            imageVector = Icons.Rounded.MusicNote,
             contentDescription = "Music",
             tint = JayraSubtext,
             modifier = Modifier.size(64.dp)
@@ -607,7 +607,7 @@ private fun MusicErrorState(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Warning,
+            imageVector = Icons.Rounded.Warning,
             contentDescription = "Warning",
             tint = JayraDangerRed,
             modifier = Modifier.size(48.dp)

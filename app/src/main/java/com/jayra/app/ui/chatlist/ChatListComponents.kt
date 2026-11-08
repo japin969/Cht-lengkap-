@@ -28,13 +28,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.NotificationsOff
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Archive
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DoneAll
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -96,7 +96,7 @@ fun JayraSearchBar(
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(
-                imageVector = Icons.Default.Search,
+                imageVector = Icons.Rounded.Search,
                 contentDescription = "Search icon",
                 tint = JayraSubtext,
                 modifier = Modifier.size(16.dp)
@@ -266,7 +266,7 @@ fun ChatItemRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (chat.isRead) {
                         Icon(
-                            imageVector = Icons.Default.DoneAll,
+                            imageVector = Icons.Rounded.DoneAll,
                             contentDescription = "Read",
                             tint = JayraBlue,
                             modifier = Modifier.size(14.dp)
@@ -285,7 +285,7 @@ fun ChatItemRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (chat.isMuted) {
                         Icon(
-                            imageVector = Icons.Default.NotificationsOff,
+                            imageVector = Icons.Rounded.NotificationsOff,
                             contentDescription = "Muted",
                             tint = JayraSubtext,
                             modifier = Modifier.size(12.dp)
@@ -294,7 +294,7 @@ fun ChatItemRow(
                     }
                     if (chat.isPinned) {
                         Icon(
-                            imageVector = Icons.Default.PushPin,
+                            imageVector = Icons.Rounded.PushPin,
                             contentDescription = "Pinned",
                             tint = JayraSubtext,
                             modifier = Modifier.size(12.dp)

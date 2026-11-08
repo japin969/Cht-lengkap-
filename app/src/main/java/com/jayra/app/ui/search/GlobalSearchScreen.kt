@@ -41,15 +41,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -360,7 +360,7 @@ fun GlobalSearchTopBar(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = Icons.Rounded.Close,
                             contentDescription = "Hapus teks pencarian",
                             tint = JayraSubtext,
                             modifier = Modifier.size(24.dp)
@@ -772,7 +772,7 @@ fun GlobalSearchFileItemRow(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Description,
+                imageVector = Icons.Rounded.Description,
                 contentDescription = result.title,
                 tint = JayraBlue,
                 modifier = Modifier.size(28.dp)
@@ -852,12 +852,12 @@ private fun GlobalSearchAvatar(
             } else {
                 Icon(
                     imageVector = when (type) {
-                        SearchResultType.CHANNEL -> Icons.Default.VolumeUp
-                        SearchResultType.GROUP -> Icons.Default.Group
-                        SearchResultType.CONTACT -> Icons.Default.Person
-                        SearchResultType.MESSAGE -> Icons.Default.Forum
-                        SearchResultType.CHAT -> Icons.Default.Person
-                        SearchResultType.FILE -> Icons.Default.Description
+                        SearchResultType.CHANNEL -> Icons.Rounded.VolumeUp
+                        SearchResultType.GROUP -> Icons.Rounded.Group
+                        SearchResultType.CONTACT -> Icons.Rounded.Person
+                        SearchResultType.MESSAGE -> Icons.Rounded.Forum
+                        SearchResultType.CHAT -> Icons.Rounded.Person
+                        SearchResultType.FILE -> Icons.Rounded.Description
                     },
                     contentDescription = title,
                     tint = Color(0xFFFFFFFF),
@@ -886,7 +886,7 @@ fun GlobalSearchIdleView(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Search,
+            imageVector = Icons.Rounded.Search,
             contentDescription = null,
             tint = JayraSubtext,
             modifier = Modifier.size(64.dp)
@@ -933,7 +933,7 @@ fun GlobalSearchEmptyView(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.SearchOff,
+            imageVector = Icons.Rounded.SearchOff,
             contentDescription = null,
             tint = JayraSubtext,
             modifier = Modifier.size(64.dp)
@@ -1075,7 +1075,7 @@ fun GlobalSearchErrorView(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.WarningAmber,
+            imageVector = Icons.Rounded.WarningAmber,
             contentDescription = "Peringatan kesalahan pencarian",
             tint = JayraDangerRed,
             modifier = Modifier.size(48.dp)

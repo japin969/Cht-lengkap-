@@ -21,12 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Message
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Message
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -79,31 +79,31 @@ private val PERMISSION_DEFINITIONS = listOf(
         key = "send_messages",
         title = "Kirim Pesan",
         description = "Mengizinkan anggota mengirim pesan teks dan stiker",
-        icon = Icons.Default.Message
+        icon = Icons.Rounded.Message
     ),
     PermissionItemDef(
         key = "send_media",
         title = "Kirim Media",
         description = "Mengizinkan pengiriman foto, video, berkas, dan audio",
-        icon = Icons.Default.Image
+        icon = Icons.Rounded.Image
     ),
     PermissionItemDef(
         key = "add_members",
         title = "Tambah Anggota",
         description = "Mengizinkan anggota mengundang orang lain ke grup",
-        icon = Icons.Default.PersonAdd
+        icon = Icons.Rounded.PersonAdd
     ),
     PermissionItemDef(
         key = "pin_messages",
         title = "Pin Pesan",
         description = "Mengizinkan anggota menyematkan pesan obrolan penting",
-        icon = Icons.Default.PushPin
+        icon = Icons.Rounded.PushPin
     ),
     PermissionItemDef(
         key = "change_info",
         title = "Ubah Info Grup",
         description = "Mengizinkan penggantian nama, foto, dan deskripsi grup",
-        icon = Icons.Default.Edit
+        icon = Icons.Rounded.Edit
     )
 )
 
@@ -280,7 +280,7 @@ fun MemberPermissionsContent(
                             verticalAlignment = Alignment.Top
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Info,
+                                imageVector = Icons.Rounded.Info,
                                 contentDescription = null,
                                 tint = JayraBlue,
                                 modifier = Modifier

@@ -28,18 +28,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Poll
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Poll
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -312,7 +312,7 @@ fun ChatRoomContent(
                 // Action Icons (Video, Voice, Menu with 16dp spacing)
                 IconButton(onClick = { /* Video Call */ }) {
                     Icon(
-                        imageVector = Icons.Default.Videocam,
+                        imageVector = Icons.Rounded.Videocam,
                         contentDescription = "Video call",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
@@ -320,7 +320,7 @@ fun ChatRoomContent(
                 }
                 IconButton(onClick = { /* Voice Call */ }) {
                     Icon(
-                        imageVector = Icons.Default.Call,
+                        imageVector = Icons.Rounded.Call,
                         contentDescription = "Voice call",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
@@ -329,7 +329,7 @@ fun ChatRoomContent(
                 Box {
                     IconButton(onClick = { showTopMenu = true }) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = Icons.Rounded.MoreVert,
                             contentDescription = "Menu",
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
@@ -446,7 +446,7 @@ fun ChatRoomContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ChatBubbleOutline,
+                            imageVector = Icons.Rounded.ChatBubbleOutline,
                             contentDescription = "Empty chat",
                             tint = JayraSubtext,
                             modifier = Modifier.size(64.dp)
@@ -548,7 +548,7 @@ fun ChatRoomContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
+                        imageVector = Icons.Rounded.KeyboardArrowDown,
                         contentDescription = "Scroll to bottom",
                         tint = JayraBlue,
                         modifier = Modifier.size(24.dp)
@@ -585,7 +585,7 @@ fun ChatRoomContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     AttachmentOptionItem(
-                        icon = Icons.Default.Poll,
+                        icon = Icons.Rounded.Poll,
                         label = "Poling",
                         backgroundColor = JayraBlue,
                         onClick = {
@@ -594,7 +594,7 @@ fun ChatRoomContent(
                         }
                     )
                     AttachmentOptionItem(
-                        icon = Icons.Default.Checklist,
+                        icon = Icons.Rounded.Checklist,
                         label = "Tugas",
                         backgroundColor = JayraSuccessGreen,
                         onClick = {
@@ -603,7 +603,7 @@ fun ChatRoomContent(
                         }
                     )
                     AttachmentOptionItem(
-                        icon = Icons.Default.Mic,
+                        icon = Icons.Rounded.Mic,
                         label = "Suara",
                         backgroundColor = JayraOrange,
                         onClick = {
@@ -612,7 +612,7 @@ fun ChatRoomContent(
                         }
                     )
                     AttachmentOptionItem(
-                        icon = Icons.Default.LocationOn,
+                        icon = Icons.Rounded.LocationOn,
                         label = "Lokasi",
                         backgroundColor = Color(0xFF4CAF50),
                         onClick = {
@@ -621,7 +621,7 @@ fun ChatRoomContent(
                         }
                     )
                     AttachmentOptionItem(
-                        icon = Icons.Default.Person,
+                        icon = Icons.Rounded.Person,
                         label = "Kontak",
                         backgroundColor = Color(0xFFFF9800),
                         onClick = {

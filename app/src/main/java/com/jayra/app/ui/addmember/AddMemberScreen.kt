@@ -31,13 +31,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -201,7 +201,7 @@ fun AddMemberContent(
                                 .testTag("add_member_btn_done")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                imageVector = Icons.Rounded.Check,
                                 contentDescription = "Selesai",
                                 tint = Color.White,
                                 modifier = Modifier.size(26.dp)
@@ -221,7 +221,7 @@ fun AddMemberContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = Icons.Rounded.Search,
                         contentDescription = null,
                         tint = Color.White.copy(alpha = 0.65f),
                         modifier = Modifier.size(18.dp)
@@ -259,7 +259,7 @@ fun AddMemberContent(
                             modifier = Modifier.size(20.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = "Hapus",
                                 tint = Color.White,
                                 modifier = Modifier.size(16.dp)
@@ -297,7 +297,7 @@ fun AddMemberContent(
                     modifier = Modifier.testTag("fab_confirm_add_members")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Check,
+                        imageVector = Icons.Rounded.Check,
                         contentDescription = "Selesai"
                     )
                 }
@@ -393,7 +393,7 @@ private fun SelectedContactChip(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = Icons.Rounded.Close,
                     contentDescription = "Hapus",
                     tint = Color.White,
                     modifier = Modifier.size(12.dp)
@@ -533,7 +533,7 @@ private fun ContactSelectableRow(
         ) {
             if (isSelected) {
                 Icon(
-                    imageVector = Icons.Default.Check,
+                    imageVector = Icons.Rounded.Check,
                     contentDescription = "Dipilih",
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)
@@ -556,7 +556,7 @@ private fun AddMemberEmptyView(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.People,
+            imageVector = Icons.Rounded.People,
             contentDescription = null,
             tint = JayraSubtext.copy(alpha = 0.5f),
             modifier = Modifier.size(72.dp)
@@ -591,7 +591,7 @@ private fun AddMemberErrorView(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Warning,
+            imageVector = Icons.Rounded.Warning,
             contentDescription = null,
             tint = JayraDangerRed,
             modifier = Modifier.size(56.dp)

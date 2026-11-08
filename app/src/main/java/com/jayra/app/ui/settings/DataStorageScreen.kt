@@ -21,15 +21,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Photo
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -182,7 +182,7 @@ fun DataStorageContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = "Error",
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -263,7 +263,7 @@ fun DataStorageContent(
                                 .background(cardBg)
                         ) {
                             StorageCategoryItem(
-                                icon = Icons.Default.Photo,
+                                icon = Icons.Rounded.Photo,
                                 iconTint = JayraOrange,
                                 title = "Foto",
                                 sizeText = info.photoSize,
@@ -271,7 +271,7 @@ fun DataStorageContent(
                                 showSeparator = true
                             )
                             StorageCategoryItem(
-                                icon = Icons.Default.Videocam,
+                                icon = Icons.Rounded.Videocam,
                                 iconTint = JayraDangerRed,
                                 title = "Video",
                                 sizeText = info.videoSize,
@@ -279,7 +279,7 @@ fun DataStorageContent(
                                 showSeparator = true
                             )
                             StorageCategoryItem(
-                                icon = Icons.Default.Description,
+                                icon = Icons.Rounded.Description,
                                 iconTint = JayraBlue,
                                 title = "Dokumen",
                                 sizeText = info.documentSize,
@@ -287,7 +287,7 @@ fun DataStorageContent(
                                 showSeparator = true
                             )
                             StorageCategoryItem(
-                                icon = Icons.Default.MusicNote,
+                                icon = Icons.Rounded.MusicNote,
                                 iconTint = JayraSuccessGreen,
                                 title = "Musik",
                                 sizeText = info.musicSize,
@@ -295,7 +295,7 @@ fun DataStorageContent(
                                 showSeparator = true
                             )
                             StorageCategoryItem(
-                                icon = Icons.Default.Folder,
+                                icon = Icons.Rounded.Folder,
                                 iconTint = JayraSubtext,
                                 title = "Lainnya",
                                 sizeText = info.otherSize,
@@ -313,21 +313,21 @@ fun DataStorageContent(
                                 .background(cardBg)
                         ) {
                             StorageToggleItem(
-                                icon = Icons.Default.Download,
+                                icon = Icons.Rounded.Download,
                                 title = "Unduh Otomatis (Seluler)",
                                 checked = info.autoDownloadCellular,
                                 onCheckedChange = { onToggle("autoDownloadCellular", it) },
                                 showSeparator = true
                             )
                             StorageToggleItem(
-                                icon = Icons.Default.Wifi,
+                                icon = Icons.Rounded.Wifi,
                                 title = "Unduh Otomatis (Wi-Fi)",
                                 checked = info.autoDownloadWifi,
                                 onCheckedChange = { onToggle("autoDownloadWifi", it) },
                                 showSeparator = true
                             )
                             StorageToggleItem(
-                                icon = Icons.Default.Public,
+                                icon = Icons.Rounded.Public,
                                 title = "Unduh Otomatis (Roaming)",
                                 checked = info.autoDownloadRoaming,
                                 onCheckedChange = { onToggle("autoDownloadRoaming", it) },

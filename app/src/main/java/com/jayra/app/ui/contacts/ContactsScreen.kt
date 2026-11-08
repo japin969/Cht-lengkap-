@@ -29,19 +29,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.NotificationsOff
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Chat
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -225,7 +225,7 @@ fun ContactsScreenContent(
                             modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Clear,
+                                imageVector = Icons.Rounded.Clear,
                                 contentDescription = "Tutup Pencarian",
                                 tint = Color.White
                             )
@@ -248,7 +248,7 @@ fun ContactsScreenContent(
                                 .testTag("contacts_search_icon")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Search,
+                                imageVector = Icons.Rounded.Search,
                                 contentDescription = "Cari",
                                 tint = Color.White
                             )
@@ -261,7 +261,7 @@ fun ContactsScreenContent(
                                 .testTag("contacts_add_icon")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.PersonAdd,
+                                imageVector = Icons.Rounded.PersonAdd,
                                 contentDescription = "Tambah Kontak",
                                 tint = Color.White
                             )
@@ -273,7 +273,7 @@ fun ContactsScreenContent(
                                 modifier = Modifier.size(48.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.MoreVert,
+                                    imageVector = Icons.Rounded.MoreVert,
                                     contentDescription = "Opsi",
                                     tint = Color.White
                                 )
@@ -308,7 +308,7 @@ fun ContactsScreenContent(
                     .testTag("fab_add_contact")
             ) {
                 Icon(
-                    imageVector = Icons.Default.PersonAdd,
+                    imageVector = Icons.Rounded.PersonAdd,
                     contentDescription = "Tambah Kontak",
                     modifier = Modifier.size(24.dp)
                 )
@@ -473,7 +473,7 @@ fun ContactItemRow(
                         Text("Hapus", color = Color.White, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            imageVector = Icons.Rounded.Delete,
                             contentDescription = "Hapus",
                             tint = Color.White
                         )
@@ -481,7 +481,7 @@ fun ContactItemRow(
                 } else if (direction == SwipeToDismissBoxValue.StartToEnd) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.NotificationsOff,
+                            imageVector = Icons.Rounded.NotificationsOff,
                             contentDescription = "Bisukan",
                             tint = Color.White
                         )
@@ -576,7 +576,7 @@ fun ContactItemRow(
 
                 if (user.isMuted) {
                     Icon(
-                        imageVector = Icons.Default.NotificationsOff,
+                        imageVector = Icons.Rounded.NotificationsOff,
                         contentDescription = "Dibisukan",
                         tint = JayraSubtext,
                         modifier = Modifier
@@ -594,7 +594,7 @@ fun ContactItemRow(
                             .testTag("contact_item_options_${user.id}")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = Icons.Rounded.MoreVert,
                             contentDescription = "Opsi Kontak",
                             tint = JayraSubtext
                         )
@@ -606,7 +606,7 @@ fun ContactItemRow(
                     ) {
                         DropdownMenuItem(
                             text = { Text("Kirim Pesan") },
-                            leadingIcon = { Icon(Icons.Default.Chat, contentDescription = null, tint = JayraBlue) },
+                            leadingIcon = { Icon(Icons.Rounded.Chat, contentDescription = null, tint = JayraBlue) },
                             onClick = {
                                 showMenu = false
                                 onClick()
@@ -614,7 +614,7 @@ fun ContactItemRow(
                         )
                         DropdownMenuItem(
                             text = { Text("Panggil Suara") },
-                            leadingIcon = { Icon(Icons.Default.Call, contentDescription = null, tint = JayraBlue) },
+                            leadingIcon = { Icon(Icons.Rounded.Call, contentDescription = null, tint = JayraBlue) },
                             onClick = {
                                 showMenu = false
                                 onVoiceCall()
@@ -622,7 +622,7 @@ fun ContactItemRow(
                         )
                         DropdownMenuItem(
                             text = { Text("Panggil Video") },
-                            leadingIcon = { Icon(Icons.Default.Videocam, contentDescription = null, tint = JayraBlue) },
+                            leadingIcon = { Icon(Icons.Rounded.Videocam, contentDescription = null, tint = JayraBlue) },
                             onClick = {
                                 showMenu = false
                                 onVideoCall()
@@ -630,7 +630,7 @@ fun ContactItemRow(
                         )
                         DropdownMenuItem(
                             text = { Text(if (user.isMuted) "Bunyikan Notifikasi" else "Bisukan Notifikasi") },
-                            leadingIcon = { Icon(Icons.Default.NotificationsOff, contentDescription = null, tint = JayraOrange) },
+                            leadingIcon = { Icon(Icons.Rounded.NotificationsOff, contentDescription = null, tint = JayraOrange) },
                             onClick = {
                                 showMenu = false
                                 onToggleMute()
@@ -638,7 +638,7 @@ fun ContactItemRow(
                         )
                         DropdownMenuItem(
                             text = { Text("Blokir Pengguna") },
-                            leadingIcon = { Icon(Icons.Default.Block, contentDescription = null, tint = JayraSubtext) },
+                            leadingIcon = { Icon(Icons.Rounded.Block, contentDescription = null, tint = JayraSubtext) },
                             onClick = {
                                 showMenu = false
                                 onBlockUser()
@@ -647,7 +647,7 @@ fun ContactItemRow(
                         HorizontalDivider()
                         DropdownMenuItem(
                             text = { Text("Hapus Kontak", color = JayraDangerRed) },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = JayraDangerRed) },
+                            leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = JayraDangerRed) },
                             onClick = {
                                 showMenu = false
                                 onDeleteContact()
@@ -737,7 +737,7 @@ fun ContactsEmptyState(onAddClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Person,
+                imageVector = Icons.Rounded.Person,
                 contentDescription = null,
                 tint = JayraBlue,
                 modifier = Modifier.size(40.dp)
@@ -769,7 +769,7 @@ fun ContactsEmptyState(onAddClick: () -> Unit) {
             onClick = onAddClick,
             modifier = Modifier.testTag("btn_add_first_contact")
         ) {
-            Icon(Icons.Default.Add, contentDescription = null, tint = JayraBlue)
+            Icon(Icons.Rounded.Add, contentDescription = null, tint = JayraBlue)
             Spacer(modifier = Modifier.width(6.dp))
             Text("Tambah Kontak Sekarang", color = JayraBlue, fontWeight = FontWeight.Bold)
         }

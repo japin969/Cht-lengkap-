@@ -25,17 +25,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Message
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Message
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -279,7 +279,7 @@ fun GroupSettingsContent(
                         .testTag("group_settings_save")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Check,
+                        imageVector = Icons.Rounded.Check,
                         contentDescription = "Simpan",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
@@ -351,7 +351,7 @@ fun GroupSettingsContent(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.CameraAlt,
+                                            imageVector = Icons.Rounded.CameraAlt,
                                             contentDescription = "Ganti Foto",
                                             tint = Color.White,
                                             modifier = Modifier.size(24.dp)
@@ -444,7 +444,7 @@ fun GroupSettingsContent(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.Default.Security,
+                                        imageVector = Icons.Rounded.Security,
                                         contentDescription = null,
                                         tint = JayraBlue,
                                         modifier = Modifier.size(24.dp)
@@ -472,27 +472,27 @@ fun GroupSettingsContent(
                             // Quick Permissions Summary
                             val perms = currentGroup?.permissions ?: emptyMap()
                             PermissionSummaryItem(
-                                icon = Icons.Default.Message,
+                                icon = Icons.Rounded.Message,
                                 title = "Kirim Pesan",
                                 role = perms["send_messages"] ?: "Semua Anggota"
                             )
                             PermissionSummaryItem(
-                                icon = Icons.Default.Image,
+                                icon = Icons.Rounded.Image,
                                 title = "Kirim Media",
                                 role = perms["send_media"] ?: "Semua Anggota"
                             )
                             PermissionSummaryItem(
-                                icon = Icons.Default.PersonAdd,
+                                icon = Icons.Rounded.PersonAdd,
                                 title = "Tambah Anggota",
                                 role = perms["add_members"] ?: "Admin"
                             )
                             PermissionSummaryItem(
-                                icon = Icons.Default.PushPin,
+                                icon = Icons.Rounded.PushPin,
                                 title = "Pin Pesan",
                                 role = perms["pin_messages"] ?: "Admin"
                             )
                             PermissionSummaryItem(
-                                icon = Icons.Default.Edit,
+                                icon = Icons.Rounded.Edit,
                                 title = "Ubah Info Grup",
                                 role = perms["change_info"] ?: "Admin"
                             )
@@ -530,7 +530,7 @@ fun GroupSettingsContent(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.Default.Timer,
+                                        imageVector = Icons.Rounded.Timer,
                                         contentDescription = null,
                                         tint = JayraBlue,
                                         modifier = Modifier.size(24.dp)
@@ -576,7 +576,7 @@ fun GroupSettingsContent(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Lock,
+                                        imageVector = Icons.Rounded.Lock,
                                         contentDescription = null,
                                         tint = JayraBlue,
                                         modifier = Modifier.size(24.dp)
@@ -678,7 +678,7 @@ fun GroupSettingsContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
+                                imageVector = Icons.Rounded.Delete,
                                 contentDescription = "Hapus Grup",
                                 tint = JayraDangerRed,
                                 modifier = Modifier.size(24.dp)

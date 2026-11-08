@@ -25,11 +25,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Policy
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -221,21 +221,21 @@ fun AboutContent(
                             AboutRowItem(
                                 title = "Pengembang",
                                 subtitle = uiState.developer,
-                                icon = Icons.Default.VerifiedUser,
+                                icon = Icons.Rounded.VerifiedUser,
                                 iconTint = JayraBlue
                             )
                             Spacer(modifier = Modifier.height(14.dp))
                             AboutRowItem(
                                 title = "Lisensi",
                                 subtitle = uiState.license,
-                                icon = Icons.Default.Code,
+                                icon = Icons.Rounded.Code,
                                 iconTint = JayraOrange
                             )
                             Spacer(modifier = Modifier.height(14.dp))
                             AboutRowItem(
                                 title = "Rilis Terakhir",
                                 subtitle = uiState.releaseDate,
-                                icon = Icons.Default.Star,
+                                icon = Icons.Rounded.Star,
                                 iconTint = JayraSuccessGreen
                             )
                         }
@@ -253,7 +253,7 @@ fun AboutContent(
                         Column {
                             AboutClickableRow(
                                 title = "Kode Sumber Terbuka (GitHub)",
-                                icon = Icons.Default.Code,
+                                icon = Icons.Rounded.Code,
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uiState.githubUrl))
                                     try {
@@ -263,7 +263,7 @@ fun AboutContent(
                             )
                             AboutClickableRow(
                                 title = "Situs Web Resmi",
-                                icon = Icons.Default.Language,
+                                icon = Icons.Rounded.Language,
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uiState.websiteUrl))
                                     try {
@@ -273,14 +273,14 @@ fun AboutContent(
                             )
                             AboutClickableRow(
                                 title = "Beri Nilai Aplikasi",
-                                icon = Icons.Default.Star,
+                                icon = Icons.Rounded.Star,
                                 onClick = {
                                     Toast.makeText(context, "Terima kasih telah mendukung Jayra!", Toast.LENGTH_SHORT).show()
                                 }
                             )
                             AboutClickableRow(
                                 title = "Kebijakan Privasi & Ketentuan",
-                                icon = Icons.Default.Policy,
+                                icon = Icons.Rounded.Policy,
                                 onClick = onPrivacyClick,
                                 isLast = true
                             )

@@ -23,10 +23,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -257,7 +257,7 @@ fun TwoStepVerificationContent(
                     if (data.isEnabled) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
-                            imageVector = Icons.Default.Security,
+                            imageVector = Icons.Rounded.Security,
                             contentDescription = "Terlindungi",
                             tint = JayraSuccessGreen,
                             modifier = Modifier.size(24.dp)
@@ -294,7 +294,7 @@ fun TwoStepVerificationContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Lock,
+                    imageVector = Icons.Rounded.Lock,
                     contentDescription = null,
                     tint = JayraBlue,
                     modifier = Modifier.size(24.dp)
@@ -339,7 +339,7 @@ fun TwoStepVerificationContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Email,
+                    imageVector = Icons.Rounded.Email,
                     contentDescription = null,
                     tint = JayraBlue,
                     modifier = Modifier.size(24.dp)
@@ -383,7 +383,7 @@ fun TwoStepVerificationContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Fingerprint,
+                    imageVector = Icons.Rounded.Fingerprint,
                     contentDescription = null,
                     tint = JayraBlue,
                     modifier = Modifier.size(24.dp)
@@ -430,7 +430,7 @@ fun TwoStepVerificationContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Security,
+                    imageVector = Icons.Rounded.Security,
                     contentDescription = null,
                     tint = JayraBlue,
                     modifier = Modifier.size(24.dp)
