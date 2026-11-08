@@ -19,8 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -149,7 +149,7 @@ fun CountryRowItem(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Flag,
+                    imageVector = Icons.Rounded.Flag,
                     contentDescription = stringResource(id = R.string.auth_country_flag_cd),
                     tint = JayraBlue,
                     modifier = Modifier.size(20.dp)
@@ -183,7 +183,7 @@ fun CountryRowItem(
             if (isSelected) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(
-                    imageVector = Icons.Default.Check,
+                    imageVector = Icons.Rounded.Check,
                     contentDescription = country.name,
                     tint = JayraBlue,
                     modifier = Modifier.size(20.dp)
