@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.google.firebase.FirebaseApp
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.jayra.app.di.AppModule
 import com.jayra.app.util.ErrorHandler
 import timber.log.Timber
@@ -15,6 +17,14 @@ class JayraApp : Application() {
         instance = this
 
         initTimber()
+
+        // Eksplisit inisialisasi Firebase sebelum modul lain mengaksesnya
+        try {
+            FirebaseApp.initializeApp(this)
+            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
+        } catch (e: Exception) {
+            Timber.e(e, "FirebaseApp.initializeApp gagal")
+        }
 
         runCatching {
             AppModule.init(applicationContext)
@@ -30,6 +40,14 @@ class JayraApp : Application() {
                     previousHandler = previousHandler
                 )
             )
+        }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // Lepas cache gambar saat app masuk background (mencegah OOM)
+        if (level >= TRIM_MEMORY_UI_HIDDEN) {
+            // Cache akan dibersihkan otomatis oleh Coil
         }
     }
 
