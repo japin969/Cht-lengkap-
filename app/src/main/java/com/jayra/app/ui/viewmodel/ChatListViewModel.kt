@@ -129,4 +129,28 @@ class ChatListViewModel(
     fun onRetry() {
         loadChats()
     }
+
+    fun deleteChat(chatId: String) {
+        viewModelScope.launch {
+            try { repository.deleteChat(chatId) } catch (_: Exception) {}
+        }
+    }
+
+    fun archiveChat(chatId: String) {
+        viewModelScope.launch {
+            try { repository.archiveChat(chatId) } catch (_: Exception) {}
+        }
+    }
+
+    fun togglePin(chatId: String) {
+        viewModelScope.launch {
+            try { repository.togglePin(chatId) } catch (_: Exception) {}
+        }
+    }
+
+    fun toggleMute(chatId: String) {
+        viewModelScope.launch {
+            try { repository.toggleMute(chatId) } catch (_: Exception) {}
+        }
+    }
 }

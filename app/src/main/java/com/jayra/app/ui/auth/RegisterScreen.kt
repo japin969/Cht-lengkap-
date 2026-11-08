@@ -8,7 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,7 +62,7 @@ fun RegisterScreen(
                     modifier = Modifier.size(80.dp).iosGlass(cornerRadius = 40, tint = Color.White.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.PersonAdd, contentDescription = "Register", tint = Color.White, modifier = Modifier.size(36.dp))
+                    Icon(Icons.Rounded.PersonAdd, contentDescription = "Register", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
                 Spacer(Modifier.height(32.dp))
                 
