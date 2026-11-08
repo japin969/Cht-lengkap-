@@ -67,8 +67,11 @@ class SplashViewModel(
 
     fun isUserAuthenticated(): Boolean {
         return try {
-            FirebaseAuth.getInstance().currentUser != null
-        } catch (_: Exception) {
+            // Gunakan FirebaseAuth.getInstance() dengan aman
+            val auth = FirebaseAuth.getInstance()
+            auth.currentUser != null
+        } catch (e: Exception) {
+            // Jika Firebase belum siap atau error, anggap belum login
             false
         }
     }
@@ -85,8 +88,12 @@ fun SplashScreen(
 
     LaunchedEffect(uiState.splashDelayMillis) {
         isVisible = true
-        delay(uiState.splashDelayMillis)
-        if (viewModel.isUserAuthenticated()) {
+        // Beri waktu Firebase untuk inisialisasi di background
+        delay(uiState.splashDelayMillis.coerceAtLeast(800L))
+        
+        // Cek autentikasi setelah delay
+        val isLoggedIn = viewModel.isUserAuthenticated()
+        if (isLoggedIn) {
             onNavigateToChatList()
         } else {
             onNavigateToLogin()
