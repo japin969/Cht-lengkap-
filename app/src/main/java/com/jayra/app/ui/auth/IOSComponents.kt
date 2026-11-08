@@ -108,7 +108,7 @@ fun IOSTextField(
             {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
-                        imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        imageVector = if (passwordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
                         contentDescription = if (passwordVisible) "Sembunyikan sandi" else "Tampilkan sandi",
                         tint = Color.White.copy(alpha = 0.6f)
                     )
