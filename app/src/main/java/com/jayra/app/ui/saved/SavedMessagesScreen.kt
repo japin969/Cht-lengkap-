@@ -35,10 +35,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.CheckCircleOutline
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.CheckCircleOutline
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -367,7 +367,7 @@ fun SavedMessagesTopBar(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Bookmark,
+                    imageVector = Icons.Rounded.Bookmark,
                     contentDescription = title,
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(20.dp)
@@ -401,7 +401,7 @@ fun SavedMessagesTopBar(
                     .testTag("saved_messages_search_button")
             ) {
                 Icon(
-                    imageVector = if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                    imageVector = if (isSearchActive) Icons.Rounded.Close else Icons.Rounded.Search,
                     contentDescription = if (isSearchActive) "Tutup pencarian" else "Cari di Pesan Tersimpan",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(24.dp)
@@ -429,7 +429,7 @@ fun SavedMessagesTopBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = Icons.Rounded.Search,
                         contentDescription = null,
                         tint = JayraSubtext,
                         modifier = Modifier.size(18.dp)
@@ -490,7 +490,7 @@ fun SavedMessagesEmptyCard(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Bookmark,
+                imageVector = Icons.Rounded.Bookmark,
                 contentDescription = title,
                 tint = JayraBlue,
                 modifier = Modifier.size(36.dp)
@@ -516,7 +516,7 @@ fun SavedMessagesEmptyCard(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CheckCircleOutline,
+                        imageVector = Icons.Rounded.CheckCircleOutline,
                         contentDescription = null,
                         tint = JayraBlue,
                         modifier = Modifier.size(18.dp)

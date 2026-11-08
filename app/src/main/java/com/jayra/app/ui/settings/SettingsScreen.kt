@@ -28,21 +28,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.AutoAwesomeMotion
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Mood
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Policy
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.AutoAwesomeMotion
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Help
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Mood
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.rounded.SmartToy
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -223,7 +223,7 @@ fun SettingsContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = "Error",
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -324,42 +324,42 @@ fun SettingsContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
-                                        icon = Icons.Default.AutoAwesomeMotion,
+                                        icon = Icons.Rounded.AutoAwesomeMotion,
                                         iconTint = JayraBlue,
                                         title = "Stories",
                                         onClick = onStoriesClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Bookmark,
+                                        icon = Icons.Rounded.Bookmark,
                                         iconTint = JayraBlue,
                                         title = "Pesan Tersimpan",
                                         onClick = onSavedMessagesClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Groups,
+                                        icon = Icons.Rounded.Groups,
                                         iconTint = JayraBlue,
                                         title = "Komunitas",
                                         onClick = onCommunitiesClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Lock,
+                                        icon = Icons.Rounded.Lock,
                                         iconTint = JayraBlue,
                                         title = "Privasi & Keamanan",
                                         onClick = onPrivacyClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Notifications,
+                                        icon = Icons.Rounded.Notifications,
                                         iconTint = JayraOrange,
                                         title = "Notifikasi & Suara",
                                         onClick = onNotificationsClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Storage,
+                                        icon = Icons.Rounded.Storage,
                                         iconTint = JayraSuccessGreen,
                                         title = "Data & Penyimpanan",
                                         onClick = onStorageClick,
@@ -375,7 +375,7 @@ fun SettingsContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSwitchRow(
-                                        icon = Icons.Default.SmartToy,
+                                        icon = Icons.Rounded.SmartToy,
                                         iconTint = JayraBlue,
                                         title = "Aktifkan Asisten AI",
                                         checked = isAssistantEnabled,
@@ -386,7 +386,7 @@ fun SettingsContent(
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.SmartToy,
+                                        icon = Icons.Rounded.SmartToy,
                                         iconTint = JayraBlue,
                                         title = "Asisten AI (Jayra AI)",
                                         valueText = if (isAssistantEnabled) "Aktif" else "Nonaktif",
@@ -409,14 +409,14 @@ fun SettingsContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
-                                        icon = Icons.Default.Mood,
+                                        icon = Icons.Rounded.Mood,
                                         iconTint = JayraOrange,
                                         title = "Stiker dan GIF",
                                         onClick = onStickersClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Palette,
+                                        icon = Icons.Rounded.Palette,
                                         iconTint = JayraBlue,
                                         title = "Tema & Tampilan",
                                         valueText = uiState.appTheme,
@@ -424,7 +424,7 @@ fun SettingsContent(
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Language,
+                                        icon = Icons.Rounded.Language,
                                         iconTint = JayraBlue,
                                         title = "Bahasa",
                                         valueText = uiState.language,
@@ -441,21 +441,21 @@ fun SettingsContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
-                                        icon = Icons.Default.Help,
+                                        icon = Icons.Rounded.Help,
                                         iconTint = JayraBlue,
                                         title = "Bantuan & FAQ",
                                         onClick = onHelpClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Policy,
+                                        icon = Icons.Rounded.Policy,
                                         iconTint = JayraSubtext,
                                         title = "Kebijakan Privasi",
                                         onClick = onPrivacyPolicyClick,
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Info,
+                                        icon = Icons.Rounded.Info,
                                         iconTint = JayraBlue,
                                         title = "Tentang Jayra",
                                         onClick = onAboutClick,

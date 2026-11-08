@@ -33,9 +33,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -264,7 +264,7 @@ fun CreateGroupContent(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.CameraAlt,
+                                        imageVector = Icons.Rounded.CameraAlt,
                                         contentDescription = "Ganti Foto",
                                         tint = Color.White,
                                         modifier = Modifier.size(32.dp)
@@ -272,7 +272,7 @@ fun CreateGroupContent(
                                 }
                             } else {
                                 Icon(
-                                    imageVector = Icons.Default.CameraAlt,
+                                    imageVector = Icons.Rounded.CameraAlt,
                                     contentDescription = "Pilih Foto",
                                     tint = Color.White,
                                     modifier = Modifier.size(44.dp)
@@ -432,7 +432,7 @@ fun SelectedMemberBadge(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = Icons.Rounded.Close,
                     contentDescription = "Hapus",
                     tint = Color.White,
                     modifier = Modifier.size(12.dp)

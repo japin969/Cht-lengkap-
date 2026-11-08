@@ -26,11 +26,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.ShareLocation
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.MyLocation
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.ShareLocation
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -142,7 +142,7 @@ fun LocationSharingScreen(
                             .testTag("location_refresh_button")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
+                            imageVector = Icons.Rounded.Refresh,
                             contentDescription = "Segarkan Lokasi",
                             tint = Color.White
                         )
@@ -173,7 +173,7 @@ fun LocationSharingScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Info,
+                        imageVector = Icons.Rounded.Info,
                         contentDescription = null,
                         tint = JayraBlue,
                         modifier = Modifier.size(20.dp)
@@ -258,7 +258,7 @@ fun LocationSharingScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.LocationOn,
+                                imageVector = Icons.Rounded.LocationOn,
                                 contentDescription = "Pin Lokasi",
                                 tint = Color.White,
                                 modifier = Modifier.size(28.dp)
@@ -284,7 +284,7 @@ fun LocationSharingScreen(
                             .testTag("map_my_location_btn")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MyLocation,
+                            imageVector = Icons.Rounded.MyLocation,
                             contentDescription = "Posisikan saya",
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
@@ -408,7 +408,7 @@ fun LocationSharingScreen(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.ShareLocation,
+                        imageVector = Icons.Rounded.ShareLocation,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)

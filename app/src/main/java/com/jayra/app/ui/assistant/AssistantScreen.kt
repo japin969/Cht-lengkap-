@@ -44,11 +44,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.EmojiEmotions
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.AttachFile
+import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.SmartToy
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -176,7 +176,7 @@ fun AssistantScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SmartToy,
+                        imageVector = Icons.Rounded.SmartToy,
                         contentDescription = "Avatar Jayra AI",
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)
@@ -212,7 +212,7 @@ fun AssistantScreenContent(
                             .testTag("assistant_menu_button")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = Icons.Rounded.MoreVert,
                             contentDescription = "Menu Lainnya",
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
@@ -396,7 +396,7 @@ private fun UserMessageBubble(
                 } else if (message.status == MessageStatus.FAILED) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        imageVector = Icons.Default.Warning,
+                        imageVector = Icons.Rounded.Warning,
                         contentDescription = "Gagal",
                         tint = JayraDangerRed,
                         modifier = Modifier.size(12.dp)
@@ -432,7 +432,7 @@ private fun AiMessageBubble(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.SmartToy,
+                imageVector = Icons.Rounded.SmartToy,
                 contentDescription = "Jayra AI",
                 tint = Color.White,
                 modifier = Modifier.size(18.dp)
@@ -503,7 +503,7 @@ private fun TypingIndicatorBubble(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.SmartToy,
+                imageVector = Icons.Rounded.SmartToy,
                 contentDescription = "Jayra AI",
                 tint = Color.White,
                 modifier = Modifier.size(18.dp)
@@ -608,13 +608,13 @@ private fun AssistantInputBar(
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Attach (Icons.Default.AttachFile) 24dp JayraSubtext
+        // Attach (Icons.Rounded.AttachFile) 24dp JayraSubtext
         IconButton(
             onClick = {},
             modifier = Modifier.size(40.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.AttachFile,
+                imageVector = Icons.Rounded.AttachFile,
                 contentDescription = "Lampirkan file",
                 tint = JayraSubtext,
                 modifier = Modifier.size(24.dp)
@@ -651,13 +651,13 @@ private fun AssistantInputBar(
             )
         }
 
-        // Emoji (Icons.Default.EmojiEmotions) 24dp JayraSubtext
+        // Emoji (Icons.Rounded.EmojiEmotions) 24dp JayraSubtext
         IconButton(
             onClick = {},
             modifier = Modifier.size(40.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.EmojiEmotions,
+                imageVector = Icons.Rounded.EmojiEmotions,
                 contentDescription = "Pilih emoji",
                 tint = JayraSubtext,
                 modifier = Modifier.size(24.dp)
@@ -700,7 +700,7 @@ private fun AssistantEmptyState(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.SmartToy,
+            imageVector = Icons.Rounded.SmartToy,
             contentDescription = "Bot",
             tint = JayraSubtext,
             modifier = Modifier.size(64.dp)
@@ -738,7 +738,7 @@ private fun AssistantErrorState(
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Warning,
+            imageVector = Icons.Rounded.Warning,
             contentDescription = "Error",
             tint = JayraDangerRed,
             modifier = Modifier.size(48.dp)

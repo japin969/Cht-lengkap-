@@ -21,9 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -242,7 +242,7 @@ fun CreateChecklistContent(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Checklist,
+                            imageVector = Icons.Rounded.Checklist,
                             contentDescription = null,
                             tint = Color(0xFFFFFFFF),
                             modifier = Modifier.size(22.dp)
@@ -435,7 +435,7 @@ fun CreateChecklistContent(
                                         .testTag("remove_checklist_item_button_$index")
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Close,
+                                        imageVector = Icons.Rounded.Close,
                                         contentDescription = strings.removeItemContentDescription,
                                         tint = JayraSubtext,
                                         modifier = Modifier.size(20.dp)
@@ -454,7 +454,7 @@ fun CreateChecklistContent(
                                 .testTag("add_checklist_item_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Add,
+                                imageVector = Icons.Rounded.Add,
                                 contentDescription = null,
                                 tint = JayraBlue,
                                 modifier = Modifier.size(18.dp)

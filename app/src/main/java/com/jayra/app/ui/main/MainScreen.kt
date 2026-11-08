@@ -22,11 +22,11 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Chat
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
@@ -146,27 +146,27 @@ class MainViewModel(
         NavItem(
             route = ROUTE_CHAT_LIST,
             label = "Chat",
-            icon = Icons.Default.Chat
+            icon = Icons.Rounded.Chat
         ),
         NavItem(
             route = ROUTE_CALLS,
             label = "Panggilan",
-            icon = Icons.Default.Call
+            icon = Icons.Rounded.Call
         ),
         NavItem(
             route = ROUTE_MUSIC_HOME,
             label = "Musik",
-            icon = Icons.Default.MusicNote
+            icon = Icons.Rounded.MusicNote
         ),
         NavItem(
             route = ROUTE_DRAMA_HOME,
-            icon = Icons.Default.PlayArrow,
+            icon = Icons.Rounded.PlayArrow,
             label = "VidHub"
         ),
         NavItem(
             route = ROUTE_SETTINGS,
             label = "Pengaturan",
-            icon = Icons.Default.Settings
+            icon = Icons.Rounded.Settings
         )
     )
 
@@ -700,7 +700,8 @@ private fun MainNavigationGraph(
                 onAboutClick = { navController.navigate("about") },
                 onSavedMessagesClick = { navController.navigate("saved_messages") },
                 onCommunitiesClick = { navController.navigate(MainViewModel.ROUTE_COMMUNITIES) },
-                onStoriesClick = { navController.navigate(MainViewModel.ROUTE_STORY_ALBUMS) }
+                onStoriesClick = { navController.navigate(MainViewModel.ROUTE_STORY_ALBUMS) },
+                        onAiClick = { navController.navigate("assistant") }
             )
         }
 
@@ -1110,10 +1111,10 @@ private fun MainScreenPreviewContent(
     val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
     val textColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
     val previewTabs = listOf(
-        NavItem("chat_list", "Chat", Icons.Default.Chat, badgeCount = unreadCount),
-        NavItem("calls", "Panggilan", Icons.Default.Call),
-        NavItem("music_home", "Musik", Icons.Default.MusicNote),
-        NavItem("settings", "Pengaturan", Icons.Default.Settings)
+        NavItem("chat_list", "Chat", Icons.Rounded.Chat, badgeCount = unreadCount),
+        NavItem("calls", "Panggilan", Icons.Rounded.Call),
+        NavItem("music_home", "Musik", Icons.Rounded.MusicNote),
+        NavItem("settings", "Pengaturan", Icons.Rounded.Settings)
     )
 
     Scaffold(

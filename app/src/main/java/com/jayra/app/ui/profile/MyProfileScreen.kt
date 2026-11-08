@@ -28,17 +28,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -225,7 +225,7 @@ fun MyProfileContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = "Error",
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -300,7 +300,7 @@ fun MyProfileContent(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.PhotoCamera,
+                                        imageVector = Icons.Rounded.PhotoCamera,
                                         contentDescription = "Ganti foto",
                                         tint = Color.White,
                                         modifier = Modifier.size(18.dp)
@@ -351,13 +351,13 @@ fun MyProfileContent(
                             ) {
                                 // Action Grid (Panggilan, Video, Cari)
                                 InfoActionGrid(
-                                    action1Icon = Icons.Default.Call,
+                                    action1Icon = Icons.Rounded.Call,
                                     action1Label = "panggilan",
                                     onAction1Click = {},
-                                    action2Icon = Icons.Default.Videocam,
+                                    action2Icon = Icons.Rounded.Videocam,
                                     action2Label = "video",
                                     onAction2Click = {},
-                                    action3Icon = Icons.Default.Search,
+                                    action3Icon = Icons.Rounded.Search,
                                     action3Label = "cari",
                                     onAction3Click = {},
                                     modifier = Modifier.padding(top = 16.dp)
@@ -428,7 +428,7 @@ fun MyProfileContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
-                                        icon = Icons.Default.Timer,
+                                        icon = Icons.Rounded.Timer,
                                         iconTint = JayraBlue,
                                         title = "Pesan Sementara",
                                         valueText = user.disappearingDuration,
@@ -436,7 +436,7 @@ fun MyProfileContent(
                                         showSeparator = true
                                     )
                                     InfoSwitchRow(
-                                        icon = Icons.Default.Lock,
+                                        icon = Icons.Rounded.Lock,
                                         iconTint = JayraYellow,
                                         title = "Kunci Aplikasi",
                                         checked = user.isAppLockEnabled,
@@ -444,7 +444,7 @@ fun MyProfileContent(
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Security,
+                                        icon = Icons.Rounded.Security,
                                         iconTint = JayraSuccessGreen,
                                         title = "Privasi",
                                         onClick = onPrivacyClick,
@@ -461,14 +461,14 @@ fun MyProfileContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
-                                        icon = Icons.Default.Palette,
+                                        icon = Icons.Rounded.Palette,
                                         iconTint = JayraOrange,
                                         title = "Wallpaper & Bunyi",
                                         onClick = {},
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Folder,
+                                        icon = Icons.Rounded.Folder,
                                         iconTint = JayraBlue,
                                         title = "Penyimpanan",
                                         valueText = "1.2 GB",
@@ -476,7 +476,7 @@ fun MyProfileContent(
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Language,
+                                        icon = Icons.Rounded.Language,
                                         iconTint = JayraSuccessGreen,
                                         title = "Bahasa",
                                         valueText = user.language,

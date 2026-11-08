@@ -38,11 +38,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -352,7 +352,7 @@ fun ForwardTopBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Search,
+                    imageVector = Icons.Rounded.Search,
                     contentDescription = null,
                     tint = JayraSubtext,
                     modifier = Modifier.size(18.dp)
@@ -386,7 +386,7 @@ fun ForwardTopBar(
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = Icons.Rounded.Close,
                             contentDescription = "Hapus pencarian",
                             tint = JayraSubtext,
                             modifier = Modifier.size(16.dp)
@@ -485,7 +485,7 @@ fun ForwardChatItemRow(
             when {
                 isSavedMessages -> {
                     Icon(
-                        imageVector = Icons.Default.Bookmark,
+                        imageVector = Icons.Rounded.Bookmark,
                         contentDescription = chat.name,
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(24.dp)
@@ -504,7 +504,7 @@ fun ForwardChatItemRow(
                 }
                 chat.isGroup -> {
                     Icon(
-                        imageVector = Icons.Default.Group,
+                        imageVector = Icons.Rounded.Group,
                         contentDescription = chat.name,
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(24.dp)
@@ -512,7 +512,7 @@ fun ForwardChatItemRow(
                 }
                 chat.isChannel -> {
                     Icon(
-                        imageVector = Icons.Default.Campaign,
+                        imageVector = Icons.Rounded.Campaign,
                         contentDescription = chat.name,
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(24.dp)

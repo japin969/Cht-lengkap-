@@ -20,10 +20,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.rounded.Computer
+import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -144,7 +144,7 @@ fun ActiveSessionsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Devices,
+                            imageVector = Icons.Rounded.Devices,
                             contentDescription = null,
                             tint = JayraSubtext,
                             modifier = Modifier.size(64.dp)
@@ -290,7 +290,7 @@ fun SessionItemRow(
         ) {
             // Icon
             Icon(
-                imageVector = if (session.isDesktop) Icons.Default.Computer else Icons.Default.PhoneAndroid,
+                imageVector = if (session.isDesktop) Icons.Rounded.Computer else Icons.Rounded.PhoneAndroid,
                 contentDescription = null,
                 tint = JayraBlue,
                 modifier = Modifier.size(24.dp)
@@ -360,7 +360,7 @@ fun SessionItemRow(
                         modifier = Modifier.testTag("session_menu_${session.id}")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = Icons.Rounded.MoreVert,
                             contentDescription = "Opsi Sesi",
                             tint = JayraSubtext,
                             modifier = Modifier.size(24.dp)

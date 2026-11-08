@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -166,7 +166,7 @@ fun PrivacyPolicyContent(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Security,
+                                        imageVector = Icons.Rounded.Security,
                                         contentDescription = null,
                                         tint = JayraSuccessGreen,
                                         modifier = Modifier.size(28.dp)

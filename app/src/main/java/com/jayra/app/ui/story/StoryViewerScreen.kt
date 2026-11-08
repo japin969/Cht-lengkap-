@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -452,7 +452,7 @@ fun StoryViewerContent(
                                 .testTag("story_viewer_close_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = strings.closeViewerContentDescription,
                                 tint = Color(0xFFFFFFFF),
                                 modifier = Modifier.size(24.dp)

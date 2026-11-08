@@ -25,7 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -189,7 +189,7 @@ fun ProxyScreenContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Security,
+                                    imageVector = Icons.Rounded.Security,
                                     contentDescription = "Proxy",
                                     tint = JayraBlue,
                                     modifier = Modifier.size(24.dp)

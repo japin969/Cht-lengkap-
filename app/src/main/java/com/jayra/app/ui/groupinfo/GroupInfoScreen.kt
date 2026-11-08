@@ -28,17 +28,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsOff
-import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.Photo
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -228,7 +228,7 @@ fun GroupInfoContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = "Error",
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -274,13 +274,13 @@ fun GroupInfoContent(
                             ) {
                                 // 2. Action Grid (Audio, Video, Cari)
                                 InfoActionGrid(
-                                    action1Icon = Icons.Default.Call,
+                                    action1Icon = Icons.Rounded.Call,
                                     action1Label = "audio",
                                     onAction1Click = onAudioClick,
-                                    action2Icon = Icons.Default.Videocam,
+                                    action2Icon = Icons.Rounded.Videocam,
                                     action2Label = "video",
                                     onAction2Click = onVideoClick,
-                                    action3Icon = Icons.Default.Search,
+                                    action3Icon = Icons.Rounded.Search,
                                     action3Label = "cari",
                                     onAction3Click = onSearchClick,
                                     modifier = Modifier.padding(top = 16.dp)
@@ -336,7 +336,7 @@ fun GroupInfoContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
-                                        icon = Icons.Default.Photo,
+                                        icon = Icons.Rounded.Photo,
                                         iconTint = JayraBlue,
                                         title = "Media, Tautan, Dok",
                                         valueText = "${group.mediaCount}",
@@ -344,7 +344,7 @@ fun GroupInfoContent(
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Star,
+                                        icon = Icons.Rounded.Star,
                                         iconTint = JayraYellow,
                                         title = "Pesan Berbintang",
                                         valueText = if (group.starredCount > 0) "${group.starredCount}" else "Tidak Ada",
@@ -418,7 +418,7 @@ fun GroupInfoContent(
                                         .background(cardBg)
                                 ) {
                                     InfoSwitchRow(
-                                        icon = Icons.Default.NotificationsOff,
+                                        icon = Icons.Rounded.NotificationsOff,
                                         iconTint = JayraSuccessGreen,
                                         title = "Bisukan",
                                         checked = group.isMuted,
@@ -426,7 +426,7 @@ fun GroupInfoContent(
                                         showSeparator = true
                                     )
                                     InfoSwitchRow(
-                                        icon = Icons.Default.Notifications,
+                                        icon = Icons.Rounded.Notifications,
                                         iconTint = JayraOrange,
                                         title = "Notifikasi Kustom",
                                         checked = group.isCustomNotification,
@@ -434,7 +434,7 @@ fun GroupInfoContent(
                                         showSeparator = true
                                     )
                                     InfoSettingRow(
-                                        icon = Icons.Default.Timer,
+                                        icon = Icons.Rounded.Timer,
                                         iconTint = JayraBlue,
                                         title = "Pesan Sementara",
                                         valueText = group.disappearingDuration,
@@ -442,7 +442,7 @@ fun GroupInfoContent(
                                         showSeparator = true
                                     )
                                     InfoSwitchRow(
-                                        icon = Icons.Default.Lock,
+                                        icon = Icons.Rounded.Lock,
                                         iconTint = JayraYellow,
                                         title = "Kunci Grup",
                                         checked = group.isLocked,
@@ -470,7 +470,7 @@ fun GroupInfoContent(
                                     )
                                     if (group.isAdmin) {
                                         InfoSettingRow(
-                                            icon = Icons.Default.Delete,
+                                            icon = Icons.Rounded.Delete,
                                             iconTint = JayraDangerRed,
                                             title = "Hapus Grup",
                                             titleColor = JayraDangerRed,

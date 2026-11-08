@@ -26,10 +26,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Gif
-import androidx.compose.material.icons.filled.Mood
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Gif
+import androidx.compose.material.icons.rounded.Mood
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -201,7 +201,7 @@ fun StickersContent(
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Search,
+                                imageVector = Icons.Rounded.Search,
                                 contentDescription = "Cari",
                                 tint = JayraSubtext
                             )
@@ -213,7 +213,7 @@ fun StickersContent(
                                     modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Clear,
+                                        imageVector = Icons.Rounded.Clear,
                                         contentDescription = "Hapus",
                                         tint = JayraSubtext
                                     )
@@ -252,7 +252,7 @@ fun StickersContent(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.Default.Mood,
+                                        imageVector = Icons.Rounded.Mood,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -270,7 +270,7 @@ fun StickersContent(
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.Default.Gif,
+                                        imageVector = Icons.Rounded.Gif,
                                         contentDescription = null,
                                         modifier = Modifier.size(22.dp)
                                     )

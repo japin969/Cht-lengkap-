@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -109,7 +109,7 @@ fun ChecklistBubble(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Checklist,
+                        imageVector = Icons.Rounded.Checklist,
                         contentDescription = strings.bubbleBadgeLabel,
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(16.dp)

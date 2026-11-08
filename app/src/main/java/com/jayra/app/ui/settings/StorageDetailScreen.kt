@@ -21,9 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -169,7 +169,7 @@ fun StorageDetailContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.FolderOpen,
+                            imageVector = Icons.Rounded.FolderOpen,
                             contentDescription = "Kosong",
                             tint = JayraSubtext,
                             modifier = Modifier.size(64.dp)
@@ -194,7 +194,7 @@ fun StorageDetailContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = "Error",
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -272,7 +272,7 @@ fun StorageDetailContent(
                                             .testTag("delete_file_${file.id}")
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Delete,
+                                            imageVector = Icons.Rounded.Delete,
                                             contentDescription = "Hapus berkas",
                                             tint = JayraDangerRed,
                                             modifier = Modifier.size(24.dp)

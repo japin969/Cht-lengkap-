@@ -17,15 +17,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -152,7 +152,7 @@ fun MusicPlayerContent(
                     .testTag("player_back_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = "Tutup Pemutar",
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
@@ -174,7 +174,7 @@ fun MusicPlayerContent(
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        imageVector = Icons.Rounded.MoreVert,
                         contentDescription = "Menu Lainnya",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
@@ -216,7 +216,7 @@ fun MusicPlayerContent(
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Default.MusicNote,
+                    imageVector = Icons.Rounded.MusicNote,
                     contentDescription = "Cover",
                     tint = JayraSubtext,
                     modifier = Modifier.size(120.dp)
@@ -302,7 +302,7 @@ fun MusicPlayerContent(
                 modifier = Modifier.size(44.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Shuffle,
+                    imageVector = Icons.Rounded.Shuffle,
                     contentDescription = "Acak",
                     tint = if (isShuffle) JayraBlue else JayraSubtext,
                     modifier = Modifier.size(24.dp)
@@ -319,7 +319,7 @@ fun MusicPlayerContent(
                     .testTag("player_prev_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.SkipPrevious,
+                    imageVector = Icons.Rounded.SkipPrevious,
                     contentDescription = "Sebelumnya",
                     tint = Color.White,
                     modifier = Modifier.size(32.dp)
@@ -343,7 +343,7 @@ fun MusicPlayerContent(
                         .testTag("player_play_pause_button")
                 ) {
                     Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         contentDescription = if (isPlaying) "Jeda" else "Putar",
                         tint = JayraBlue,
                         modifier = Modifier.size(36.dp)
@@ -361,7 +361,7 @@ fun MusicPlayerContent(
                     .testTag("player_next_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.SkipNext,
+                    imageVector = Icons.Rounded.SkipNext,
                     contentDescription = "Berikutnya",
                     tint = Color.White,
                     modifier = Modifier.size(32.dp)
@@ -376,7 +376,7 @@ fun MusicPlayerContent(
                 modifier = Modifier.size(44.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Repeat,
+                    imageVector = Icons.Rounded.Repeat,
                     contentDescription = "Ulangi",
                     tint = if (isRepeat) JayraBlue else JayraSubtext,
                     modifier = Modifier.size(24.dp)

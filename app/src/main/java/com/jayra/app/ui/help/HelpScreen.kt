@@ -25,13 +25,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.Policy
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.OpenInBrowser
+import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -196,7 +196,7 @@ fun HelpContent(
                             placeholder = { Text("Cari pertanyaan...", color = JayraSubtext) },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.Default.Search,
+                                    imageVector = Icons.Rounded.Search,
                                     contentDescription = "Cari",
                                     tint = JayraSubtext
                                 )
@@ -208,7 +208,7 @@ fun HelpContent(
                                         modifier = Modifier.size(48.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Clear,
+                                            imageVector = Icons.Rounded.Clear,
                                             contentDescription = "Hapus",
                                             tint = JayraSubtext
                                         )
@@ -241,7 +241,7 @@ fun HelpContent(
                         ) {
                             HelpActionChip(
                                 title = "Dukungan Email",
-                                icon = Icons.Default.Email,
+                                icon = Icons.Rounded.Email,
                                 modifier = Modifier.weight(1f),
                                 cardBg = cardBg,
                                 onClick = {
@@ -257,7 +257,7 @@ fun HelpContent(
 
                             HelpActionChip(
                                 title = "FAQ Jayra",
-                                icon = Icons.Default.OpenInBrowser,
+                                icon = Icons.Rounded.OpenInBrowser,
                                 modifier = Modifier.weight(1f),
                                 cardBg = cardBg,
                                 onClick = {
@@ -273,7 +273,7 @@ fun HelpContent(
 
                         HelpActionChip(
                             title = "Kebijakan Privasi Jayra",
-                            icon = Icons.Default.Policy,
+                            icon = Icons.Rounded.Policy,
                             modifier = Modifier.fillMaxWidth(),
                             cardBg = cardBg,
                             onClick = onPrivacyClick
@@ -411,7 +411,7 @@ fun FaqItemCard(
                         .testTag("faq_expand_button_${faq.id}")
                 ) {
                     Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
                         contentDescription = if (isExpanded) "Tutup" else "Buka",
                         tint = JayraSubtext
                     )

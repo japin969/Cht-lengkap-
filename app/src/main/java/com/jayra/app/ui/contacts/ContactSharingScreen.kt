@@ -23,10 +23,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -136,7 +136,7 @@ fun ContactSharingScreen(
                     placeholder = { Text("Cari kontak atau nomor telepon...", color = JayraSubtext) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = Icons.Rounded.Search,
                             contentDescription = "Cari",
                             tint = JayraSubtext
                         )
@@ -145,7 +145,7 @@ fun ContactSharingScreen(
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
                                 Icon(
-                                    imageVector = Icons.Default.Clear,
+                                    imageVector = Icons.Rounded.Clear,
                                     contentDescription = "Hapus pencarian",
                                     tint = JayraSubtext
                                 )
@@ -189,7 +189,7 @@ fun ContactSharingScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Person,
+                                imageVector = Icons.Rounded.Person,
                                 contentDescription = null,
                                 tint = JayraSubtext,
                                 modifier = Modifier.size(64.dp)
@@ -341,7 +341,7 @@ private fun ContactSharingCard(
                     .testTag("share_contact_btn_${contact.id}")
             ) {
                 Icon(
-                    imageVector = Icons.Default.Share,
+                    imageVector = Icons.Rounded.Share,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(16.dp)

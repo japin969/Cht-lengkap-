@@ -31,18 +31,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Animation
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Keyboard
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.SdCard
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material.icons.filled.Vibration
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Animation
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.SdCard
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Upload
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -204,7 +204,7 @@ fun AdvancedSettingsContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = "Error",
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -246,28 +246,28 @@ fun AdvancedSettingsContent(
                                 .background(cardBg)
                         ) {
                             SettingToggleItem(
-                                icon = Icons.Default.Public,
+                                icon = Icons.Rounded.Public,
                                 title = "Gunakan Data Saat Roaming",
                                 checked = settings.dataRoaming,
                                 onCheckedChange = { onToggle("roaming", it) },
                                 showSeparator = true
                             )
                             SettingValueItem(
-                                icon = Icons.Default.Security,
+                                icon = Icons.Rounded.Security,
                                 title = "Proxy",
                                 value = if (settings.proxyEnabled) "Aktif" else "Nonaktif",
                                 onClick = onProxyClick,
                                 showSeparator = true
                             )
                             SettingValueItem(
-                                icon = Icons.Default.Call,
+                                icon = Icons.Rounded.Call,
                                 title = "Kualitas Panggilan",
                                 value = settings.callQuality,
                                 onClick = { showCallQualityDialog = true },
                                 showSeparator = true
                             )
                             SettingValueItem(
-                                icon = Icons.Default.Upload,
+                                icon = Icons.Rounded.Upload,
                                 title = "Kualitas Unggah Media",
                                 value = settings.uploadQuality,
                                 onClick = { showUploadQualityDialog = true },
@@ -284,14 +284,14 @@ fun AdvancedSettingsContent(
                                 .background(cardBg)
                         ) {
                             SettingToggleItem(
-                                icon = Icons.Default.SdCard,
+                                icon = Icons.Rounded.SdCard,
                                 title = "Gunakan Penyimpanan Eksternal",
                                 checked = settings.externalStorage,
                                 onCheckedChange = { onToggle("externalStorage", it) },
                                 showSeparator = true
                             )
                             SettingValueItem(
-                                icon = Icons.Default.CleaningServices,
+                                icon = Icons.Rounded.CleaningServices,
                                 iconTint = JayraDangerRed,
                                 title = "Bersihkan Cache",
                                 value = settings.cacheSize,
@@ -299,14 +299,14 @@ fun AdvancedSettingsContent(
                                 showSeparator = true
                             )
                             SettingValueItem(
-                                icon = Icons.Default.Storage,
+                                icon = Icons.Rounded.Storage,
                                 title = "Batas Cache",
                                 value = settings.cacheLimit,
                                 onClick = { showCacheLimitDialog = true },
                                 showSeparator = true
                             )
                             SettingToggleItem(
-                                icon = Icons.Default.PhotoLibrary,
+                                icon = Icons.Rounded.PhotoLibrary,
                                 title = "Simpan ke Galeri",
                                 checked = settings.saveToGallery,
                                 onCheckedChange = { onToggle("saveToGallery", it) },
@@ -323,21 +323,21 @@ fun AdvancedSettingsContent(
                                 .background(cardBg)
                         ) {
                             SettingToggleItem(
-                                icon = Icons.Default.Animation,
+                                icon = Icons.Rounded.Animation,
                                 title = "Gunakan Animasi",
                                 checked = settings.animationsEnabled,
                                 onCheckedChange = { onToggle("animations", it) },
                                 showSeparator = true
                             )
                             SettingToggleItem(
-                                icon = Icons.Default.Vibration,
+                                icon = Icons.Rounded.Vibration,
                                 title = "Getaran Saat Mengetik",
                                 checked = settings.typingVibration,
                                 onCheckedChange = { onToggle("typingVibration", it) },
                                 showSeparator = true
                             )
                             SettingToggleItem(
-                                icon = Icons.Default.Keyboard,
+                                icon = Icons.Rounded.Keyboard,
                                 title = "Kirim dengan Tombol Enter",
                                 checked = settings.enterToSend,
                                 onCheckedChange = { onToggle("enterToSend", it) },

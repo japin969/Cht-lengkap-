@@ -28,18 +28,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Cake
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.FilePresent
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.rounded.Cake
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.FilePresent
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -298,17 +298,17 @@ fun ContactInfoContent(
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 ActionGridItem(
-                                    icon = Icons.Default.Call,
+                                    icon = Icons.Rounded.Call,
                                     label = "panggilan",
                                     modifier = Modifier.weight(1f)
                                 )
                                 ActionGridItem(
-                                    icon = Icons.Default.Videocam,
+                                    icon = Icons.Rounded.Videocam,
                                     label = "video",
                                     modifier = Modifier.weight(1f)
                                 )
                                 ActionGridItem(
-                                    icon = Icons.Default.Search,
+                                    icon = Icons.Rounded.Search,
                                     label = "cari",
                                     modifier = Modifier.weight(1f)
                                 )
@@ -322,7 +322,7 @@ fun ContactInfoContent(
                                     .background(cardBg)
                             ) {
                                 SettingItemRow(
-                                    icon = Icons.Default.FilePresent,
+                                    icon = Icons.Rounded.FilePresent,
                                     iconTint = JayraBlue,
                                     title = "Media, Tautan, dan Dok",
                                     valueText = "${contact.mediaCount}"
@@ -335,7 +335,7 @@ fun ContactInfoContent(
                                         .background(separatorColor)
                                 )
                                 SettingItemRow(
-                                    icon = Icons.Default.Star,
+                                    icon = Icons.Rounded.Star,
                                     iconTint = JayraYellow,
                                     title = "Pesan Berbintang",
                                     valueText = "${contact.starredCount}"
@@ -384,7 +384,7 @@ fun ContactInfoContent(
                                         .background(separatorColor)
                                 )
                                 SettingItemRow(
-                                    icon = Icons.Default.Palette,
+                                    icon = Icons.Rounded.Palette,
                                     iconTint = JayraOrange,
                                     title = "Wallpaper & Bunyi",
                                     valueText = "Default"
@@ -397,7 +397,7 @@ fun ContactInfoContent(
                                         .background(separatorColor)
                                 )
                                 SettingSwitchRow(
-                                    icon = Icons.Default.Download,
+                                    icon = Icons.Rounded.Download,
                                     iconTint = JayraYellow,
                                     title = "Simpan ke Rol Kamera",
                                     checked = contact.saveToCamera,
@@ -413,7 +413,7 @@ fun ContactInfoContent(
                                     .background(cardBg)
                             ) {
                                 SettingSwitchRow(
-                                    icon = Icons.Default.Timer,
+                                    icon = Icons.Rounded.Timer,
                                     iconTint = JayraBlue,
                                     title = "Pesan Sementara",
                                     checked = contact.disappearingEnabled,
@@ -431,7 +431,7 @@ fun ContactInfoContent(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.Default.Security,
+                                        imageVector = Icons.Rounded.Security,
                                         contentDescription = "Security",
                                         tint = JayraSuccessGreen,
                                         modifier = Modifier.size(20.dp)
@@ -603,7 +603,7 @@ private fun PersonalNoteCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.EditNote,
+                    imageVector = Icons.Rounded.EditNote,
                     contentDescription = noteStrings.personalNoteCardTitle,
                     tint = JayraBlue,
                     modifier = Modifier.size(22.dp)
@@ -624,7 +624,7 @@ private fun PersonalNoteCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = noteStrings.savedBadgeLabel,
                         tint = JayraSuccessGreen,
                         modifier = Modifier.size(16.dp)
@@ -721,7 +721,7 @@ private fun BirthdayCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Cake,
+                imageVector = Icons.Rounded.Cake,
                 contentDescription = noteStrings.birthdayCardTitle,
                 tint = JayraOrange,
                 modifier = Modifier.size(22.dp)

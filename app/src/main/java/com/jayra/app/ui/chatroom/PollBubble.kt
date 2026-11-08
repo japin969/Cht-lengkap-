@@ -18,10 +18,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Poll
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Poll
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -91,7 +91,7 @@ fun PollBubble(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Poll,
+                    imageVector = Icons.Rounded.Poll,
                     contentDescription = null,
                     tint = JayraBlue,
                     modifier = Modifier.size(16.dp)
@@ -197,21 +197,21 @@ fun PollBubble(
                             ) {
                                 if (isCorrectQuiz) {
                                     Icon(
-                                        imageVector = Icons.Default.Check,
+                                        imageVector = Icons.Rounded.Check,
                                         contentDescription = "Benar",
                                         tint = Color.White,
                                         modifier = Modifier.size(14.dp)
                                     )
                                 } else if (isWrongQuiz) {
                                     Icon(
-                                        imageVector = Icons.Default.Close,
+                                        imageVector = Icons.Rounded.Close,
                                         contentDescription = "Salah",
                                         tint = Color.White,
                                         modifier = Modifier.size(14.dp)
                                     )
                                 } else if (isSelected) {
                                     Icon(
-                                        imageVector = Icons.Default.Check,
+                                        imageVector = Icons.Rounded.Check,
                                         contentDescription = "Dipilih",
                                         tint = Color.White,
                                         modifier = Modifier.size(14.dp)

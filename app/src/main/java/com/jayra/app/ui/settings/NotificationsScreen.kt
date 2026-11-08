@@ -24,15 +24,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PriorityHigh
+import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.Chat
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PriorityHigh
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.Vibration
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -174,7 +174,7 @@ fun NotificationsContent(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Warning,
+                            imageVector = Icons.Rounded.Warning,
                             contentDescription = "Error",
                             tint = JayraDangerRed,
                             modifier = Modifier.size(48.dp)
@@ -221,7 +221,7 @@ fun NotificationsContent(
                                             .background(cardBg)
                                     ) {
                                         InfoSwitchRow(
-                                            icon = Icons.Default.Chat,
+                                            icon = Icons.Rounded.Chat,
                                             iconTint = JayraBlue,
                                             title = "Notifikasi Pribadi",
                                             checked = settings.isPrivateChatNotificationsEnabled,
@@ -229,7 +229,7 @@ fun NotificationsContent(
                                             showSeparator = true
                                         )
                                         InfoSwitchRow(
-                                            icon = Icons.Default.Group,
+                                            icon = Icons.Rounded.Group,
                                             iconTint = JayraOrange,
                                             title = "Notifikasi Grup",
                                             checked = settings.isGroupNotificationsEnabled,
@@ -237,7 +237,7 @@ fun NotificationsContent(
                                             showSeparator = true
                                         )
                                         InfoSwitchRow(
-                                            icon = Icons.Default.Campaign,
+                                            icon = Icons.Rounded.Campaign,
                                             iconTint = JayraSuccessGreen,
                                             title = "Notifikasi Channel",
                                             checked = settings.isChannelNotificationsEnabled,
@@ -245,7 +245,7 @@ fun NotificationsContent(
                                             showSeparator = true
                                         )
                                         InfoSettingRow(
-                                            icon = Icons.Default.MusicNote,
+                                            icon = Icons.Rounded.MusicNote,
                                             iconTint = JayraYellow,
                                             title = "Suara",
                                             valueText = settings.sound,
@@ -253,7 +253,7 @@ fun NotificationsContent(
                                             showSeparator = true
                                         )
                                         InfoSettingRow(
-                                            icon = Icons.Default.Vibration,
+                                            icon = Icons.Rounded.Vibration,
                                             iconTint = JayraSubtext,
                                             title = "Getar",
                                             valueText = settings.vibrate,
@@ -279,7 +279,7 @@ fun NotificationsContent(
                                             .background(cardBg)
                                     ) {
                                         InfoSwitchRow(
-                                            icon = Icons.Default.PriorityHigh,
+                                            icon = Icons.Rounded.PriorityHigh,
                                             iconTint = JayraOrange,
                                             title = "Pesan Prioritas",
                                             checked = settings.isPriorityMessageEnabled,
@@ -287,7 +287,7 @@ fun NotificationsContent(
                                             showSeparator = true
                                         )
                                         InfoSwitchRow(
-                                            icon = Icons.Default.DeleteSweep,
+                                            icon = Icons.Rounded.DeleteSweep,
                                             iconTint = JayraDangerRed,
                                             title = "Pesan Dihapus",
                                             checked = settings.isDeletedMessageNoticeEnabled,

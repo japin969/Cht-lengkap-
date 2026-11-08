@@ -16,10 +16,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Chat
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -249,10 +249,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MainActivityRootLightPreview() {
     val sampleTabs = listOf(
-        NavItem("chat_list", "Chat", Icons.Default.Chat, badgeCount = 2),
-        NavItem("calls", "Panggilan", Icons.Default.Call),
-        NavItem("music_home", "Musik", Icons.Default.MusicNote),
-        NavItem("settings", "Pengaturan", Icons.Default.Settings)
+        NavItem("chat_list", "Chat", Icons.Rounded.Chat, badgeCount = 2),
+        NavItem("calls", "Panggilan", Icons.Rounded.Call),
+        NavItem("music_home", "Musik", Icons.Rounded.MusicNote),
+        NavItem("settings", "Pengaturan", Icons.Rounded.Settings)
     )
     JayraTheme(darkTheme = false) {
         Surface {
@@ -270,10 +270,10 @@ private fun MainActivityRootLightPreview() {
 @Composable
 private fun MainActivityRootDarkPreview() {
     val sampleTabs = listOf(
-        NavItem("chat_list", "Chat", Icons.Default.Chat, badgeCount = 5),
-        NavItem("calls", "Panggilan", Icons.Default.Call),
-        NavItem("music_home", "Musik", Icons.Default.MusicNote),
-        NavItem("settings", "Pengaturan", Icons.Default.Settings)
+        NavItem("chat_list", "Chat", Icons.Rounded.Chat, badgeCount = 5),
+        NavItem("calls", "Panggilan", Icons.Rounded.Call),
+        NavItem("music_home", "Musik", Icons.Rounded.MusicNote),
+        NavItem("settings", "Pengaturan", Icons.Rounded.Settings)
     )
     JayraTheme(darkTheme = true) {
         Surface {

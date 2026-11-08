@@ -37,14 +37,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -596,7 +596,7 @@ fun VoiceTrimmerContent(
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
-                    imageVector = Icons.Default.ContentCut,
+                    imageVector = Icons.Rounded.ContentCut,
                     contentDescription = null,
                     tint = Color(0xFFFFFFFF).copy(alpha = 0.85f),
                     modifier = Modifier
@@ -702,7 +702,7 @@ fun VoiceTrimmerContent(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.GraphicEq,
+                                        imageVector = Icons.Rounded.GraphicEq,
                                         contentDescription = null,
                                         tint = JayraBlue,
                                         modifier = Modifier.size(20.dp)
@@ -903,9 +903,9 @@ fun VoiceTrimmerContent(
                             ) {
                                 Icon(
                                     imageVector = if (uiState.isPlayingPreview) {
-                                        Icons.Default.Pause
+                                        Icons.Rounded.Pause
                                     } else {
-                                        Icons.Default.PlayArrow
+                                        Icons.Rounded.PlayArrow
                                     },
                                     contentDescription = null,
                                     tint = playBtnTextColor,
@@ -953,9 +953,9 @@ fun VoiceTrimmerContent(
                             ) {
                                 Icon(
                                     imageVector = if (uiState.isRecordingMic) {
-                                        Icons.Default.Stop
+                                        Icons.Rounded.Stop
                                     } else {
-                                        Icons.Default.Mic
+                                        Icons.Rounded.Mic
                                     },
                                     contentDescription = null,
                                     tint = if (uiState.isRecordingMic) Color(0xFFFFFFFF) else JayraDangerRed,
@@ -983,7 +983,7 @@ fun VoiceTrimmerContent(
                                     .testTag("voice_trimmer_reset_sample_button")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Refresh,
+                                    imageVector = Icons.Rounded.Refresh,
                                     contentDescription = strings.resetSampleLabel,
                                     tint = JayraSubtext,
                                     modifier = Modifier.size(22.dp)
@@ -1007,7 +1007,7 @@ fun VoiceTrimmerContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
                                 tint = Color(0xFFFFFFFF),
                                 modifier = Modifier.size(22.dp)

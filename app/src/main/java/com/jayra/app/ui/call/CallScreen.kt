@@ -38,17 +38,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.Cameraswitch
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VideocamOff
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CallEnd
+import androidx.compose.material.icons.rounded.Cameraswitch
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MicOff
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material.icons.rounded.VideocamOff
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -232,7 +232,7 @@ fun CallScreenContent(
                     modifier = Modifier.padding(24.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Warning,
+                        imageVector = Icons.Rounded.Warning,
                         contentDescription = "Error",
                         tint = JayraDangerRed,
                         modifier = Modifier.size(48.dp)
@@ -417,7 +417,7 @@ private fun GroupVideoCallLayout(
                     .testTag("group_call_back_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = "Tutup",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(24.dp)
@@ -454,7 +454,7 @@ private fun GroupVideoCallLayout(
                     .testTag("call_topbar_add_participant_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.PersonAdd,
+                    imageVector = Icons.Rounded.PersonAdd,
                     contentDescription = "Tambah Peserta",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(24.dp)
@@ -555,7 +555,7 @@ private fun GroupParticipantVideoTile(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.Person,
+                        imageVector = Icons.Rounded.Person,
                         contentDescription = participant.name,
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(36.dp)
@@ -602,7 +602,7 @@ private fun GroupParticipantVideoTile(
             Spacer(modifier = Modifier.width(6.dp))
 
             Icon(
-                imageVector = if (participant.isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                imageVector = if (participant.isMuted) Icons.Rounded.MicOff else Icons.Rounded.Mic,
                 contentDescription = if (participant.isMuted) "Dibisukan" else "Aktif",
                 tint = if (participant.isMuted) JayraDangerRed else JayraSuccessGreen,
                 modifier = Modifier.size(16.dp)
@@ -684,7 +684,7 @@ private fun VideoCallLayout(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = Icons.Rounded.Person,
                             contentDescription = null,
                             tint = Color(0xFFFFFFFF),
                             modifier = Modifier.size(64.dp)
@@ -759,7 +759,7 @@ private fun VideoCallLayout(
                     .testTag("call_back_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = "Tutup",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(24.dp)
@@ -782,7 +782,7 @@ private fun VideoCallLayout(
                     .testTag("video_topbar_add_participant_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.PersonAdd,
+                    imageVector = Icons.Rounded.PersonAdd,
                     contentDescription = "Tambah Peserta",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(24.dp)
@@ -857,7 +857,7 @@ private fun VoiceCallLayout(
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = "Tutup",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(24.dp)
@@ -880,7 +880,7 @@ private fun VoiceCallLayout(
                     .testTag("voice_topbar_add_participant_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.PersonAdd,
+                    imageVector = Icons.Rounded.PersonAdd,
                     contentDescription = "Tambah Peserta",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(24.dp)
@@ -914,7 +914,7 @@ private fun VoiceCallLayout(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.Person,
+                        imageVector = Icons.Rounded.Person,
                         contentDescription = null,
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(64.dp)
@@ -1003,7 +1003,7 @@ private fun CallControlsDock(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Cameraswitch,
+                        imageVector = Icons.Rounded.Cameraswitch,
                         contentDescription = "Ganti Kamera",
                         tint = Color(0xFFFFFFFF),
                         modifier = Modifier.size(22.dp)
@@ -1029,7 +1029,7 @@ private fun CallControlsDock(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.PersonAdd,
+                    imageVector = Icons.Rounded.PersonAdd,
                     contentDescription = "Tambah Peserta",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(22.dp)
@@ -1058,7 +1058,7 @@ private fun CallControlsDock(
                     .testTag("call_mute_button")
             ) {
                 Icon(
-                    imageVector = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                    imageVector = if (isMuted) Icons.Rounded.MicOff else Icons.Rounded.Mic,
                     contentDescription = "Mute",
                     tint = if (isMuted) JayraDangerRed else Color(0xFFFFFFFF),
                     modifier = Modifier.size(24.dp)
@@ -1075,7 +1075,7 @@ private fun CallControlsDock(
                         .testTag("call_video_toggle_button")
                 ) {
                     Icon(
-                        imageVector = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                        imageVector = if (isVideoEnabled) Icons.Rounded.Videocam else Icons.Rounded.VideocamOff,
                         contentDescription = "Video",
                         tint = if (isVideoEnabled) Color(0xFFFFFFFF) else JayraDangerRed,
                         modifier = Modifier.size(24.dp)
@@ -1092,7 +1092,7 @@ private fun CallControlsDock(
                     .testTag("call_end_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.CallEnd,
+                    imageVector = Icons.Rounded.CallEnd,
                     contentDescription = "Akhiri Panggilan",
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(32.dp)
@@ -1207,7 +1207,7 @@ private fun AddCallParticipantDialog(
                                 }
                             }
                             Icon(
-                                imageVector = Icons.Default.Add,
+                                imageVector = Icons.Rounded.Add,
                                 contentDescription = "Undang ${contact.name}",
                                 tint = JayraBlue,
                                 modifier = Modifier.size(22.dp)
