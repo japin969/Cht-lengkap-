@@ -259,7 +259,7 @@ fun CreatePollScreen(
                                         .testTag("quiz_option_select_$index")
                                 ) {
                                     Icon(
-                                        imageVector = if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                                        imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Outlined.Circle,
                                         contentDescription = "Pilih jawaban benar",
                                         tint = if (isSelected) Color(0xFF4CAF50) else JayraSubtext
                                     )

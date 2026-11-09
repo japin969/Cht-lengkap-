@@ -30,7 +30,7 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -273,7 +273,7 @@ fun PrivacyContent(
                                             showSeparator = true
                                         )
                                         InfoSettingRow(
-                                            icon = Icons.Default.Visibility,
+                                            icon = Icons.Rounded.Visibility,
                                             iconTint = JayraSuccessGreen,
                                             title = "Terakhir Dilihat & Online",
                                             valueText = settings.lastSeenPrivacy,

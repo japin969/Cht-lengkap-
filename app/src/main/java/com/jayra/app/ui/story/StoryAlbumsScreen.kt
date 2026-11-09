@@ -36,7 +36,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesomeMotion
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -629,7 +629,7 @@ private fun StoryGridItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Visibility,
+                    imageVector = Icons.Rounded.Visibility,
                     contentDescription = viewsSuffix,
                     tint = Color(0xFFFFFFFF),
                     modifier = Modifier.size(12.dp)

@@ -60,6 +60,31 @@ class ChatRepository(
         }
     }
 
+    fun getChatSnapshotById(chatId: String): Chat? {
+        return _localChats.value.find { it.id == chatId }
+    }
+
+    fun observeChat(chatId: String): Flow<Chat?> = callbackFlow {
+        if (firestore != null) {
+            val listener = firestore.collection("chats")
+                .document(chatId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null || !snapshot.exists()) {
+                        trySend(_localChats.value.find { it.id == chatId })
+                        return@addSnapshotListener
+                    }
+                    val remote = snapshot.toObject(Chat::class.java)?.copy(id = snapshot.id)
+                    trySend(remote)
+                }
+            awaitClose { listener.remove() }
+        } else {
+            val job = launch {
+                _localChats.collect { list -> trySend(list.find { it.id == chatId }) }
+            }
+            awaitClose { job.cancel() }
+        }
+    }
+
     fun getMessages(chatId: String): Flow<List<Message>> = callbackFlow {
         if (firestore != null) {
             val listener = firestore.collection("chats")
