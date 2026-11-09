@@ -30,6 +30,9 @@ class ChatRepository(
     val currentUserId: String
         get() = auth?.currentUser?.uid ?: "user_telegram_me"
 
+    private val _localChats = MutableStateFlow<List<Chat>>(emptyList())
+    private val _messagesByChat = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
+
     fun getChats(): Flow<List<Chat>> = callbackFlow {
         if (firestore != null) {
             val listener = firestore.collection("chats")
