@@ -574,7 +574,9 @@ private fun MainNavigationGraph(
                     onStoriesClick = {
                         navController.navigate(MainViewModel.ROUTE_STORY_ALBUMS)
                     }
-                )
+                
+                        onAiClick = { navController.navigate("assistant") }
+                    )
             }
         }
 
@@ -700,8 +702,7 @@ private fun MainNavigationGraph(
                 onAboutClick = { navController.navigate("about") },
                 onSavedMessagesClick = { navController.navigate("saved_messages") },
                 onCommunitiesClick = { navController.navigate(MainViewModel.ROUTE_COMMUNITIES) },
-                onStoriesClick = { navController.navigate(MainViewModel.ROUTE_STORY_ALBUMS) },
-                        onAiClick = { navController.navigate("assistant") }
+                onStoriesClick = { navController.navigate(MainViewModel.ROUTE_STORY_ALBUMS) }
             )
         }
 
