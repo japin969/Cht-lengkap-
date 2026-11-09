@@ -33,6 +33,45 @@ class ChatRepository(
     private val _localChats = MutableStateFlow<List<Chat>>(emptyList())
     private val _messagesByChat = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
 
+    init {
+        if (com.jayra.app.BuildConfig.DEBUG) {
+            _localChats.value = listOf(
+                Chat(
+                    id = "demo_ai",
+                    name = "Jayra AI",
+                    avatarUrl = "",
+                    lastMessage = "Halo! Saya Jayra AI. Tanya apa saja.",
+                    timestamp = "Baru saja",
+                    unreadCount = 1,
+                    isRead = false,
+                    participants = listOf(currentUserId, "jayra_ai")
+                ),
+                Chat(
+                    id = "demo_group",
+                    name = "Tim Jayra",
+                    avatarUrl = "",
+                    lastMessage = "Rapat jam 3 sore ya",
+                    timestamp = "10:30",
+                    unreadCount = 0,
+                    isRead = true,
+                    isGroup = true,
+                    participants = listOf(currentUserId, "user_1", "user_2")
+                ),
+                Chat(
+                    id = "demo_chat",
+                    name = "Demo Chat",
+                    avatarUrl = "",
+                    lastMessage = "Halo, ini chat demo",
+                    timestamp = "Kemarin",
+                    unreadCount = 0,
+                    isRead = true,
+                    participants = listOf(currentUserId, "user_demo")
+                )
+            )
+        }
+    }
+
+
     fun getChats(): Flow<List<Chat>> = callbackFlow {
         if (firestore != null) {
             val listener = firestore.collection("chats")
