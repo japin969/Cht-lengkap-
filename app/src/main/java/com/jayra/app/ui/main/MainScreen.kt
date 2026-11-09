@@ -573,9 +573,8 @@ private fun MainNavigationGraph(
                     },
                     onStoriesClick = {
                         navController.navigate(MainViewModel.ROUTE_STORY_ALBUMS)
-                    }
-                
-                        onAiClick = { navController.navigate("assistant") }
+                    },
+                    onAiClick = { navController.navigate("assistant") }
                     )
             }
         }
