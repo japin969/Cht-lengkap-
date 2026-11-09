@@ -14,8 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import io.github.alexzhirkevich.cupertino.icons.Icons as CupertinoIcons
-import io.github.alexzhirkevich.cupertino.icons.outlined.Sparkles
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.AutoAwesomeMotion
@@ -85,7 +83,7 @@ fun ChatListScreen(
                     color = Color.Black
                 )
                 Icon(
-                    imageVector = CupertinoIcons.Outlined.Sparkles,
+                    imageVector = Icons.Rounded.AutoAwesome,
                     contentDescription = "New Chat",
                     tint = Color(0xFF0A84FF),
                     modifier = Modifier.size(24.dp).clickable { onContactsClick() }
@@ -178,7 +176,7 @@ fun ChatListScreen(
                     .clickable(interactionSource = interactionAi, indication = null) { onAiClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(CupertinoIcons.Outlined.Sparkles, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
+                Icon(Icons.Rounded.AutoAwesome, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
             }
 
             val interactionFab = remember { MutableInteractionSource() }
