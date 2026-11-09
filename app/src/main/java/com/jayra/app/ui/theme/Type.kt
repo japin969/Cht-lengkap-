@@ -16,6 +16,7 @@ val SFProFontFamily = FontFamily(
 )
 
 val Typography = Typography(
+    defaultFontFamily = SFProFontFamily,
     displayLarge = TextStyle(fontFamily = SFProFontFamily, fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 41.sp, letterSpacing = (-0.5).sp),
     displayMedium = TextStyle(fontFamily = SFProFontFamily, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-0.4).sp),
     headlineMedium = TextStyle(fontFamily = SFProFontFamily, fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.3).sp),
