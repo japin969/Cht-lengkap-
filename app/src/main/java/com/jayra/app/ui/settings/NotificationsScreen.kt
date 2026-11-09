@@ -30,7 +30,7 @@ import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PriorityHigh
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
@@ -295,7 +295,7 @@ fun NotificationsContent(
                                             showSeparator = true
                                         )
                                         InfoSwitchRow(
-                                            icon = Icons.Default.Visibility,
+                                            icon = Icons.Rounded.Visibility,
                                             iconTint = JayraBlue,
                                             title = "Pratinjau Pesan",
                                             checked = settings.isMessagePreviewEnabled,

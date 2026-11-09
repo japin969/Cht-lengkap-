@@ -36,7 +36,7 @@ import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -625,7 +625,7 @@ fun GroupSettingsContent(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.VisibilityOff,
+                                        imageVector = Icons.Rounded.VisibilityOff,
                                         contentDescription = null,
                                         tint = JayraBlue,
                                         modifier = Modifier.size(24.dp)
