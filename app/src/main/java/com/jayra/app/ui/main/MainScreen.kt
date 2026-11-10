@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.praveenjuge.vadivam.VadivamIcons
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Chat
 import androidx.compose.material.icons.rounded.MusicNote
@@ -70,7 +71,6 @@ import androidx.navigation.navArgument
 import com.jayra.app.data.ChatRepository
 import com.jayra.app.di.AppModule
 import com.jayra.app.model.NavItem
-import com.jayra.app.ui.theme.JayraIcons
 import com.jayra.app.model.SearchResultType
 import com.jayra.app.ui.about.AboutScreen
 import com.jayra.app.ui.addmember.AddMemberScreen
@@ -147,27 +147,27 @@ class MainViewModel(
         NavItem(
             route = ROUTE_CHAT_LIST,
             label = "Chat",
-            icon = JayraIcons.Chat
+            icon = VadivamIcons.Outline.Message
         ),
         NavItem(
             route = ROUTE_CALLS,
             label = "Panggilan",
-            icon = JayraIcons.Phone
+            icon = VadivamIcons.Outline.Phone
         ),
         NavItem(
             route = ROUTE_MUSIC_HOME,
             label = "Musik",
-            icon = JayraIcons.MusicNote
+            icon = VadivamIcons.Outline.Music
         ),
         NavItem(
             route = ROUTE_DRAMA_HOME,
-            icon = JayraIcons.PlayArrow,
+            icon = VadivamIcons.Outline.Video,
             label = "VidHub"
         ),
         NavItem(
             route = ROUTE_SETTINGS,
             label = "Pengaturan",
-            icon = JayraIcons.Settings
+            icon = VadivamIcons.Outline.Settings
         )
     )
 
@@ -1112,10 +1112,10 @@ private fun MainScreenPreviewContent(
     val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
     val textColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
     val previewTabs = listOf(
-        NavItem("chat_list", "Chat", JayraIcons.Chat, badgeCount = unreadCount),
-        NavItem("calls", "Panggilan", JayraIcons.Phone),
-        NavItem("music_home", "Musik", JayraIcons.MusicNote),
-        NavItem("settings", "Pengaturan", JayraIcons.Settings)
+        NavItem("chat_list", "Chat", VadivamIcons.Outline.Message, badgeCount = unreadCount),
+        NavItem("calls", "Panggilan", VadivamIcons.Outline.Phone),
+        NavItem("music_home", "Musik", VadivamIcons.Outline.Music),
+        NavItem("settings", "Pengaturan", VadivamIcons.Outline.Settings)
     )
 
     Scaffold(
