@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AIResponse
 import com.jayra.app.data.EncryptionHelper
 import com.jayra.app.data.NexadevAiApi
+import com.jayra.app.data.NexadevAiResponse
 import com.jayra.app.data.SiputzxApi
 import com.jayra.app.model.AssistantUiState
 import com.jayra.app.model.Message
