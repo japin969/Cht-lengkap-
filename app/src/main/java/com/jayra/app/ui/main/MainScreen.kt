@@ -22,12 +22,11 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import com.praveenjuge.vadivam.VadivamIcons
-import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material.icons.rounded.Chat
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Settings
+import com.praveenjuge.vadivam.icons.Settings
+import com.praveenjuge.vadivam.icons.Video
+import com.praveenjuge.vadivam.icons.Music
+import com.praveenjuge.vadivam.icons.PhoneCall
+import com.praveenjuge.vadivam.icons.MessageCircle
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
@@ -147,27 +146,27 @@ class MainViewModel(
         NavItem(
             route = ROUTE_CHAT_LIST,
             label = "Chat",
-            icon = VadivamIcons.Outline.Message
+            icon = MessageCircle
         ),
         NavItem(
             route = ROUTE_CALLS,
             label = "Panggilan",
-            icon = VadivamIcons.Outline.Phone
+            icon = PhoneCall
         ),
         NavItem(
             route = ROUTE_MUSIC_HOME,
             label = "Musik",
-            icon = VadivamIcons.Outline.Music
+            icon = Music
         ),
         NavItem(
             route = ROUTE_DRAMA_HOME,
-            icon = VadivamIcons.Outline.Video,
+            icon = Video,
             label = "VidHub"
         ),
         NavItem(
             route = ROUTE_SETTINGS,
             label = "Pengaturan",
-            icon = VadivamIcons.Outline.Settings
+            icon = Settings
         )
     )
 
@@ -1112,10 +1111,10 @@ private fun MainScreenPreviewContent(
     val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
     val textColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
     val previewTabs = listOf(
-        NavItem("chat_list", "Chat", VadivamIcons.Outline.Message, badgeCount = unreadCount),
-        NavItem("calls", "Panggilan", VadivamIcons.Outline.Phone),
-        NavItem("music_home", "Musik", VadivamIcons.Outline.Music),
-        NavItem("settings", "Pengaturan", VadivamIcons.Outline.Settings)
+        NavItem("chat_list", "Chat", MessageCircle, badgeCount = unreadCount),
+        NavItem("calls", "Panggilan", PhoneCall),
+        NavItem("music_home", "Musik", Music),
+        NavItem("settings", "Pengaturan", Settings)
     )
 
     Scaffold(
