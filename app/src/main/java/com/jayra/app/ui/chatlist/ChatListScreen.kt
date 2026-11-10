@@ -75,7 +75,7 @@ fun ChatListScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                AppText(
                     text = "Chat",
                     fontSize = 34.sp,
                     fontWeight = FontWeight.Bold,
@@ -103,7 +103,7 @@ fun ChatListScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Search, null, tint = Color.Gray, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Cari", color = Color.Gray, fontSize = 17.sp)
+                    AppText("Cari", color = Color.Gray, fontSize = 17.sp)
                 }
             }
 
@@ -126,7 +126,7 @@ fun ChatListScreen(
                             .clickable { viewModel.onFilterChange(filter) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        AppText(
                             text = filter.label,
                             fontSize = 13.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
@@ -139,7 +139,7 @@ fun ChatListScreen(
             // List
             when (val state = uiState) {
                 is ChatListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF0A84FF)) }
-                is ChatListUiState.Empty -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Belum ada chat", color = Color.Gray, fontSize = 17.sp) }
+                is ChatListUiState.Empty -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AppText("Belum ada chat", color = Color.Gray, fontSize = 17.sp) }
                 is ChatListUiState.Success -> {
                     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
                         items(state.chats, key = { it.id }, contentType = { "chat_item" }) { chat ->
@@ -154,7 +154,7 @@ fun ChatListScreen(
                         }
                     }
                 }
-                is ChatListUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Error: ${state.message}", color = Color.Red) }
+                is ChatListUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AppText("Error: ${state.message}", color = Color.Red) }
             }
         }
 
@@ -260,27 +260,55 @@ fun IOSChatItemRow(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        Text(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Text(chat.timestamp, fontSize = 13.sp, color = Color.Gray)
+                        AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        AppText(chat.timestamp, fontSize = 13.sp, color = Color.Gray)
                     }
                     Spacer(Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(chat.lastMessage, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f), color = Color.Gray)
+                        AppText(chat.lastMessage, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f), color = Color.Gray)
                         if (chat.unreadCount > 0) {
                             Box(modifier = Modifier.padding(start = 8.dp).size(20.dp).background(Color(0xFF0A84FF), CircleShape), contentAlignment = Alignment.Center) {
-                                Text(chat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                AppText(chat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
             }
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                DropdownMenuItem(text = { Text("Tandai Dibaca") }, leadingIcon = { Icon(Icons.Rounded.MarkChatRead, null) }, onClick = { showMenu = false })
-                DropdownMenuItem(text = { Text(if (chat.isPinned) "Lepas Pin" else "Sematkan") }, leadingIcon = { Icon(Icons.Rounded.PushPin, null) }, onClick = { onPin(); showMenu = false })
-                DropdownMenuItem(text = { Text(if (chat.isMuted) "Bunyikan" else "Bisukan") }, leadingIcon = { Icon(Icons.Rounded.NotificationsOff, null) }, onClick = { onMute(); showMenu = false })
-                DropdownMenuItem(text = { Text("Arsipkan") }, leadingIcon = { Icon(Icons.Rounded.Archive, null) }, onClick = { onArchive(); showMenu = false })
-                DropdownMenuItem(text = { Text("Hapus", color = Color.Red) }, leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = Color.Red) }, onClick = { onDelete(); showMenu = false })
+                DropdownMenuItem(text = { AppText("Tandai Dibaca") }, leadingIcon = { Icon(Icons.Rounded.MarkChatRead, null) }, onClick = { showMenu = false })
+                DropdownMenuItem(text = { AppText(if (chat.isPinned) "Lepas Pin" else "Sematkan") }, leadingIcon = { Icon(Icons.Rounded.PushPin, null) }, onClick = { onPin(); showMenu = false })
+                DropdownMenuItem(text = { AppText(if (chat.isMuted) "Bunyikan" else "Bisukan") }, leadingIcon = { Icon(Icons.Rounded.NotificationsOff, null) }, onClick = { onMute(); showMenu = false })
+                DropdownMenuItem(text = { AppText("Arsipkan") }, leadingIcon = { Icon(Icons.Rounded.Archive, null) }, onClick = { onArchive(); showMenu = false })
+                DropdownMenuItem(text = { AppText("Hapus", color = Color.Red) }, leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = Color.Red) }, onClick = { onDelete(); showMenu = false })
             }
         }
     }
+}
+
+// AppText: Text dengan font SF Pro default
+@androidx.compose.runtime.Composable
+private fun AppText(
+    text: String,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified,
+    fontSize: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    fontWeight: androidx.compose.ui.text.font.FontWeight? = null,
+    fontFamily: androidx.compose.ui.text.font.FontFamily? = com.jayra.app.ui.theme.SFProFontFamily,
+    letterSpacing: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: androidx.compose.ui.text.style.TextOverflow = androidx.compose.ui.text.style.TextOverflow.Clip,
+    textAlign: androidx.compose.ui.text.style.TextAlign? = null
+) {
+    androidx.compose.material3.AppText(
+        text = text,
+        modifier = modifier,
+        color = color,
+        fontSize = fontSize,
+        fontWeight = fontWeight,
+        fontFamily = fontFamily,
+        letterSpacing = letterSpacing,
+        maxLines = maxLines,
+        overflow = overflow,
+        textAlign = textAlign
+    )
 }
