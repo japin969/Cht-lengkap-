@@ -8,10 +8,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -31,18 +32,19 @@ import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -198,7 +200,7 @@ fun ChatListScreen(
 
             // ========== FILTER CHIP ==========
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ChatFilter.entries.forEach { filter ->
@@ -342,124 +344,36 @@ fun SwipeableChatRow(
     onMute: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    var offsetX by remember { mutableStateOf(0f) }
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
-        label = "item_press"
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            when (it) {
+                SwipeToDismissBoxValue.StartToEnd -> onArchive()
+                SwipeToDismissBoxValue.EndToStart -> onDelete()
+                else -> {}
+            }
+            true
+        }
     )
 
-    Box {
-        // Background swipe (archive kiri, delete kanan)
-        Row(
-            modifier = Modifier.fillMaxSize().background(
-                if (offsetX > 0) Color(0xFF0A84FF) else Color(0xFFFF3B30)
-            ),
-            horizontalArrangement = if (offsetX > 0) Arrangement.Start else Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (offsetX > 0) {
-                Icon(Icons.Rounded.Archive, null, tint = Color.White, modifier = Modifier.padding(start = 24.dp).size(28.dp))
-            } else if (offsetX < 0) {
-                Icon(Icons.Rounded.Delete, null, tint = Color.White, modifier = Modifier.padding(end = 24.dp).size(28.dp))
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val color = when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF0A84FF)
+                SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF3B30)
+                else -> Color.Transparent
+            }
+            Box(modifier = Modifier.fillMaxSize().background(color), contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
+                Icon(
+                    imageVector = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Icons.Rounded.Archive else Icons.Rounded.Delete,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.padding(horizontal = 24.dp).size(28.dp)
+                )
             }
         }
-
-        Column(
-            modifier = Modifier
-                .offset { IntOffset(offsetX.roundToInt(), 0) }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { _, dragAmount ->
-                            offsetX = (offsetX + dragAmount).coerceIn(-200f, 200f)
-                        },
-                        onDragEnd = {
-                            if (offsetX > 100f) onArchive()
-                            else if (offsetX < -100f) onDelete()
-                            offsetX = 0f
-                        }
-                    )
-                }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer { scaleX = scale; scaleY = scale }
-                    .background(Color.White)
-                    .combinedClickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onClick,
-                        onLongClick = { if (!isSelectionMode) showMenu = true }
-                    )
-                    .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isSelectionMode) {
-                    Icon(
-                        imageVector = if (isSelected) Icons.Rounded.Check else Icons.Rounded.Search,
-                        contentDescription = null,
-                        tint = if (isSelected) Color(0xFF0A84FF) else Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                }
-                Box {
-                    AsyncImage(
-                        model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff&size=112" },
-                        contentDescription = chat.name,
-                        modifier = Modifier.size(56.dp).clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (chat.isPinned) {
-                                Icon(Icons.Rounded.PushPin, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
-                                Spacer(Modifier.width(4.dp))
-                            }
-                            if (chat.isMuted) {
-                                Icon(Icons.Rounded.NotificationsOff, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
-                                Spacer(Modifier.width(4.dp))
-                            }
-                            AppText(chat.timestamp, fontSize = 13.sp, color = Color.Gray)
-                        }
-                    }
-                    Spacer(Modifier.height(2.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (chat.hasDraft) {
-                            AppText("Draft: ", fontSize = 15.sp, color = Color(0xFF25D366), fontWeight = FontWeight.SemiBold)
-                        }
-                        AppText(
-                            text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
-                            fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                            color = if (chat.hasDraft) Color(0xFF25D366) else Color.Gray
-                        )
-                        when (chat.lastMessageStatus) {
-                            MessageStatus.SENT -> Icon(Icons.Rounded.Check, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                            MessageStatus.DELIVERED -> Icon(Icons.Rounded.DoneAll, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                            MessageStatus.READ -> Icon(Icons.Rounded.DoneAll, null, tint = Color(0xFF0A84FF), modifier = Modifier.size(14.dp))
-                            else -> {}
-                        }
-                        if (chat.unreadCount > 0) {
-                            Spacer(Modifier.width(8.dp))
-                            Box(modifier = Modifier.size(20.dp).background(Color(0xFF25D366), CircleShape), contentAlignment = Alignment.Center) {
-                                AppText(
-                                    text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
-                                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.5.dp).background(Color(0xFFE5E5EA)))
-        }
+    ) {
+        ChatRowContent(chat, isSelectionMode, isSelected, onClick, onPin, onMute, onArchive, onDelete, { showMenu = true })
     }
 
     if (showMenu) {
@@ -474,6 +388,101 @@ fun SwipeableChatRow(
                 ActionSheetItem(Icons.Rounded.Delete, "Hapus", isDestructive = true) { onDelete(); showMenu = false }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ChatRowContent(
+    chat: Chat,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onPin: () -> Unit,
+    onMute: () -> Unit,
+    onArchive: () -> Unit,
+    onDelete: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        label = "item_press"
+    )
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .background(Color.White)
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                    onLongClick = { if (!isSelectionMode) onLongPress() }
+                )
+                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isSelectionMode) {
+                Checkbox(checked = isSelected, onCheckedChange = { onClick() }, colors = CheckboxDefaults.colors(checkedColor = Color(0xFF0A84FF)))
+                Spacer(Modifier.width(8.dp))
+            }
+            Box {
+                AsyncImage(
+                    model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff&size=112" },
+                    contentDescription = chat.name,
+                    modifier = Modifier.size(56.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (chat.isPinned) {
+                            Icon(Icons.Rounded.PushPin, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        if (chat.isMuted) {
+                            Icon(Icons.Rounded.NotificationsOff, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        AppText(chat.timestamp, fontSize = 13.sp, color = Color.Gray)
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (chat.hasDraft) {
+                        AppText("Draft: ", fontSize = 15.sp, color = Color(0xFF25D366), fontWeight = FontWeight.SemiBold)
+                    }
+                    AppText(
+                        text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
+                        fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                        color = if (chat.hasDraft) Color(0xFF25D366) else Color.Gray
+                    )
+                    when (chat.lastMessageStatus) {
+                        MessageStatus.SENT -> Icon(Icons.Rounded.Check, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                        MessageStatus.DELIVERED -> Icon(Icons.Rounded.DoneAll, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                        MessageStatus.READ -> Icon(Icons.Rounded.DoneAll, null, tint = Color(0xFF0A84FF), modifier = Modifier.size(14.dp))
+                        else -> {}
+                    }
+                    if (chat.unreadCount > 0) {
+                        Spacer(Modifier.width(8.dp))
+                        Box(modifier = Modifier.size(20.dp).background(Color(0xFF25D366), CircleShape), contentAlignment = Alignment.Center) {
+                            AppText(
+                                text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
+                                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.5.dp).background(Color(0xFFE5E5EA)))
     }
 }
 
