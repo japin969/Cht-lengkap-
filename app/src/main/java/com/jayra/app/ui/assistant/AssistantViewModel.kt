@@ -194,7 +194,14 @@ class AssistantViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             try {
                 val response = withContext(Dispatchers.IO) {
-                    nexadevAiApi.askGpt4(query = sanitized)
+                    nexadevAiApi.askGpt4(query = """Kamu adalah Jayra AI, asisten cerdas tingkat lanjut. 
+Aturan Wajib:
+1. Selalu jawab dalam bahasa yang digunakan pengguna (multi-bahasa).
+2. Karaktermu: Ramah namun tegas, sangat ketat pada aturan, dan sangat pintar di berbagai aspek (coding, sains, analisis) setara dengan model Sonnet/Opus.
+3. Jangan pernah memberikan jawaban setengah-setengah, berikan solusi paling akurat dan efisien.
+4. Jangan membahas topik ilegal atau berbahaya.
+
+Pertanyaan pengguna: """ + sanitized)
                 }
 
                 if (response.isSuccessful && response.body() != null) {
