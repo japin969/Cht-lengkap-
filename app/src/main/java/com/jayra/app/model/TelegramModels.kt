@@ -58,7 +58,8 @@ data class Chat(
     val isFavorite: Boolean = false,
     val hasDraft: Boolean = false,
     val draftText: String = "",
-    val isOnline: Boolean = false
+    val isOnline: Boolean = false,
+    val lastMessageStatus: MessageStatus = MessageStatus.SENT
 )
 
 @Immutable
