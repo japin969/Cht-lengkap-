@@ -299,7 +299,7 @@ private fun AppText(
     overflow: androidx.compose.ui.text.style.TextOverflow = androidx.compose.ui.text.style.TextOverflow.Clip,
     textAlign: androidx.compose.ui.text.style.TextAlign? = null
 ) {
-    androidx.compose.material3.AppText(
+    androidx.compose.material3.Text(
         text = text,
         modifier = modifier,
         color = color,
