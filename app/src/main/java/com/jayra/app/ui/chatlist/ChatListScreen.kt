@@ -1,5 +1,6 @@
 package com.jayra.app.ui.chatlist
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -7,6 +8,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -14,13 +16,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.MarkChatRead
 import androidx.compose.material.icons.rounded.MoreVert
@@ -34,11 +37,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -48,6 +56,10 @@ import com.jayra.app.model.ChatListUiState
 import com.jayra.app.model.MessageStatus
 import com.jayra.app.ui.viewmodel.ChatListViewModel
 import com.jayra.app.util.iosGlass
+import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,8 +80,24 @@ fun ChatListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
-    var isRefreshing by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var isSelectionMode by remember { mutableStateOf(false) }
+    val selectedChats = remember { mutableStateListOf<String>() }
+    var isPaused by remember { mutableStateOf(false) }
+
+    // Blur background saat app di background (WhatsApp iOS style)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> isPaused = true
+                Lifecycle.Event.ON_RESUME -> isPaused = false
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val bgColor = Color(0xFFF2F2F7)
 
@@ -81,22 +109,31 @@ fun ChatListScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Edit (kiri)
+                if (isSelectionMode) {
+                    AppText(
+                        text = "Cancel",
+                        fontSize = 17.sp,
+                        color = Color(0xFF0A84FF),
+                        modifier = Modifier.clickable {
+                            isSelectionMode = false
+                            selectedChats.clear()
+                        }
+                    )
+                } else {
+                    AppText(
+                        text = "Edit",
+                        fontSize = 17.sp,
+                        color = Color(0xFF0A84FF),
+                        modifier = Modifier.clickable { isSelectionMode = true }
+                    )
+                }
                 AppText(
-                    text = "Edit",
-                    fontSize = 17.sp,
-                    color = Color(0xFF0A84FF),
-                    modifier = Modifier.clickable { /* mode seleksi nanti */ }
-                )
-                // Large Title
-                AppText(
-                    text = "Chat",
-                    fontSize = 34.sp,
+                    text = if (isSelectionMode) "${selectedChats.size} Dipilih" else "Chat",
+                    fontSize = if (isSelectionMode) 22.sp else 34.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
                     color = Color.Black
                 )
-                // Add & Menu (kanan)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Rounded.Add,
@@ -115,7 +152,6 @@ fun ChatListScreen(
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             DropdownMenuItem(text = { AppText("New Group") }, onClick = { showMenu = false; onCreateGroupClick() })
                             DropdownMenuItem(text = { AppText("New Broadcast") }, onClick = { showMenu = false })
-                            DropdownMenuItem(text = { AppText("Linked Devices") }, onClick = { showMenu = false })
                             DropdownMenuItem(text = { AppText("Starred Messages") }, onClick = { showMenu = false; onSavedMessagesClick() })
                             DropdownMenuItem(text = { AppText("Settings") }, onClick = { showMenu = false; onMyProfileClick() })
                         }
@@ -142,9 +178,11 @@ fun ChatListScreen(
                         modifier = Modifier.weight(1f),
                         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, color = Color.Black, fontFamily = com.jayra.app.ui.theme.SFProFontFamily),
                         singleLine = true,
-                        decorationBox = { inner ->
-                            if (searchQuery.isEmpty()) AppText("Search", fontSize = 17.sp, color = Color.Gray)
-                            inner()
+                        decorationBox = { innerTextField ->
+                            Box {
+                                if (searchQuery.isEmpty()) AppText("Search", fontSize = 17.sp, color = Color.Gray)
+                                innerTextField()
+                            }
                         }
                     )
                     if (searchQuery.isNotEmpty()) {
@@ -185,25 +223,25 @@ fun ChatListScreen(
                 }
             }
 
-            // ========== LIST + PULL TO REFRESH ==========
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = {
-                    isRefreshing = true
-                    viewModel.loadChats()
-                    isRefreshing = false
-                },
-                modifier = Modifier.fillMaxSize()
-            ) {
+            // ========== LIST ==========
+            Box(modifier = Modifier.fillMaxSize()) {
                 when (val state = uiState) {
                     is ChatListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF0A84FF)) }
-                    is ChatListUiState.Empty -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AppText("Belum ada chat", color = Color.Gray, fontSize = 17.sp) }
+                    is ChatListUiState.Empty -> EmptyState(onStartChat = onContactsClick)
                     is ChatListUiState.Success -> {
                         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 140.dp)) {
                             items(state.chats, key = { it.id }, contentType = { "chat_item" }) { chat ->
-                                IOSChatItemRow(
+                                SwipeableChatRow(
                                     chat = chat,
-                                    onClick = { onChatClick(chat.id) },
+                                    isSelectionMode = isSelectionMode,
+                                    isSelected = selectedChats.contains(chat.id),
+                                    onClick = {
+                                        if (isSelectionMode) {
+                                            if (selectedChats.contains(chat.id)) selectedChats.remove(chat.id) else selectedChats.add(chat.id)
+                                        } else {
+                                            onChatClick(chat.id)
+                                        }
+                                    },
                                     onDelete = { viewModel.deleteChat(chat.id) },
                                     onArchive = { viewModel.archiveChat(chat.id) },
                                     onPin = { viewModel.togglePin(chat.id) },
@@ -217,42 +255,86 @@ fun ChatListScreen(
             }
         }
 
-        // ========== FAB (AI + Compose) ==========
-        Column(
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        // ========== FAB ==========
+        if (!isSelectionMode) {
+            Column(
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val interactionAi = remember { MutableInteractionSource() }
+                val pressedAi by interactionAi.collectIsPressedAsState()
+                val scaleAi by animateFloatAsState(if (pressedAi) 0.9f else 1f, spring(dampingRatio = 0.6f, stiffness = 400f))
+                Box(
+                    modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleAi; scaleY = scaleAi }
+                        .iosGlass(cornerRadius = 26, tint = Color(0xFF6E48AA).copy(alpha = 0.95f))
+                        .clickable(interactionSource = interactionAi, indication = null) { onAiClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.AutoAwesome, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+                val interactionFab = remember { MutableInteractionSource() }
+                val pressedFab by interactionFab.collectIsPressedAsState()
+                val scaleFab by animateFloatAsState(if (pressedFab) 0.9f else 1f, spring(dampingRatio = 0.6f, stiffness = 400f))
+                Box(
+                    modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleFab; scaleY = scaleFab }
+                        .background(Color(0xFF0A84FF), CircleShape)
+                        .clickable(interactionSource = interactionFab, indication = null) { onContactsClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.Edit, "New Chat", tint = Color.White, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+
+        // ========== ACTION BAR (Selection Mode) ==========
+        if (isSelectionMode && selectedChats.isNotEmpty()) {
+            Row(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.White).padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                ActionBarItem(Icons.Rounded.Archive, "Arsipkan") { selectedChats.forEach { viewModel.archiveChat(it) }; selectedChats.clear() }
+                ActionBarItem(Icons.Rounded.Delete, "Hapus", isDestructive = true) { selectedChats.forEach { viewModel.deleteChat(it) }; selectedChats.clear() }
+                ActionBarItem(Icons.Rounded.MarkChatRead, "Tandai") { selectedChats.clear() }
+            }
+        }
+
+        // ========== BLUR OVERLAY (App Background) ==========
+        if (isPaused) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f)))
+        }
+    }
+}
+
+@Composable
+fun EmptyState(onStartChat: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Rounded.Search, null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+        Spacer(Modifier.height(16.dp))
+        AppText("Belum ada chat", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
+        Spacer(Modifier.height(8.dp))
+        AppText("Mulai percakapan baru dengan tombol di bawah", fontSize = 15.sp, color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = onStartChat,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A84FF)),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            val interactionAi = remember { MutableInteractionSource() }
-            val pressedAi by interactionAi.collectIsPressedAsState()
-            val scaleAi by animateFloatAsState(if (pressedAi) 0.9f else 1f, spring(dampingRatio = 0.6f, stiffness = 400f))
-            Box(
-                modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleAi; scaleY = scaleAi }
-                    .iosGlass(cornerRadius = 26, tint = Color(0xFF6E48AA).copy(alpha = 0.95f))
-                    .clickable(interactionSource = interactionAi, indication = null) { onAiClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.AutoAwesome, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
-            }
-            val interactionFab = remember { MutableInteractionSource() }
-            val pressedFab by interactionFab.collectIsPressedAsState()
-            val scaleFab by animateFloatAsState(if (pressedFab) 0.9f else 1f, spring(dampingRatio = 0.6f, stiffness = 400f))
-            Box(
-                modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleFab; scaleY = scaleFab }
-                    .background(Color(0xFF0A84FF), CircleShape)
-                    .clickable(interactionSource = interactionFab, indication = null) { onContactsClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.Edit, "New Chat", tint = Color.White, modifier = Modifier.size(22.dp))
-            }
+            AppText("Mulai Chat", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun IOSChatItemRow(
+fun SwipeableChatRow(
     chat: Chat,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onArchive: () -> Unit,
@@ -260,6 +342,7 @@ fun IOSChatItemRow(
     onMute: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var offsetX by remember { mutableStateOf(0f) }
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -268,85 +351,115 @@ fun IOSChatItemRow(
         label = "item_press"
     )
 
-    Column {
+    Box {
+        // Background swipe (archive kiri, delete kanan)
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .graphicsLayer { scaleX = scale; scaleY = scale }
-                .background(Color.White)
-                .combinedClickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick,
-                    onLongClick = { showMenu = true }
-                )
-                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+            modifier = Modifier.fillMaxSize().background(
+                if (offsetX > 0) Color(0xFF0A84FF) else Color(0xFFFF3B30)
+            ),
+            horizontalArrangement = if (offsetX > 0) Arrangement.Start else Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box {
-                AsyncImage(
-                    model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff&size=112" },
-                    contentDescription = chat.name,
-                    modifier = Modifier.size(56.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-                if (chat.isOnline) {
-                    Box(
-                        modifier = Modifier.size(14.dp).align(Alignment.BottomEnd).offset(x = 2.dp, y = 2.dp)
-                            .background(Color.White, CircleShape).padding(2.dp)
-                            .background(Color(0xFF25D366), CircleShape)
-                    )
-                }
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (chat.isPinned) {
-                            Icon(Icons.Rounded.PushPin, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        if (chat.isMuted) {
-                            Icon(Icons.Rounded.NotificationsOff, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        AppText(chat.timestamp, fontSize = 13.sp, color = Color.Gray)
-                    }
-                }
-                Spacer(Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (chat.hasDraft) {
-                        AppText("Draft: ", fontSize = 15.sp, color = Color(0xFF25D366), fontWeight = FontWeight.SemiBold)
-                    }
-                    AppText(
-                        text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
-                        fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                        color = if (chat.hasDraft) Color(0xFF25D366) else Color.Gray
-                    )
-                    // Centang status pesan terakhir
-                    when (chat.lastMessageStatus) {
-                        MessageStatus.SENT -> Icon(Icons.Rounded.Check, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                        MessageStatus.DELIVERED -> Icon(Icons.Rounded.DoneAll, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                        MessageStatus.READ -> Icon(Icons.Rounded.DoneAll, null, tint = Color(0xFF0A84FF), modifier = Modifier.size(14.dp))
-                        else -> {}
-                    }
-                    if (chat.unreadCount > 0) {
-                        Spacer(Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier.size(20.dp).background(Color(0xFF25D366), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AppText(
-                                text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
-                                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
+            if (offsetX > 0) {
+                Icon(Icons.Rounded.Archive, null, tint = Color.White, modifier = Modifier.padding(start = 24.dp).size(28.dp))
+            } else if (offsetX < 0) {
+                Icon(Icons.Rounded.Delete, null, tint = Color.White, modifier = Modifier.padding(end = 24.dp).size(28.dp))
             }
         }
-        Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.5.dp).background(Color(0xFFE5E5EA)))
+
+        Column(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.roundToInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { _, dragAmount ->
+                            offsetX = (offsetX + dragAmount).coerceIn(-200f, 200f)
+                        },
+                        onDragEnd = {
+                            if (offsetX > 100f) onArchive()
+                            else if (offsetX < -100f) onDelete()
+                            offsetX = 0f
+                        }
+                    )
+                }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                    .background(Color.White)
+                    .combinedClickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick,
+                        onLongClick = { if (!isSelectionMode) showMenu = true }
+                    )
+                    .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isSelectionMode) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Rounded.Check else Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = if (isSelected) Color(0xFF0A84FF) else Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
+                Box {
+                    AsyncImage(
+                        model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff&size=112" },
+                        contentDescription = chat.name,
+                        modifier = Modifier.size(56.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (chat.isPinned) {
+                                Icon(Icons.Rounded.PushPin, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            if (chat.isMuted) {
+                                Icon(Icons.Rounded.NotificationsOff, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            AppText(chat.timestamp, fontSize = 13.sp, color = Color.Gray)
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (chat.hasDraft) {
+                            AppText("Draft: ", fontSize = 15.sp, color = Color(0xFF25D366), fontWeight = FontWeight.SemiBold)
+                        }
+                        AppText(
+                            text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
+                            fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                            color = if (chat.hasDraft) Color(0xFF25D366) else Color.Gray
+                        )
+                        when (chat.lastMessageStatus) {
+                            MessageStatus.SENT -> Icon(Icons.Rounded.Check, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                            MessageStatus.DELIVERED -> Icon(Icons.Rounded.DoneAll, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                            MessageStatus.READ -> Icon(Icons.Rounded.DoneAll, null, tint = Color(0xFF0A84FF), modifier = Modifier.size(14.dp))
+                            else -> {}
+                        }
+                        if (chat.unreadCount > 0) {
+                            Spacer(Modifier.width(8.dp))
+                            Box(modifier = Modifier.size(20.dp).background(Color(0xFF25D366), CircleShape), contentAlignment = Alignment.Center) {
+                                AppText(
+                                    text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
+                                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.5.dp).background(Color(0xFFE5E5EA)))
+        }
     }
 
     if (showMenu) {
@@ -365,12 +478,7 @@ fun IOSChatItemRow(
 }
 
 @Composable
-fun ActionSheetItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    isDestructive: Boolean = false,
-    onClick: () -> Unit
-) {
+fun ActionSheetItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, isDestructive: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -378,6 +486,15 @@ fun ActionSheetItem(
         Icon(icon, null, tint = if (isDestructive) Color.Red else Color(0xFF0A84FF), modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(16.dp))
         AppText(label, fontSize = 17.sp, color = if (isDestructive) Color.Red else Color.Black)
+    }
+}
+
+@Composable
+fun ActionBarItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, isDestructive: Boolean = false, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
+        Icon(icon, null, tint = if (isDestructive) Color.Red else Color(0xFF0A84FF), modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(4.dp))
+        AppText(label, fontSize = 12.sp, color = if (isDestructive) Color.Red else Color(0xFF0A84FF))
     }
 }
 
