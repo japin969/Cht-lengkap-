@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AIResponse
 import com.jayra.app.data.EncryptionHelper
+import com.jayra.app.data.NexadevAiApi
 import com.jayra.app.data.SiputzxApi
 import com.jayra.app.model.AssistantUiState
 import com.jayra.app.model.Message
@@ -32,6 +33,7 @@ import java.util.UUID
 class AssistantViewModel @JvmOverloads constructor(
     application: Application,
     private val siputzxApi: SiputzxApi = SiputzxApi.create(),
+    private val nexadevAiApi: NexadevAiApi = NexadevAiApi.create(),
     private val firestore: FirebaseFirestore? = com.jayra.app.di.AppModule.provideFirestore(application),
     private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
 ) : AndroidViewModel(application) {
@@ -191,7 +193,7 @@ class AssistantViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             try {
                 val response = withContext(Dispatchers.IO) {
-                    siputzxApi.askAI(prompt = sanitized)
+                    nexadevAiApi.askGpt4(query = sanitized)
                 }
 
                 if (response.isSuccessful && response.body() != null) {
