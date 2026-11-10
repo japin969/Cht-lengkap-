@@ -14,8 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import com.praveenjuge.vadivam.icons.Pencil
-import com.praveenjuge.vadivam.icons.Star
+import com.praveenjuge.vadivam.VadivamIcons
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.AutoAwesomeMotion
@@ -85,7 +84,7 @@ fun ChatListScreen(
                     color = Color.Black
                 )
                 Icon(
-                    imageVector = Star,
+                    imageVector = VadivamIcons.Star,
                     contentDescription = "New Chat",
                     tint = Color(0xFF0A84FF),
                     modifier = Modifier.size(24.dp).clickable { onContactsClick() }
@@ -178,7 +177,7 @@ fun ChatListScreen(
                     .clickable(interactionSource = interactionAi, indication = null) { onAiClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Star, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
+                Icon(VadivamIcons.Star, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
             }
 
             val interactionFab = remember { MutableInteractionSource() }
@@ -193,7 +192,7 @@ fun ChatListScreen(
                     .clickable(interactionSource = interactionFab, indication = null) { onContactsClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Pencil, "New Chat", tint = Color.White, modifier = Modifier.size(22.dp))
+                Icon(VadivamIcons.Pencil, "New Chat", tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
     }
