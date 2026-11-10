@@ -22,7 +22,11 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import com.praveenjuge.vadivam.VadivamIcons
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Chat
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
@@ -142,27 +146,27 @@ class MainViewModel(
         NavItem(
             route = ROUTE_CHAT_LIST,
             label = "Chat",
-            icon = VadivamIcons.MessageCircle
+            icon = Icons.Rounded.Chat
         ),
         NavItem(
             route = ROUTE_CALLS,
             label = "Panggilan",
-            icon = VadivamIcons.PhoneCall
+            icon = Icons.Rounded.Call
         ),
         NavItem(
             route = ROUTE_MUSIC_HOME,
             label = "Musik",
-            icon = VadivamIcons.FileMusic
+            icon = Icons.Rounded.MusicNote
         ),
         NavItem(
             route = ROUTE_DRAMA_HOME,
-            icon = VadivamIcons.Video,
+            icon = Icons.Rounded.PlayArrow,
             label = "VidHub"
         ),
         NavItem(
             route = ROUTE_SETTINGS,
             label = "Pengaturan",
-            icon = VadivamIcons.Settings
+            icon = Icons.Rounded.Settings
         )
     )
 
@@ -1107,10 +1111,10 @@ private fun MainScreenPreviewContent(
     val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
     val textColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
     val previewTabs = listOf(
-        NavItem("chat_list", "Chat", VadivamIcons.MessageCircle, badgeCount = unreadCount),
-        NavItem("calls", "Panggilan", VadivamIcons.PhoneCall),
-        NavItem("music_home", "Musik", VadivamIcons.FileMusic),
-        NavItem("settings", "Pengaturan", VadivamIcons.Settings)
+        NavItem("chat_list", "Chat", Icons.Rounded.Chat, badgeCount = unreadCount),
+        NavItem("calls", "Panggilan", Icons.Rounded.Call),
+        NavItem("music_home", "Musik", Icons.Rounded.MusicNote),
+        NavItem("settings", "Pengaturan", Icons.Rounded.Settings)
     )
 
     Scaffold(
