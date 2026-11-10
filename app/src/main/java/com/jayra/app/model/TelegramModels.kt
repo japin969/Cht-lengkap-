@@ -5,8 +5,10 @@ import androidx.compose.runtime.Immutable
 enum class ChatFilter(val label: String) {
     ALL("All"),
     UNREAD("Unread"),
+    FAVORITES("Favorites"),
     GROUPS("Groups"),
-    CHANNELS("Channels")
+    CHANNELS("Channels"),
+    DRAFTS("Drafts")
 }
 
 enum class MessageStatus {
@@ -52,7 +54,11 @@ data class Chat(
     val hasTopics: Boolean = false,
     val isChannel: Boolean = false,
     val participants: List<String> = emptyList(),
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val isFavorite: Boolean = false,
+    val hasDraft: Boolean = false,
+    val draftText: String = "",
+    val isOnline: Boolean = false
 )
 
 @Immutable

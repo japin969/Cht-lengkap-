@@ -208,82 +208,154 @@ fun IOSChatItemRow(
     onMute: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            when (it) {
-                SwipeToDismissBoxValue.StartToEnd -> onArchive()
-                SwipeToDismissBoxValue.EndToStart -> onDelete()
-                else -> {}
-            }
-            true
-        }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        label = "item_press"
     )
 
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-            val color = when (dismissState.dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> Color(0xFFFF9500) // Orange (Archive)
-                SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF3B30) // Red (Delete)
-                else -> Color.Transparent
-            }
-            Box(
-                modifier = Modifier.fillMaxSize().background(color).padding(horizontal = 20.dp),
-                contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
-            ) {
-                Icon(
-                    imageVector = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Icons.Rounded.Archive else Icons.Rounded.Delete,
-                    contentDescription = null,
-                    tint = Color.White
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .background(Color.White)
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                    onLongClick = { showMenu = true }
                 )
-            }
-        }
-    ) {
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-                    .combinedClickable(
-                        onClick = onClick,
-                        onLongClick = { showMenu = true }
-                    )
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Avatar + online indicator
+            Box {
                 AsyncImage(
-                    model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff" },
+                    model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff&size=112" },
                     contentDescription = chat.name,
-                    modifier = Modifier.size(52.dp).clip(CircleShape),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    modifier = Modifier.size(56.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (chat.isOnline) {
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 2.dp, y = 2.dp)
+                            .background(Color.White, CircleShape)
+                            .padding(2.dp)
+                            .background(Color(0xFF25D366), CircleShape)
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = chat.name,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 17.sp,
+                        letterSpacing = (-0.2).sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (chat.isPinned) {
+                            Icon(Icons.Rounded.PushPin, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        if (chat.isMuted) {
+                            Icon(Icons.Rounded.NotificationsOff, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
                         AppText(chat.timestamp, fontSize = 13.sp, color = Color.Gray)
                     }
-                    Spacer(Modifier.height(2.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AppText(chat.lastMessage, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f), color = Color.Gray)
-                        if (chat.unreadCount > 0) {
-                            Box(modifier = Modifier.padding(start = 8.dp).size(20.dp).background(Color(0xFF0A84FF), CircleShape), contentAlignment = Alignment.Center) {
-                                AppText(chat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
+                }
+                Spacer(Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (chat.hasDraft) {
+                        AppText("Draft: ", fontSize = 15.sp, color = Color(0xFF25D366), fontWeight = FontWeight.SemiBold)
+                    }
+                    AppText(
+                        text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
+                        fontSize = 15.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                        color = if (chat.hasDraft) Color(0xFF25D366) else Color.Gray
+                    )
+                    if (chat.unreadCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .size(20.dp)
+                                .background(Color(0xFF25D366), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AppText(
+                                chat.unreadCount.toString(),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
             }
-            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                DropdownMenuItem(text = { AppText("Tandai Dibaca") }, leadingIcon = { Icon(Icons.Rounded.MarkChatRead, null) }, onClick = { showMenu = false })
-                DropdownMenuItem(text = { AppText(if (chat.isPinned) "Lepas Pin" else "Sematkan") }, leadingIcon = { Icon(Icons.Rounded.PushPin, null) }, onClick = { onPin(); showMenu = false })
-                DropdownMenuItem(text = { AppText(if (chat.isMuted) "Bunyikan" else "Bisukan") }, leadingIcon = { Icon(Icons.Rounded.NotificationsOff, null) }, onClick = { onMute(); showMenu = false })
-                DropdownMenuItem(text = { AppText("Arsipkan") }, leadingIcon = { Icon(Icons.Rounded.Archive, null) }, onClick = { onArchive(); showMenu = false })
-                DropdownMenuItem(text = { AppText("Hapus", color = Color.Red) }, leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = Color.Red) }, onClick = { onDelete(); showMenu = false })
+        }
+        // Separator inset
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 84.dp)
+                .height(0.5.dp)
+                .background(Color(0xFFE5E5EA))
+        )
+    }
+    
+    if (showMenu) {
+        ModalBottomSheet(
+            onDismissRequest = { showMenu = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+                Text(chat.name, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+                Divider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
+                ActionSheetItem(Icons.Rounded.MarkChatRead, "Tandai Dibaca") { showMenu = false }
+                ActionSheetItem(Icons.Rounded.PushPin, if (chat.isPinned) "Lepas Pin" else "Sematkan") { onPin(); showMenu = false }
+                ActionSheetItem(Icons.Rounded.NotificationsOff, if (chat.isMuted) "Bunyikan" else "Bisukan") { onMute(); showMenu = false }
+                ActionSheetItem(Icons.Rounded.Archive, "Arsipkan") { onArchive(); showMenu = false }
+                ActionSheetItem(Icons.Rounded.Delete, "Hapus", isDestructive = true) { onDelete(); showMenu = false }
             }
         }
     }
 }
+
+@Composable
+fun ActionSheetItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isDestructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = if (isDestructive) Color.Red else Color(0xFF0A84FF), modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(16.dp))
+        Text(label, fontSize = 17.sp, color = if (isDestructive) Color.Red else Color.Black)
+    }
+}
+
 
 // AppText: Text dengan font SF Pro default
 @androidx.compose.runtime.Composable

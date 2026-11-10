@@ -41,8 +41,10 @@ class ChatListViewModel(
                 val filteredByTab = when (filter) {
                     ChatFilter.ALL -> nonArchived
                     ChatFilter.UNREAD -> nonArchived.filter { it.unreadCount > 0 || !it.isRead }
+                    ChatFilter.FAVORITES -> nonArchived.filter { it.isFavorite || it.isPinned }
                     ChatFilter.GROUPS -> nonArchived.filter { it.isGroup }
                     ChatFilter.CHANNELS -> nonArchived.filter { it.isChannel }
+                    ChatFilter.DRAFTS -> nonArchived.filter { it.hasDraft }
                 }
                 val filtered = if (query.isBlank()) {
                     filteredByTab
