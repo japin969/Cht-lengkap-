@@ -173,8 +173,7 @@ fun ChatListScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .height(36.dp)
-                    .background(Color(0xFFE5E5EA), RoundedCornerShape(10.dp))
-                    .border(0.5.dp, Color(0xFFC6C6C8), RoundedCornerShape(10.dp))
+                    .background(Color(0x1F767680), RoundedCornerShape(10.dp))
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -213,11 +212,11 @@ fun ChatListScreen(
                 ChatFilter.entries.forEach { filter ->
                     val isSelected = selectedFilter == filter
                     val bg by animateColorAsState(
-                        targetValue = if (isSelected) Color(0xFF34C759) else Color(0xFFE5E5EA),
+                        targetValue = if (isSelected) Color(0xFF007AFF) else Color(0xFFE5E5EA),
                         label = "chip_bg"
                     )
                     val textColor by animateColorAsState(
-                        targetValue = if (isSelected) Color.White else Color.Gray,
+                        targetValue = if (isSelected) Color.White else Color(0xFF3C3C43).copy(alpha = 0.6f),
                         label = "chip_text"
                     )
                     Box(
@@ -273,7 +272,7 @@ fun ChatListScreen(
             ) {
                 val interactionAi = remember { MutableInteractionSource() }
                 val pressedAi by interactionAi.collectIsPressedAsState()
-                val scaleAi by animateFloatAsState(if (pressedAi) 0.9f else 1f, spring(dampingRatio = 0.35f, stiffness = 300f))
+                val scaleAi by animateFloatAsState(if (pressedAi) 0.9f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f))
                 Box(
                     modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleAi; scaleY = scaleAi }
                         .iosGlass(cornerRadius = 26, tint = Color(0xFF6E48AA).copy(alpha = 0.95f))
@@ -284,7 +283,7 @@ fun ChatListScreen(
                 }
                 val interactionFab = remember { MutableInteractionSource() }
                 val pressedFab by interactionFab.collectIsPressedAsState()
-                val scaleFab by animateFloatAsState(if (pressedFab) 0.9f else 1f, spring(dampingRatio = 0.35f, stiffness = 300f))
+                val scaleFab by animateFloatAsState(if (pressedFab) 0.9f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f))
                 Box(
                     modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleFab; scaleY = scaleFab }
                         .background(Color(0xFF007AFF), CircleShape)
@@ -366,8 +365,8 @@ fun SwipeableChatRow(
         state = dismissState,
         backgroundContent = {
             val color = when (dismissState.dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF007AFF)
-                SwipeToDismissBoxValue.EndToStart -> Color(0xFF34C759)
+                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF007AFF) // Archive — iOS Blue
+                SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF3B30) // Delete — iOS Red
                 else -> Color.Transparent
             }
             Box(modifier = Modifier.fillMaxSize().background(color), contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
@@ -415,7 +414,7 @@ fun ChatRowContent(
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = spring(dampingRatio = 0.35f, stiffness = 300f), // jelly bounce
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f), // iOS natural
         label = "item_press_jelly"
     )
     Column {
@@ -444,6 +443,16 @@ fun ChatRowContent(
                     modifier = Modifier.size(56.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
+                if (chat.isOnline) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(14.dp)
+                            .background(Color.White, CircleShape)
+                            .padding(2.dp)
+                            .background(Color(0xFF34C759), CircleShape)
+                    )
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -489,7 +498,7 @@ fun ChatRowContent(
                 }
             }
         }
-        Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.5.dp).background(Color(0xFFE5E5EA)))
+        Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.33.dp).background(Color(0xFFC6C6C8)))
     }
 }
 
