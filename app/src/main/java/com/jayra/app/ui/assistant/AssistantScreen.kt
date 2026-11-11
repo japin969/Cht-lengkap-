@@ -284,7 +284,8 @@ fun AssistantScreenContent(
                     } else {
                         val listState = rememberLazyListState()
 
-                        LaunchedEffect(uiState.messages.size, uiState.isLoading) {
+                        val lastItemKey = uiState.messages.lastOrNull()?.id
+                        LaunchedEffect(lastItemKey, uiState.isLoading) {
                             val totalCount = uiState.messages.size + if (uiState.isLoading) 1 else 0
                             if (totalCount > 0) {
                                 listState.animateScrollToItem(totalCount - 1)
