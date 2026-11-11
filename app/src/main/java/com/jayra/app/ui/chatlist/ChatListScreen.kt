@@ -279,7 +279,7 @@ fun ChatListScreen(
                         .clickable(interactionSource = interactionAi, indication = null) { onAiClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Rounded.AutoAwesome, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(PoeLogo, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
                 }
                 val interactionFab = remember { MutableInteractionSource() }
                 val pressedFab by interactionFab.collectIsPressedAsState()

@@ -784,7 +784,6 @@ data class UserAccount(
 // ================= FASE 16: BOTTOM NAVIGATION BAR & PUSH NOTIFICATIONS (FCM) =================
 
 @Immutable
-@androidx.compose.runtime.Immutable
 data class NavItem(
     val route: String,
     val label: String,
