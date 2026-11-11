@@ -192,12 +192,31 @@ class AssistantViewModel @JvmOverloads constructor(
         inMemoryMessages.addAll(updatedMessages)
         _uiState.value = AssistantUiState.Success(messages = updatedMessages, isLoading = true)
 
+        // Snapshot immutable untuk dipakai di coroutine (hindari mutable reference)
+        val historySnapshot: List<Message> = updatedMessages.toList()
+
         viewModelScope.launch {
             try {
                 val aiText = withContext(Dispatchers.IO) {
-                    val prompt = """Jawab sebagai Jayra AI: Asisten jenius, ramah, adaptif (seperti Meta AI).
-Aturan: 1. Jawab dalam bahasa user (multi-bahasa). 2. Jangan berhalusinasi. 3. Berikan solusi/insight tajam.
-User: """ + sanitized
+                    val historyBlock = historySnapshot.dropLast(1).takeLast(6).joinToString("\n") { m ->
+                        val role = if (m.senderId == "jayra_ai") "Jayra AI" else "User"
+                        "$role: ${m.text.take(280)}"
+                    }
+                    val prompt = """Kamu adalah Jayra AI, asisten pribadi cerdas.
+
+ATURAN WAJIB:
+1. JANGAN pernah menyapa "Halo/Hai/Hey/Hello" jika ini lanjutan percakapan. LANGSUNG jawab.
+2. Jangan perkenalan "Saya Jayra AI" — user sudah tahu. Langsung ke inti.
+3. Jawab dalam bahasa user. Ringkas, tajam, actionable.
+4. Jangan berhalusinasi. Jika tidak tahu, bilang tidak tahu.
+5. Markdown seperlunya.
+
+Riwayat percakapan:
+$historyBlock
+
+User: $sanitized
+
+Jayra AI:"""
 
                     // Fallback berlapis: 11 endpoint AI (prioritas Siputzx karena cepat + stabil)
                     var localAiText: String? = null
@@ -270,7 +289,14 @@ User: """ + sanitized
                         }
                     }
 
-                    localAiText
+                    localAiText?.let { raw ->
+                        val stripped = raw
+                            .replace(Regex("^(Halo|Hai|Hey|Hello)\\!?[,.\\s]+", RegexOption.IGNORE_CASE), "")
+                            .replace(Regex("^(Saya Jayra AI[,.]?\\s*)", RegexOption.IGNORE_CASE), "")
+                            .replace(Regex("^(Asisten[^.]+\\.\\s*)", RegexOption.IGNORE_CASE), "")
+                            .trim()
+                        if (stripped.isBlank()) raw else stripped
+                    }
                 }
 
                 if (!aiText.isNullOrBlank()) {
