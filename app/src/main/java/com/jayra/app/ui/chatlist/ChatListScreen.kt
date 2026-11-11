@@ -58,6 +58,7 @@ import com.jayra.app.model.ChatFilter
 import com.jayra.app.model.ChatListUiState
 import com.jayra.app.model.MessageStatus
 import com.jayra.app.ui.viewmodel.ChatListViewModel
+import com.jayra.app.ui.theme.PoeLogo
 import com.jayra.app.util.iosGlass
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat

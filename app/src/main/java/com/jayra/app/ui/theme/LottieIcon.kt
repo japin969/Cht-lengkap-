@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.airbnb.lottie.compose.LottieAnimation
@@ -19,7 +17,6 @@ fun LottieIcon(
     assetName: String,
     modifier: Modifier = Modifier,
     size: Dp = 24.dp,
-    colorFilter: ColorFilter? = null,
     playOnStart: Boolean = false
 ) {
     val composition by rememberLottieComposition(
@@ -33,7 +30,6 @@ fun LottieIcon(
     LottieAnimation(
         composition = composition,
         progress = progress,
-        modifier = modifier.size(size),
-        colorFilter = colorFilter
+        modifier = modifier.size(size)
     )
 }
