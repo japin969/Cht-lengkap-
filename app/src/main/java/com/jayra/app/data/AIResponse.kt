@@ -11,24 +11,22 @@ data class AIResponse(
     @Json(name = "result") val result: String? = null
 ) {
     fun getExtractedText(): String {
-        return when (val d = data) {
+        val raw = when (val d = data) {
             is String -> d
             is Map<*, *> -> {
-                // 1. Cek endpoint glm47flash
                 val response = d["response"]?.toString()
-                // 2. Cek endpoint bibleai
                 val results = d["results"] as? Map<*, *>
                 val answer = results?.get("answer")?.toString()
-                // 3. Cek fallback umum
                 val text = d["text"]?.toString()
                 val result = d["result"]?.toString()
                 val msg = d["message"]?.toString()
-
                 response ?: answer ?: text ?: result ?: msg ?: d.toString()
             }
             is List<*> -> d.firstOrNull()?.toString() ?: d.toString()
             null -> message ?: result ?: "Tidak ada balasan."
             else -> d.toString()
         }
+        // Strip <think>...</think> tag (deepseek r1)
+        return raw.replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "").trim()
     }
 }
