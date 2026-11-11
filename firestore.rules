@@ -239,7 +239,7 @@ service cloud.firestore {
                            !('allowOthersToToggle' in existing()) ||
                            existing().allowOthersToToggle == true
                          ) &&
-                         incoming().diff(existing()).affectedKeys().hasOnly(['checklistItems']) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['checklistItems', 'reactions']) &&
                          incoming().senderId == existing().senderId &&
                          incoming().cipherText == existing().cipherText &&
                          incoming().timestamp == existing().timestamp &&

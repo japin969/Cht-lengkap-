@@ -78,6 +78,7 @@ import com.jayra.app.ui.theme.JayraReplyLight
 import com.jayra.app.ui.theme.JayraSubtext
 import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.util.MarkdownParser
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun DateSeparator(dateText: String) {
@@ -116,133 +117,131 @@ fun MessageBubble(
     onDeleteClick: () -> Unit,
     onCopyClick: () -> Unit,
     onForwardClick: () -> Unit = {},
-    onToggleChecklistItem: (String) -> Unit = {}
+    onToggleChecklistItem: (String) -> Unit = {},
+    onReactionLongClick: (String) -> Unit = {}
 ) {
     val isDark = isSystemInDarkTheme()
     var showMenu by remember { mutableStateOf(false) }
 
-    // Bubble shape with authentic Jayra tail
-    // Bubble Out: 0dp tail at bottomEnd
-    // Bubble In: 0dp tail at bottomStart
+    // #25 System bubble (pill center)
+    if (!message.systemText.isNullOrBlank()) {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.Center) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = message.systemText ?: "",
+                    fontSize = 13.sp,
+                    color = if (isDark) Color(0xFFEBEBF5) else Color(0xFF3C3C43),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        return
+    }
+
+    // #13/#14/#34: corner 18dp tail
     val bubbleShape = if (isOutgoing) {
-        RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 0.dp)
+        RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 4.dp)
     } else {
-        RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp, bottomStart = 0.dp, bottomEnd = 12.dp)
+        RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 4.dp, bottomEnd = 18.dp)
     }
-
     val bubbleBg = if (isOutgoing) {
-        if (isDark) JayraBubbleOutDark else JayraBubbleOutLight
+        if (isDark) Color(0xFF005C4B) else Color(0xFFDCF8C6)
     } else {
-        if (isDark) JayraBubbleInDark else JayraBubbleInLight
+        if (isDark) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
     }
+    val textColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
+    val secondary = Color(0xFF8E8E93)
 
-    val textColor = if (isDark) Color.White else Color.Black
+    // #19 palette sender deterministic
+    val palette = listOf(
+        Color(0xFFFF9500), Color(0xFF34C759), Color(0xFF5856D6),
+        Color(0xFFFF2D55), Color(0xFFAF52DE), Color(0xFF5AC8FA), Color(0xFFFF3B30)
+    )
+    val senderColor = remember(message.senderId) {
+        if (message.senderId.isBlank()) palette[0]
+        else palette[(message.senderId.hashCode() and 0x7FFFFFFF) % palette.size]
+    }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 3.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         Box(
             modifier = Modifier
-                .widthIn(max = 280.dp)
-                .shadow(elevation = 1.dp, shape = bubbleShape)
+                .widthIn(max = 300.dp)
+                .shadow(0.5.dp, bubbleShape)
                 .clip(bubbleShape)
                 .background(bubbleBg)
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = { showMenu = true }
-                )
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .combinedClickable(onClick = {}, onLongClick = { showMenu = true })
+                .padding(horizontal = 12.dp, vertical = 8.dp)
                 .testTag("bubble_${message.id}")
         ) {
             Column {
-                // Group Sender Name if incoming
                 if (!isOutgoing && message.senderName.isNotBlank() && message.senderName != "Me") {
-                    Text(
-                        text = message.senderName,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = JayraBlue,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
+                    Text(message.senderName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = senderColor, modifier = Modifier.padding(bottom = 2.dp))
                 }
 
-                // Forwarded From Header inside bubble
+                // #20 Forwarded
                 if (!message.forwardedFrom.isNullOrBlank()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(bottom = 3.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Forward,
-                            contentDescription = null,
-                            tint = JayraBlue,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "Diteruskan dari ${message.forwardedFrom}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = JayraBlue,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(bottom = 3.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.Forward, null, tint = secondary, modifier = Modifier.size(12.dp))
+                        Text("Diteruskan", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = secondary, maxLines = 1)
                     }
                 }
 
-                // Reply Preview inside bubble
+                // #21 Reply (4dp #34C759)
                 if (!message.replyToText.isNullOrBlank()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(if (isDark) JayraReplyDark else JayraReplyLight)
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF000000).copy(alpha = 0.06f))
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .width(3.dp)
-                                    .height(28.dp)
-                                    .background(JayraBlue)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Box(Modifier.width(4.dp).height(30.dp).clip(RoundedCornerShape(2.dp)).background(Color(0xFF34C759)))
+                            Spacer(Modifier.width(8.dp))
                             Column {
-                                Text(
-                                    text = message.replyToSender ?: "Reply",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = JayraBlue,
-                                    maxLines = 1
-                                )
-                                val parsedReplyText = remember(message.replyToText) {
-                                    MarkdownParser.parse(message.replyToText)
-                                }
-                                Text(
-                                    text = parsedReplyText,
-                                    fontSize = 12.sp,
-                                    color = JayraSubtext,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Text(message.replyToSender ?: "Reply", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF34C759), maxLines = 1)
+                                Text(MarkdownParser.parse(message.replyToText ?: ""), fontSize = 13.sp, color = secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(Modifier.height(4.dp))
                 }
 
-                // Message Content (Checklist, Voice Note, Poll, Location, Contact, or standard Text)
                 val isChecklist = message.checklistItems.isNotEmpty()
-                val isVoiceNote = message.voiceDurationMillis != null || message.text.startsWith("🎤 [Voice Note")
+                val isVoice = message.voiceDurationMillis != null || message.text.startsWith("🎤 [Voice Note")
                 val isPoll = message.text.startsWith("📊 Poling:") || message.text.startsWith("🧠 Kuis:")
-                val isLocation = message.text.startsWith("📍 [Lokasi]")
+                val isLoc = message.text.startsWith("📍 [Lokasi]")
                 val isContact = message.text.startsWith("👤 [Kontak]")
+                val isDoc = message.text.startsWith("📄 [Dokumen]")
 
-                if (isChecklist) {
-                    ChecklistBubble(
+                when {
+                    !message.mediaUrl.isNullOrBlank() -> AsyncImage(
+                        model = message.mediaUrl,
+                        contentDescription = "Media",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.widthIn(max = 260.dp).height(200.dp).clip(RoundedCornerShape(14.dp))
+                    )
+                    !message.stickerUrl.isNullOrBlank() -> AsyncImage(
+                        model = message.stickerUrl,
+                        contentDescription = "Sticker",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(120.dp)
+                    )
+                    !message.gifUrl.isNullOrBlank() -> AsyncImage(
+                        model = message.gifUrl,
+                        contentDescription = "GIF",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.widthIn(max = 240.dp).height(160.dp).clip(RoundedCornerShape(12.dp))
+                    )
+                    isChecklist -> ChecklistBubble(
                         checklist = com.jayra.app.model.Checklist(
                             id = message.id,
                             title = message.checklistTitle ?: "Daftar Tugas",
@@ -251,245 +250,128 @@ fun MessageBubble(
                         ),
                         onToggleItem = onToggleChecklistItem
                     )
-                } else if (isVoiceNote) {
-                    VoiceNoteBubble(
+                    isVoice -> VoiceNoteBubble(
                         messageId = message.id,
                         durationMillis = message.voiceDurationMillis ?: 5_000L,
                         waveform = message.voiceWaveform,
                         filePath = message.voiceFilePath
                     )
-                } else if (isPoll) {
-                    val lines = message.text.lines()
-                    val header = lines.firstOrNull() ?: ""
-                    val isQuizMode = header.startsWith("🧠 Kuis:")
-                    val questionText = header.substringAfter(": ").trim()
-                    val optionItems = lines.drop(1).filter { it.isNotBlank() }.map { line ->
-                        val textOnly = line.replaceFirst(Regex("^\\d+\\.\\s*"), "")
-                        PollOption(text = textOnly, voteCount = 0)
-                    }
-                    if (optionItems.isNotEmpty()) {
-                        PollBubble(
-                            poll = Poll(
-                                id = message.id,
-                                question = questionText.ifBlank { "Poling" },
-                                options = optionItems,
-                                isQuiz = isQuizMode,
-                                isAnonymous = !isQuizMode
-                            )
-                        )
-                    } else {
-                        Text(
-                            text = message.text,
-                            fontSize = 16.sp,
-                            lineHeight = 22.sp,
-                            color = textColor
-                        )
-                    }
-                } else if (isLocation) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(JayraBlue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.LocationOn,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Text(
-                                text = "Lokasi Dibagikan",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = JayraBlue
-                            )
+                    isPoll -> {
+                        val lines = message.text.lines()
+                        val header = lines.firstOrNull() ?: ""
+                        val quiz = header.startsWith("🧠 Kuis:")
+                        val q = header.substringAfter(": ").trim()
+                        val opts = lines.drop(1).filter { it.isNotBlank() }.map { l ->
+                            PollOption(text = l.replaceFirst(Regex("^\\d+\\.\\s*"), ""), voteCount = 0)
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = message.text.substringAfter("📍 [Lokasi]").trim(),
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            color = textColor
-                        )
+                        if (opts.isNotEmpty()) PollBubble(poll = Poll(id = message.id, question = q.ifBlank { "Polling" }, options = opts, isQuiz = quiz, isAnonymous = !quiz))
+                        else Text(message.text, fontSize = 17.sp, lineHeight = 22.sp, color = textColor)
                     }
-                } else if (isContact) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(JayraBlue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Person,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
+                    isLoc -> Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Box(Modifier.size(32.dp).clip(CircleShape).background(Color(0xFF007AFF)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.LocationOn, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
-                            Column {
-                                Text(
-                                    text = "Kartu Kontak",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = JayraBlue
-                                )
-                                Text(
-                                    text = message.text.substringAfter("👤 [Kontak]").trim(),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = textColor
-                                )
-                            }
+                            Text("Lokasi Dibagikan", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF007AFF))
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(message.text.substringAfter("📍 [Lokasi]").trim(), fontSize = 15.sp, color = textColor)
+                    }
+                    isContact -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF007AFF)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Person, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        }
+                        Column {
+                            Text("Kartu Kontak", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF007AFF))
+                            Text(message.text.substringAfter("👤 [Kontak]").trim(), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = textColor)
                         }
                     }
-                } else {
-                    val formattedMessageText = remember(message.text) {
-                        MarkdownParser.parse(message.text)
+                    isDoc -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF007AFF)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.AutoMirrored.Filled.Forward, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        }
+                        Column {
+                            Text(message.text.substringAfter("📄 [Dokumen]").trim(), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = textColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("Dokumen", fontSize = 12.sp, color = secondary)
+                        }
                     }
-                    Text(
-                        text = formattedMessageText,
-                        fontSize = 16.sp,
+                    else -> Text(
+                        text = remember(message.text) { MarkdownParser.parse(message.text) },
+                        fontSize = 17.sp,
                         lineHeight = 22.sp,
                         color = textColor
                     )
                 }
 
-                // Time & Status Row
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(top = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = message.timestamp,
-                        fontSize = 12.sp,
-                        color = JayraSubtext
-                    )
+                // #33 Link preview
+                if (!message.linkPreviewTitle.isNullOrBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFF000000).copy(alpha = 0.05f)).padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!message.linkPreviewImageUrl.isNullOrBlank()) {
+                            AsyncImage(message.linkPreviewImageUrl, null, contentScale = ContentScale.Crop, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)))
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Column {
+                            Text(message.linkPreviewTitle ?: "", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = textColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (!message.linkPreviewDescription.isNullOrBlank()) {
+                                Text(message.linkPreviewDescription, fontSize = 12.sp, color = secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
 
+                // #16 Time + #17/#18 status
+                Row(Modifier.align(Alignment.End).padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (message.disappearingSeconds != null) {
+                        Text("⏱", fontSize = 11.sp, color = secondary)
+                        Spacer(Modifier.width(3.dp))
+                    }
+                    Text(message.timestamp, fontSize = 13.sp, color = secondary)
                     if (isOutgoing) {
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(Modifier.width(4.dp))
                         when (message.status) {
-                            MessageStatus.SENDING -> {
-                                Text(
-                                    text = "...",
-                                    fontSize = 11.sp,
-                                    color = JayraSubtext
-                                )
-                            }
-                            MessageStatus.SENT -> {
-                                Icon(
-                                    imageVector = Icons.Rounded.Done,
-                                    contentDescription = "Sent",
-                                    tint = JayraSubtext,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            MessageStatus.READ, MessageStatus.DELIVERED -> {
-                                Icon(
-                                    imageVector = Icons.Rounded.DoneAll,
-                                    contentDescription = "Read",
-                                    tint = JayraBlue,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            MessageStatus.FAILED -> {
-                                Text(
-                                    text = "!",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = JayraDangerRed
-                                )
-                            }
+                            MessageStatus.SENDING -> Text("...", fontSize = 11.sp, color = secondary)
+                            MessageStatus.SENT -> Icon(Icons.Rounded.Done, "Sent", tint = secondary, modifier = Modifier.size(14.dp))
+                            MessageStatus.DELIVERED -> Icon(Icons.Rounded.DoneAll, "Delivered", tint = secondary, modifier = Modifier.size(14.dp))
+                            MessageStatus.READ -> Icon(Icons.Rounded.DoneAll, "Read", tint = Color(0xFF007AFF), modifier = Modifier.size(14.dp))
+                            MessageStatus.FAILED -> Text("!", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF3B30))
                         }
                     }
                 }
             }
 
-            // Context Menu for message
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Reply") },
-                    onClick = { onReplyClick(); showMenu = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("Teruskan") },
-                    onClick = { onForwardClick(); showMenu = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("Copy") },
-                    onClick = { onCopyClick(); showMenu = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("👍 Like") },
-                    onClick = { onReactionClick("👍"); showMenu = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("❤️ Heart") },
-                    onClick = { onReactionClick("❤️"); showMenu = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("🔥 Fire") },
-                    onClick = { onReactionClick("🔥"); showMenu = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("Delete", color = JayraDangerRed) },
-                    onClick = { onDeleteClick(); showMenu = false }
-                )
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(text = { Text("Reply") }, onClick = { onReplyClick(); showMenu = false })
+                DropdownMenuItem(text = { Text("Teruskan") }, onClick = { onForwardClick(); showMenu = false })
+                DropdownMenuItem(text = { Text("Copy") }, onClick = { onCopyClick(); showMenu = false })
+                DropdownMenuItem(text = { Text("👍 Like") }, onClick = { onReactionClick("👍"); showMenu = false })
+                DropdownMenuItem(text = { Text("❤️ Heart") }, onClick = { onReactionClick("❤️"); showMenu = false })
+                DropdownMenuItem(text = { Text("🔥 Fire") }, onClick = { onReactionClick("🔥"); showMenu = false })
+                DropdownMenuItem(text = { Text("Delete", color = Color(0xFFFF3B30)) }, onClick = { onDeleteClick(); showMenu = false })
             }
         }
 
-        // Reactions container (overlapping 4dp below bubble)
+        // #22/#23 Reactions
         if (message.reactions.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .offset(y = (-4).dp)
-                    .padding(horizontal = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                message.reactions.forEach { reaction ->
+            Row(Modifier.offset(y = (-6).dp).padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                message.reactions.forEach { r ->
                     Box(
                         modifier = Modifier
                             .shadow(1.dp, RoundedCornerShape(12.dp))
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isDark) JayraBubbleInDark else Color.White)
-                            .clickable { onReactionClick(reaction.emoji) }
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .background(if (isDark) Color(0xFF2C2C2E) else Color.White)
+                            .clickable { onReactionLongClick(r.emoji) }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = reaction.emoji, fontSize = 13.sp)
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = reaction.count.toString(),
-                                fontSize = 12.sp,
-                                fontWeight = if (reaction.userReacted) FontWeight.Bold else FontWeight.Normal,
-                                color = if (reaction.userReacted) JayraBlue else JayraSubtext
-                            )
+                            Text(r.emoji, fontSize = 16.sp)
+                            if (r.count > 1) {
+                                Spacer(Modifier.width(4.dp))
+                                Text(r.count.toString(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (r.userReacted) Color(0xFF007AFF) else secondary)
+                            }
                         }
                     }
                 }

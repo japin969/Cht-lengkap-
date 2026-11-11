@@ -36,7 +36,8 @@ enum class CallFilter {
 data class Reaction(
     val emoji: String,
     val count: Int,
-    val userReacted: Boolean = false
+    val userReacted: Boolean = false,
+    val userIds: List<String> = emptyList()
 )
 
 @Immutable
@@ -83,7 +84,16 @@ data class Message(
     val allowOthersToToggle: Boolean = true,
     val voiceFilePath: String? = null,
     val voiceDurationMillis: Long? = null,
-    val voiceWaveform: List<Float> = emptyList()
+    val voiceWaveform: List<Float> = emptyList(),
+    val mediaUrl: String? = null,
+    val mediaType: String? = null,
+    val stickerUrl: String? = null,
+    val gifUrl: String? = null,
+    val linkPreviewTitle: String? = null,
+    val linkPreviewDescription: String? = null,
+    val linkPreviewImageUrl: String? = null,
+    val systemText: String? = null,
+    val disappearingSeconds: Long? = null
 )
 
 @Immutable

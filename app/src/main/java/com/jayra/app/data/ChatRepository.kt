@@ -674,6 +674,8 @@ class ChatRepository(
     }
 
     fun addReaction(chatId: String, messageId: String, emoji: String) {
+        val me = currentUserId
+        var updatedList: List<Reaction>? = null
         _messagesByChat.update { map ->
             val currentList = map[chatId]?.toMutableList() ?: return@update map
             val index = currentList.indexOfFirst { it.id == messageId }
@@ -681,20 +683,39 @@ class ChatRepository(
                 val msg = currentList[index]
                 val existing = msg.reactions.find { it.emoji == emoji }
                 val updatedReactions = if (existing != null) {
-                    msg.reactions.map {
-                        if (it.emoji == emoji) {
-                            it.copy(
-                                count = if (it.userReacted) it.count - 1 else it.count + 1,
-                                userReacted = !it.userReacted
+                    val already = existing.userIds.contains(me)
+                    msg.reactions.map { r ->
+                        if (r.emoji == emoji) {
+                            val newUsers = if (already) r.userIds - me else (r.userIds + me).distinct()
+                            r.copy(
+                                count = newUsers.size,
+                                userReacted = newUsers.contains(me),
+                                userIds = newUsers
                             )
-                        } else it
+                        } else r
                     }.filter { it.count > 0 }
                 } else {
-                    msg.reactions + Reaction(emoji = emoji, count = 1, userReacted = true)
+                    msg.reactions + Reaction(emoji = emoji, count = 1, userReacted = true, userIds = listOf(me))
                 }
                 currentList[index] = msg.copy(reactions = updatedReactions)
+                updatedList = updatedReactions
             }
             map + (chatId to currentList)
+        }
+        val toSave = updatedList ?: return
+        if (firestore != null) {
+            try {
+                val maps = toSave.map {
+                    hashMapOf(
+                        "emoji" to it.emoji,
+                        "count" to it.count,
+                        "userIds" to it.userIds
+                    )
+                }
+                firestore.collection("chats").document(chatId)
+                    .collection("messages").document(messageId)
+                    .update("reactions", maps)
+            } catch (_: Exception) {}
         }
     }
 
@@ -844,8 +865,19 @@ class ChatRepository(
                         checklistItems = parseChecklistItemsFromRaw(data["checklistItems"]),
                         allowOthersToToggle = (data["allowOthersToToggle"] as? Boolean) ?: true,
                         voiceDurationMillis = (data["voiceDurationMillis"] as? Number)?.toLong(),
-                        voiceWaveform = parseVoiceWaveformFromRaw(data["voiceWaveform"])
-                    )
+                        voiceWaveform = parseVoiceWaveformFromRaw(data["voiceWaveform"]),
+                reactions = (doc.get("reactions") as? List<*>)?.mapNotNull { rItem ->
+                    try {
+                        @Suppress("UNCHECKED_CAST")
+                        val rm = rItem as? Map<String, Any?> ?: return@mapNotNull null
+                        val emoji = rm["emoji"] as? String ?: return@mapNotNull null
+                        val count = (rm["count"] as? Number)?.toInt() ?: 0
+                        @Suppress("UNCHECKED_CAST")
+                        val users = (rm["userIds"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                        Reaction(emoji = emoji, count = count, userReacted = users.contains(currentUserId), userIds = users)
+                    } catch (_: Exception) { null }
+                } ?: emptyList()
+            )
                 }
             } catch (_: Exception) {
                 // Fallback null if unreachable
