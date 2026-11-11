@@ -154,7 +154,8 @@ fun ChatRoomScreen(
         onNavigateToVoiceTrimmer = onNavigateToVoiceTrimmer,
         onNavigateToLocation = onNavigateToLocation,
         onNavigateToContact = onNavigateToContact,
-        onForwardMessage = onForwardMessage
+        onForwardMessage = onForwardMessage,
+        onSeedDemo = { viewModel.seedDemoMessages() }
     )
 }
 
@@ -183,7 +184,8 @@ fun ChatRoomContent(
     onNavigateToVoiceTrimmer: (String) -> Unit = {},
     onNavigateToLocation: (String) -> Unit = {},
     onNavigateToContact: (String) -> Unit = {},
-    onForwardMessage: (String, String) -> Unit = { _, _ -> }
+    onForwardMessage: (String, String) -> Unit = { _, _ -> },
+    onSeedDemo: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -351,6 +353,13 @@ fun ChatRoomContent(
                         DropdownMenuItem(
                             text = { Text("Search in Chat") },
                             onClick = { showTopMenu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("🧪 Seed Demo Messages (DEV)") },
+                            onClick = {
+                                showTopMenu = false
+                                onSeedDemo()
+                            }
                         )
                     }
                 }

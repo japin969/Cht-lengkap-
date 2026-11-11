@@ -33,6 +33,96 @@ class ChatRepository(
     private val _localChats = MutableStateFlow<List<Chat>>(emptyList())
     private val _messagesByChat = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
 
+    // DEV: seed dummy messages untuk test bubble iOS
+    fun seedDemoMessages(chatId: String) {
+        if (!com.jayra.app.BuildConfig.DEBUG) return
+        val now = System.currentTimeMillis()
+        fun ts(offsetMin: Long): String {
+            val fmt = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+            return fmt.format(java.util.Date(now - offsetMin * 60_000))
+        }
+        val me = currentUserId
+        val demo = listOf(
+            Message(
+                id = "sys1", chatId = chatId, senderId = "", senderName = "",
+                text = "", timestamp = ts(30),
+                systemText = "Pesan dienkripsi end-to-end"
+            ),
+            Message(
+                id = "m1", chatId = chatId, senderId = "user_demo", senderName = "Demo User",
+                text = "Halo! Ini pesan teks biasa dari Demo User. Cek bubble In.",
+                timestamp = ts(28), status = MessageStatus.READ
+            ),
+            Message(
+                id = "m2", chatId = chatId, senderId = me, senderName = "Me",
+                text = "Pesan keluar — bubble hijau #DCF8C6 iOS WhatsApp.",
+                timestamp = ts(26), status = MessageStatus.READ
+            ),
+            Message(
+                id = "m3", chatId = chatId, senderId = "user_demo", senderName = "Demo User",
+                text = "Cek reply + forwarded",
+                timestamp = ts(24), status = MessageStatus.READ,
+                replyToId = "m2", replyToText = "Pesan keluar — bubble hijau #DCF8C6 iOS WhatsApp.",
+                replyToSender = "Me"
+            ),
+            Message(
+                id = "m4", chatId = chatId, senderId = "user_demo", senderName = "Demo User",
+                text = "Pesan diteruskan dari chat lain",
+                timestamp = ts(22), status = MessageStatus.READ,
+                forwardedFrom = "Grup Keluarga"
+            ),
+            Message(
+                id = "m5", chatId = chatId, senderId = me, senderName = "Me",
+                text = "Bubble dengan reaction",
+                timestamp = ts(20), status = MessageStatus.DELIVERED,
+                reactions = listOf(
+                    Reaction(emoji = "👍", count = 3, userReacted = true, userIds = listOf(me, "user_demo", "user_3")),
+                    Reaction(emoji = "❤️", count = 2, userReacted = false, userIds = listOf("user_demo", "user_4"))
+                )
+            ),
+            Message(
+                id = "m6", chatId = chatId, senderId = "user_demo", senderName = "Demo User",
+                text = "Bubble system test",
+                timestamp = ts(18), status = MessageStatus.READ
+            ),
+            Message(
+                id = "m7", chatId = chatId, senderId = me, senderName = "Me",
+                text = "Sent (single centang)",
+                timestamp = ts(16), status = MessageStatus.SENT
+            ),
+            Message(
+                id = "m8", chatId = chatId, senderId = "user_demo", senderName = "Demo User",
+                text = "📄 [Dokumen] Proposal.pdf",
+                timestamp = ts(14), status = MessageStatus.READ
+            ),
+            Message(
+                id = "m9", chatId = chatId, senderId = "user_demo", senderName = "Demo User",
+                text = "📍 [Lokasi] Jl. Sudirman No. 1, Jakarta",
+                timestamp = ts(12), status = MessageStatus.READ
+            ),
+            Message(
+                id = "m10", chatId = chatId, senderId = me, senderName = "Me",
+                text = "",
+                timestamp = ts(10), status = MessageStatus.READ,
+                linkPreviewTitle = "Apple Human Interface Guidelines",
+                linkPreviewDescription = "Design principles for iOS, iPadOS, macOS, watchOS, and tvOS.",
+                linkPreviewImageUrl = "https://developer.apple.com/design/human-interface-guidelines/favicon.ico"
+            ),
+            Message(
+                id = "m11", chatId = chatId, senderId = "user_demo", senderName = "Demo User",
+                text = "Pesan dengan timer disappearing",
+                timestamp = ts(8), status = MessageStatus.READ,
+                disappearingSeconds = 86400L
+            ),
+            Message(
+                id = "m12", chatId = chatId, senderId = "user_demo", senderName = "Demo User",
+                text = "Halo, ini chat demo",
+                timestamp = ts(0), status = MessageStatus.READ
+            )
+        )
+        _messagesByChat.update { it + (chatId to demo) }
+    }
+
     init {
         if (com.jayra.app.BuildConfig.DEBUG) {
             _localChats.value = listOf(

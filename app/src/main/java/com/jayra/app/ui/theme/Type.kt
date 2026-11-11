@@ -15,6 +15,10 @@ val SFProFontFamily = FontFamily(
     Font(R.font.sf_pro_bold, FontWeight.Bold)
 )
 
+val AppleEmojiFont = FontFamily(
+    Font(R.font.apple_color_emoji_subset, FontWeight.Normal)
+)
+
 val Typography = Typography(
     displayLarge = TextStyle(fontFamily = SFProFontFamily, fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 41.sp, letterSpacing = (-0.5).sp),
     displayMedium = TextStyle(fontFamily = SFProFontFamily, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-0.4).sp),

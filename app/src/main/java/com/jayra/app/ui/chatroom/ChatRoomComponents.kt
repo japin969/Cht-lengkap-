@@ -81,6 +81,7 @@ import com.jayra.app.util.MarkdownParser
 import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
+import com.jayra.app.util.EmojiParser
 
 @Composable
 fun DateSeparator(dateText: String) {
@@ -298,7 +299,10 @@ fun MessageBubble(
                         }
                     }
                     else -> Text(
-                        text = remember(message.text) { MarkdownParser.parse(message.text) },
+                        text = remember(message.text) {
+                            val md = MarkdownParser.parse(message.text)
+                            if (EmojiParser.hasEmoji(md)) EmojiParser.parse(md.text) else md
+                        },
                         fontSize = 17.sp,
                         lineHeight = 22.sp,
                         color = textColor
