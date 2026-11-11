@@ -202,6 +202,7 @@ fun ChatRoomContent(
 
     var showTopMenu by remember { mutableStateOf(false) }
     var showAttachmentSheet by remember { mutableStateOf(false) }
+    var reactionDetail by remember { mutableStateOf<Pair<Message, String>?>(null) }
     val listState = rememberLazyListState()
 
     val showScrollToBottom by remember {
@@ -490,6 +491,15 @@ fun ChatRoomContent(
                             contentType = { "message_item" }
                         ) { msg ->
                             val isOutgoing = msg.senderId == "user_telegram_me" || msg.senderName == "Me"
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = true,
+                                enter = androidx.compose.animation.slideInVertically(
+                                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 180),
+                                    initialOffsetY = { it / 3 }
+                                ) + androidx.compose.animation.fadeIn(
+                                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 180)
+                                )
+                            ) {
                             MessageBubble(
                                 message = msg,
                                 isOutgoing = isOutgoing,
@@ -507,8 +517,12 @@ fun ChatRoomContent(
                                 onForwardClick = { onForwardMessage(chatId, msg.id) },
                                 onToggleChecklistItem = { itemId ->
                                     onToggleChecklistItem(msg.id, itemId)
+                                },
+                                onReactionLongClick = { emoji ->
+                                    reactionDetail = msg to emoji
                                 }
                             )
+                            }
                         }
 
                         if (uiState.isTyping) {
@@ -631,6 +645,57 @@ fun ChatRoomContent(
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+
+    // 4d: Reaction Detail Modal (iOS)
+    val rd = reactionDetail
+    if (rd != null) {
+        val (msg, emoji) = rd
+        val reaction = msg.reactions.find { it.emoji == emoji }
+        val userIds = reaction?.userIds ?: emptyList()
+        val allMessages = (uiState as? ChatRoomUiState.Success)?.messages ?: emptyList()
+        val nameById = allMessages.associate { it.senderId to it.senderName }
+        val displayNames = userIds.map { uid ->
+            val n = nameById[uid]
+            if (n.isNullOrBlank() || n == "Me") "Kamu" else n
+        }
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(
+            onDismissRequest = { reactionDetail = null },
+            sheetState = sheetState,
+            containerColor = if (isDark) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(emoji, fontSize = 22.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "${reaction?.count ?: 0} reaksi",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isDark) Color.White else Color.Black
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                if (displayNames.isEmpty()) {
+                    Text("Belum ada info user", fontSize = 15.sp, color = Color(0xFF8E8E93))
+                } else {
+                    displayNames.forEach { name ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier.size(32.dp).clip(CircleShape).background(Color(0xFF007AFF)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(name.take(1).uppercase(), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text(name, fontSize = 16.sp, color = if (isDark) Color.White else Color.Black)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
