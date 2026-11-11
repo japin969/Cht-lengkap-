@@ -402,8 +402,7 @@ fun JayraBottomNavigationBar(
                             if (item.lottieAsset != null) {
                                 LottieIcon(
                                     assetName = item.lottieAsset,
-                                    size = 26.dp,
-                                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(animatedTint)
+                                    size = 26.dp
                                 )
                             } else {
                             Box(
@@ -580,6 +579,9 @@ private fun MainNavigationGraph(
                     onSavedMessagesClick = {
                         navController.navigate("saved_messages")
                     },
+                    onCreateGroupClick = {
+                        navController.navigate("creategroup")
+                    },
                     onCommunitiesClick = {
                         navController.navigate(MainViewModel.ROUTE_COMMUNITIES)
                     },
@@ -695,6 +697,31 @@ private fun MainNavigationGraph(
         ) { backStackEntry ->
             val slug = backStackEntry.arguments?.getString("slug") ?: ""
             com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
+        }
+
+        composable("creategroup") {
+            com.jayra.app.ui.creategroup.CreateGroupScreen(
+                onBack = { navController.popBackStack() },
+                onGroupCreated = { groupId ->
+                    navController.navigate("chat/$groupId") {
+                        popUpTo("creategroup") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable("newbroadcast") {
+            com.jayra.app.ui.settings.PlaceholderScreen(
+                title = "New Broadcast",
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("starred") {
+            com.jayra.app.ui.settings.PlaceholderScreen(
+                title = "Starred Messages",
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable(MainViewModel.ROUTE_SETTINGS) {

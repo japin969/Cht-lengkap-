@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.jayra.app.ui.theme.LottieIcon
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Chat
 import androidx.compose.material.icons.rounded.MusicNote
@@ -146,12 +147,14 @@ class MainViewModel(
         NavItem(
             route = ROUTE_CHAT_LIST,
             label = "Chat",
-            icon = Icons.Rounded.Chat
+            icon = Icons.Rounded.Chat,
+            lottieAsset = "message_circle"
         ),
         NavItem(
             route = ROUTE_CALLS,
             label = "Panggilan",
-            icon = Icons.Rounded.Call
+            icon = Icons.Rounded.Call,
+            lottieAsset = "phone"
         ),
         NavItem(
             route = ROUTE_MUSIC_HOME,
@@ -166,7 +169,8 @@ class MainViewModel(
         NavItem(
             route = ROUTE_SETTINGS,
             label = "Pengaturan",
-            icon = Icons.Rounded.Settings
+            icon = Icons.Rounded.Settings,
+            lottieAsset = "settings"
         )
     )
 
@@ -395,6 +399,12 @@ fun JayraBottomNavigationBar(
                             indicatorColor = Color.Transparent
                         ),
                         icon = {
+                            if (item.lottieAsset != null) {
+                                LottieIcon(
+                                    assetName = item.lottieAsset,
+                                    size = 26.dp
+                                )
+                            } else {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
@@ -436,6 +446,7 @@ fun JayraBottomNavigationBar(
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
+                            }
                             }
                         },
                         label = {
