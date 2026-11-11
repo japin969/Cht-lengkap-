@@ -194,74 +194,73 @@ class AssistantViewModel @JvmOverloads constructor(
 
         viewModelScope.launch {
             try {
-                val response = withContext(Dispatchers.IO) {
+                val aiText = withContext(Dispatchers.IO) {
                     val prompt = """Jawab sebagai Jayra AI: Asisten jenius, ramah, adaptif (seperti Meta AI).
 Aturan: 1. Jawab dalam bahasa user (multi-bahasa). 2. Jangan berhalusinasi. 3. Berikan solusi/insight tajam.
 User: """ + sanitized
 
                     // Fallback berlapis: 11 endpoint AI (prioritas Siputzx karena cepat + stabil)
-                    var aiText: String? = null
-
+                    
                     // 1. Siputzx gptoss120b (utama, paling cepat + pintar)
                     try {
                         val res = siputzxApi.askGptOss(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                         if (res.isSuccessful && res.body()?.status == true) {
-                            aiText = res.body()?.getExtractedText()
+                            localAiText = res.body()?.getExtractedText()
                         }
                     } catch (_: Exception) {}
 
                     // 2. Siputzx glm47flash
-                    if (aiText.isNullOrBlank()) {
+                    if (localAiText.isNullOrBlank()) {
                         try {
                             val res = siputzxApi.askGlm47Flash(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                             if (res.isSuccessful && res.body()?.status == true) {
-                                aiText = res.body()?.getExtractedText()
+                                localAiText = res.body()?.getExtractedText()
                             }
                         } catch (_: Exception) {}
                     }
 
                     // 3. Siputzx qwq32b
-                    if (aiText.isNullOrBlank()) {
+                    if (localAiText.isNullOrBlank()) {
                         try {
                             val res = siputzxApi.askQwq32b(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                             if (res.isSuccessful && res.body()?.status == true) {
-                                aiText = res.body()?.getExtractedText()
+                                localAiText = res.body()?.getExtractedText()
                             }
                         } catch (_: Exception) {}
                     }
 
                     // 4. Siputzx phi2
-                    if (aiText.isNullOrBlank()) {
+                    if (localAiText.isNullOrBlank()) {
                         try {
                             val res = siputzxApi.askPhi2(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                             if (res.isSuccessful && res.body()?.status == true) {
-                                aiText = res.body()?.getExtractedText()
+                                localAiText = res.body()?.getExtractedText()
                             }
                         } catch (_: Exception) {}
                     }
 
                     // 5. Siputzx gita
-                    if (aiText.isNullOrBlank()) {
+                    if (localAiText.isNullOrBlank()) {
                         try {
                             val res = siputzxApi.askGita(q = prompt)
                             if (res.isSuccessful && res.body()?.status == true) {
-                                aiText = res.body()?.getExtractedText()
+                                localAiText = res.body()?.getExtractedText()
                             }
                         } catch (_: Exception) {}
                     }
 
                     // 6. Siputzx deepseekr1 (paling pintar, tapi lambat ~15-30s)
-                    if (aiText.isNullOrBlank()) {
+                    if (localAiText.isNullOrBlank()) {
                         try {
                             val res = siputzxApi.askDeepseekR1(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                             if (res.isSuccessful && res.body()?.status == true) {
-                                aiText = res.body()?.getExtractedText()
+                                localAiText = res.body()?.getExtractedText()
                             }
                         } catch (_: Exception) {}
                     }
 
                     // 7-11. Nexadev fallback (kadang error, taruh terakhir)
-                    if (aiText.isNullOrBlank()) {
+                    if (localAiText.isNullOrBlank()) {
                         val nexadevEndpoints = listOf<suspend () -> Response<NexadevAiResponse>>(
                             { nexadevAiApi.askGpt4(query = prompt) },
                             { nexadevAiApi.askChatGptPro(query = prompt) },
@@ -273,17 +272,17 @@ User: """ + sanitized
                             try {
                                 val res = call()
                                 if (res.isSuccessful && res.body() != null) {
-                                    aiText = res.body()?.extractText()
-                                    if (!aiText.isNullOrBlank()) break
+                                    localAiText = res.body()?.extractText()
+                                    if (!localAiText.isNullOrBlank()) break
                                 }
                             } catch (_: Exception) {}
                         }
                     }
 
-                    aiText
+                    localAiText
                 }
 
-                if (!aiText.isNullOrBlank()) {
+                if (!localAiText.isNullOrBlank()) {
                     val aiTime = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
                     val aiMsg = Message(
                         id = UUID.randomUUID().toString(),
