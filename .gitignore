@@ -23,3 +23,11 @@ backup_before_package_change/
 build/
 .idea/
 safe_push.sh
+
+# iOS refactor backups (local only)
+backup_before_ios/
+backup_[0-9]*
+inter.zip
+inter_extracted/
+*.bak
+test_phone.svg
