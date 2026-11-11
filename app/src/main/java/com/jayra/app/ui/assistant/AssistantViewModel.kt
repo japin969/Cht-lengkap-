@@ -240,16 +240,6 @@ User: """ + sanitized
                         } catch (_: Exception) {}
                     }
 
-                    // 5. Siputzx gita
-                    if (localAiText.isNullOrBlank()) {
-                        try {
-                            val res = siputzxApi.askGita(q = prompt)
-                            if (res.isSuccessful && res.body()?.status == true) {
-                                localAiText = res.body()?.getExtractedText()
-                            }
-                        } catch (_: Exception) {}
-                    }
-
                     // 6. Siputzx deepseekr1 (paling pintar, tapi lambat ~15-30s)
                     if (localAiText.isNullOrBlank()) {
                         try {
@@ -283,14 +273,14 @@ User: """ + sanitized
                     localAiText
                 }
 
-                if (!localAiText.isNullOrBlank()) {
+                if (!aiText.isNullOrBlank()) {
                     val aiTime = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
                     val aiMsg = Message(
                         id = UUID.randomUUID().toString(),
                         chatId = "assistant",
                         senderId = "jayra_ai",
                         senderName = "Jayra AI",
-                        text = aiText,
+                        text = aiText ?: "",
                         timestamp = aiTime,
                         status = MessageStatus.READ
                     )
