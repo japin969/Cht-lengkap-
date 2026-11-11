@@ -200,6 +200,7 @@ Aturan: 1. Jawab dalam bahasa user (multi-bahasa). 2. Jangan berhalusinasi. 3. B
 User: """ + sanitized
 
                     // Fallback berlapis: 11 endpoint AI (prioritas Siputzx karena cepat + stabil)
+                    var localAiText: String? = null
                     
                     // 1. Siputzx gptoss120b (utama, paling cepat + pintar)
                     try {
