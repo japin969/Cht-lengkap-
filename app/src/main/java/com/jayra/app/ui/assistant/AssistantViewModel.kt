@@ -204,7 +204,7 @@ User: """ + sanitized
 
                     // 1. Siputzx gptoss120b (utama, paling cepat + pintar)
                     try {
-                        val res = siputzxApi.askGptOss(prompt = prompt)
+                        val res = siputzxApi.askGptOss(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                         if (res.isSuccessful && res.body()?.status == true) {
                             aiText = res.body()?.getExtractedText()
                         }
@@ -213,7 +213,7 @@ User: """ + sanitized
                     // 2. Siputzx glm47flash
                     if (aiText.isNullOrBlank()) {
                         try {
-                            val res = siputzxApi.askGlm47Flash(prompt = prompt)
+                            val res = siputzxApi.askGlm47Flash(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                             if (res.isSuccessful && res.body()?.status == true) {
                                 aiText = res.body()?.getExtractedText()
                             }
@@ -223,7 +223,7 @@ User: """ + sanitized
                     // 3. Siputzx qwq32b
                     if (aiText.isNullOrBlank()) {
                         try {
-                            val res = siputzxApi.askQwq32b(prompt = prompt)
+                            val res = siputzxApi.askQwq32b(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                             if (res.isSuccessful && res.body()?.status == true) {
                                 aiText = res.body()?.getExtractedText()
                             }
@@ -233,7 +233,7 @@ User: """ + sanitized
                     // 4. Siputzx phi2
                     if (aiText.isNullOrBlank()) {
                         try {
-                            val res = siputzxApi.askPhi2(prompt = prompt)
+                            val res = siputzxApi.askPhi2(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                             if (res.isSuccessful && res.body()?.status == true) {
                                 aiText = res.body()?.getExtractedText()
                             }
@@ -253,7 +253,7 @@ User: """ + sanitized
                     // 6. Siputzx deepseekr1 (paling pintar, tapi lambat ~15-30s)
                     if (aiText.isNullOrBlank()) {
                         try {
-                            val res = siputzxApi.askDeepseekR1(prompt = prompt)
+                            val res = siputzxApi.askDeepseekR1(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
                             if (res.isSuccessful && res.body()?.status == true) {
                                 aiText = res.body()?.getExtractedText()
                             }
@@ -283,9 +283,7 @@ User: """ + sanitized
                     aiText
                 }
 
-                if (response != null && response.isSuccessful && response.body() != null) {
-                    val aiBody: NexadevAiResponse = response.body()!!
-                    val aiText = aiBody.extractText()
+                if (!aiText.isNullOrBlank()) {
                     val aiTime = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
                     val aiMsg = Message(
                         id = UUID.randomUUID().toString(),
@@ -305,12 +303,10 @@ User: """ + sanitized
                     _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false)
                     lastFailedPrompt = null
 
-                    // Persist encrypted messages to Firestore
                     saveMessageToFirestore(deliveredUserMsg)
                     saveMessageToFirestore(aiMsg)
                 } else {
-                    val errorMsg = "Gagal memproses balasan (HTTP ${response?.code() ?: 0})"
-                    handleSendFailure(userMsg, errorMsg)
+                    handleSendFailure(userMsg, "Semua endpoint AI gagal. Coba lagi nanti.")
                 }
             } catch (e: Exception) {
                 handleSendFailure(userMsg, e.localizedMessage ?: "Terjadi kesalahan koneksi")
