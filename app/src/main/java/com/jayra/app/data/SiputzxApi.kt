@@ -13,44 +13,51 @@ import java.util.concurrent.TimeUnit
 interface SiputzxApi {
 
     @GET("api/ai/gptoss120b")
-    suspend fun askAI(
+    suspend fun askGptOss(
         @Query("prompt") prompt: String,
         @Query("system") system: String = "You are a helpful assistant.",
         @Query("temperature") temperature: Float = 0.7f
     ): Response<AIResponse>
 
+    @GET("api/ai/glm47flash")
+    suspend fun askGlm47Flash(
+        @Query("prompt") prompt: String,
+        @Query("system") system: String = "You are a helpful assistant.",
+        @Query("temperature") temperature: Float = 0.7f
+    ): Response<AIResponse>
+
+    @GET("api/ai/phi2")
+    suspend fun askPhi2(
+        @Query("prompt") prompt: String,
+        @Query("system") system: String = "You are a helpful assistant.",
+        @Query("temperature") temperature: Float = 0.7f
+    ): Response<AIResponse>
+
+    @GET("api/ai/qwq32b")
+    suspend fun askQwq32b(
+        @Query("prompt") prompt: String,
+        @Query("system") system: String = "You are a helpful assistant.",
+        @Query("temperature") temperature: Float = 0.7f
+    ): Response<AIResponse>
+
+    @GET("api/ai/deepseekr1")
+    suspend fun askDeepseekR1(
+        @Query("prompt") prompt: String,
+        @Query("system") system: String = "You are a helpful assistant.",
+        @Query("temperature") temperature: Float = 0.7f
+    ): Response<AIResponse>
+
+    @GET("api/ai/gita")
+    suspend fun askGita(@Query("q") q: String): Response<AIResponse>
 
     companion object {
-        private const val BASE_URL = "https://api.nexadev.my.id/"
-        
-        // API AI tetap pakai domain lama
         private const val AI_BASE_URL = "https://api.siputzx.my.id/"
 
         fun create(): SiputzxApi {
             val okHttpClient = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .build()
-
-            val moshi = Moshi.Builder()
-                .addLast(KotlinJsonAdapterFactory())
-                .build()
-
-            return Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .client(okHttpClient)
-                .addConverterFactory(MoshiConverterFactory.create(moshi))
-                .build()
-                .create(SiputzxApi::class.java)
-        }
-        
-        // Fungsi pembuat API AI terpisah
-        fun createAI(): SiputzxApi {
-            val okHttpClient = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
                 .build()
 
             val moshi = Moshi.Builder()

@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -198,25 +199,88 @@ class AssistantViewModel @JvmOverloads constructor(
 Aturan: 1. Jawab dalam bahasa user (multi-bahasa). 2. Jangan berhalusinasi. 3. Berikan solusi/insight tajam.
 User: """ + sanitized
 
-                    // Fallback berlapis: coba semua endpoint AI sampai ada yang 200
-                    var result: Response<NexadevAiResponse>? = null
-                    val endpoints = listOf<suspend () -> Response<NexadevAiResponse>>(
-                        { nexadevAiApi.askGpt4(query = prompt) },
-                        { nexadevAiApi.askChatGptPro(query = prompt) },
-                        { nexadevAiApi.askFelo(query = prompt) },
-                        { nexadevAiApi.askLlama(query = prompt) },
-                        { nexadevAiApi.askDeepseek(text = prompt) }
-                    )
-                    for (call in endpoints) {
+                    // Fallback berlapis: 11 endpoint AI (prioritas Siputzx karena cepat + stabil)
+                    var aiText: String? = null
+
+                    // 1. Siputzx gptoss120b (utama, paling cepat + pintar)
+                    try {
+                        val res = siputzxApi.askGptOss(prompt = prompt)
+                        if (res.isSuccessful && res.body()?.status == true) {
+                            aiText = res.body()?.getExtractedText()
+                        }
+                    } catch (_: Exception) {}
+
+                    // 2. Siputzx glm47flash
+                    if (aiText.isNullOrBlank()) {
                         try {
-                            val res = call()
-                            if (res.isSuccessful && res.body() != null) {
-                                result = res
-                                break
+                            val res = siputzxApi.askGlm47Flash(prompt = prompt)
+                            if (res.isSuccessful && res.body()?.status == true) {
+                                aiText = res.body()?.getExtractedText()
                             }
                         } catch (_: Exception) {}
                     }
-                    result
+
+                    // 3. Siputzx qwq32b
+                    if (aiText.isNullOrBlank()) {
+                        try {
+                            val res = siputzxApi.askQwq32b(prompt = prompt)
+                            if (res.isSuccessful && res.body()?.status == true) {
+                                aiText = res.body()?.getExtractedText()
+                            }
+                        } catch (_: Exception) {}
+                    }
+
+                    // 4. Siputzx phi2
+                    if (aiText.isNullOrBlank()) {
+                        try {
+                            val res = siputzxApi.askPhi2(prompt = prompt)
+                            if (res.isSuccessful && res.body()?.status == true) {
+                                aiText = res.body()?.getExtractedText()
+                            }
+                        } catch (_: Exception) {}
+                    }
+
+                    // 5. Siputzx gita
+                    if (aiText.isNullOrBlank()) {
+                        try {
+                            val res = siputzxApi.askGita(q = prompt)
+                            if (res.isSuccessful && res.body()?.status == true) {
+                                aiText = res.body()?.getExtractedText()
+                            }
+                        } catch (_: Exception) {}
+                    }
+
+                    // 6. Siputzx deepseekr1 (paling pintar, tapi lambat ~15-30s)
+                    if (aiText.isNullOrBlank()) {
+                        try {
+                            val res = siputzxApi.askDeepseekR1(prompt = prompt)
+                            if (res.isSuccessful && res.body()?.status == true) {
+                                aiText = res.body()?.getExtractedText()
+                            }
+                        } catch (_: Exception) {}
+                    }
+
+                    // 7-11. Nexadev fallback (kadang error, taruh terakhir)
+                    if (aiText.isNullOrBlank()) {
+                        val nexadevEndpoints = listOf<suspend () -> Response<NexadevAiResponse>>(
+                            { nexadevAiApi.askGpt4(query = prompt) },
+                            { nexadevAiApi.askChatGptPro(query = prompt) },
+                            { nexadevAiApi.askFelo(query = prompt) },
+                            { nexadevAiApi.askLlama(query = prompt) },
+                            { nexadevAiApi.askDeepseek(text = prompt) }
+                        )
+                        for (call in nexadevEndpoints) {
+                            try {
+                                val res = call()
+                                if (res.isSuccessful && res.body() != null) {
+                                    aiText = res.body()?.extractText()
+                                    if (!aiText.isNullOrBlank()) break
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+
+                    aiText
                 }
 
                 if (response != null && response.isSuccessful && response.body() != null) {
@@ -245,7 +309,7 @@ User: """ + sanitized
                     saveMessageToFirestore(deliveredUserMsg)
                     saveMessageToFirestore(aiMsg)
                 } else {
-                    val errorMsg = "Gagal memproses balasan (HTTP ${response.code()})"
+                    val errorMsg = "Gagal memproses balasan (HTTP ${response?.code() ?: 0})"
                     handleSendFailure(userMsg, errorMsg)
                 }
             } catch (e: Exception) {
