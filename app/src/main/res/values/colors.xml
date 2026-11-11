@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Apple iOS System Colors -->
+    <color name="apple_system_blue">#007AFF</color>
+    <color name="apple_system_green">#34C759</color>
+    <color name="apple_system_red">#FF3B30</color>
+    <color name="apple_system_orange">#FF9500</color>
+    <color name="apple_system_gray">#8E8E93</color>
+    <color name="apple_system_gray2">#AEAEB2</color>
+    <color name="apple_system_gray3">#C7C7CC</color>
+    <color name="apple_system_gray4">#D1D1D6</color>
+    <color name="apple_system_gray5">#E5E5EA</color>
+    <color name="apple_system_gray6">#F2F2F7</color>
+    <color name="apple_system_background">#F2F2F7</color>
+    <color name="apple_secondary_background">#FFFFFF</color>
+    <color name="apple_label">#000000</color>
+    <color name="apple_secondary_label">#3C3C43</color>
+    <color name="apple_separator">#C6C6C8</color>
+    <color name="apple_white">#FFFFFF</color>
+    <color name="apple_black">#000000</color>
+    <color name="apple_ai_purple">#6E48AA</color>
+
+    <!-- Legacy -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>

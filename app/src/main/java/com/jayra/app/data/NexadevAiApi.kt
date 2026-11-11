@@ -37,6 +37,15 @@ interface NexadevAiApi {
     @GET("ai/chatgptpro")
     suspend fun askChatGptPro(@Query("q") query: String): Response<NexadevAiResponse>
 
+    @GET("ai/felo")
+    suspend fun askFelo(@Query("q") query: String): Response<NexadevAiResponse>
+
+    @GET("ai/llama")
+    suspend fun askLlama(@Query("q") query: String): Response<NexadevAiResponse>
+
+    @GET("ai/deepsek")
+    suspend fun askDeepseek(@Query("text") text: String): Response<NexadevAiResponse>
+
     companion object {
         private const val BASE_URL = "https://api.nexadev.my.id/"
 
