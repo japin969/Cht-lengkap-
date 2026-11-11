@@ -32,7 +32,7 @@ fun LottieIcon(
     )
     LottieAnimation(
         composition = composition,
-        progress = { progress },
+        progress = progress,
         modifier = modifier.size(size),
         colorFilter = colorFilter
     )
