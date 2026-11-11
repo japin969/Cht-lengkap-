@@ -784,11 +784,13 @@ data class UserAccount(
 // ================= FASE 16: BOTTOM NAVIGATION BAR & PUSH NOTIFICATIONS (FCM) =================
 
 @Immutable
+@androidx.compose.runtime.Immutable
 data class NavItem(
     val route: String,
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val badgeCount: Int = 0
+    val badgeCount: Int = 0,
+    val lottieAsset: String? = null
 )
 
 // ================= FASE 18: SAVED MESSAGES & FORWARD MESSAGES =================
