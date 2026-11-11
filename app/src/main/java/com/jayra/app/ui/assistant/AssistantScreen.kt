@@ -100,6 +100,7 @@ import com.jayra.app.ui.theme.JayraLightTopBar
 import com.jayra.app.ui.theme.JayraStatusOnline
 import com.jayra.app.ui.theme.JayraSubtext
 import com.jayra.app.ui.theme.JayraTheme
+import com.jayra.app.util.EmojiParser
 
 @Composable
 fun AssistantScreen(
@@ -369,7 +370,7 @@ private fun UserMessageBubble(
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Text(
-                text = message.text,
+                text = remember(message.text) { EmojiParser.parse(message.text) },
                 fontSize = 16.sp,
                 lineHeight = 22.sp,
                 color = textColor
@@ -464,7 +465,7 @@ private fun AiMessageBubble(
             )
 
             Text(
-                text = message.text,
+                text = remember(message.text) { EmojiParser.parse(message.text) },
                 fontSize = 16.sp,
                 lineHeight = 22.sp,
                 color = textColor

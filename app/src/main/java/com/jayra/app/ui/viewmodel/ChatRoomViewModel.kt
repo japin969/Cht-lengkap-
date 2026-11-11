@@ -396,6 +396,12 @@ class ChatRoomViewModel @JvmOverloads constructor(
         chatRepository.deleteMessage(currentChatId, messageId)
     }
 
+    fun seedDemoMessages() {
+        if (currentChatId.isNotBlank()) {
+            chatRepository.seedDemoMessages(currentChatId)
+        }
+    }
+
     fun onRetry() {
         if (currentChatId.isNotEmpty()) {
             loadMessages(currentChatId)
