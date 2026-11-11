@@ -79,6 +79,8 @@ import com.jayra.app.ui.theme.JayraSubtext
 import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.util.MarkdownParser
 import androidx.compose.ui.text.style.TextAlign
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 @Composable
 fun DateSeparator(dateText: String) {
