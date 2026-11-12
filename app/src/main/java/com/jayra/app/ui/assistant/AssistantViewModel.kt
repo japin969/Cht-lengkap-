@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.tasks.await
 
 class AssistantViewModel @JvmOverloads constructor(
     application: Application,
@@ -210,9 +211,10 @@ GAYA JAWABAN (WAJIB):
 3. Sambungkan ke riwayat percakapan — jika user merujuk "di atas", "yang tadi", pahami konteksnya.
 4. Jangan mengulang sapaan "Halo/Hai" atau "Saya Jayra AI" setelah pesan pertama.
 5. Jangan pernah menampilkan token kontrol seperti <|start|>, <|end|>, <|im_start|>, <|assistant|> — output hanya teks bersih.
-6. Bahasa sesuai bahasa user (Indonesia/English/dll). Nada ramah, cerdas, tidak bertele-tele.
+6. WAJIB jawab dalam BAHASA USER. Jika user pakai Bahasa Indonesia → jawab BAHASA INDONESIA murni (jangan English). Jika user pakai English → jawab English. Jangan campur.
 7. Jika tidak yakin, katakan tidak tahu. Jangan halusinasi.
 8. Gunakan markdown untuk struktur (heading, bullet, bold, code block) bila membantu.
+9. JANGAN tampilkan proses berpikir / reasoning. Jangan tulis "Let me think", "Okay, the user asked...", "First, ...". LANGSUNG berikan JAWABAN FINAL saja.
 
 Riwayat percakapan:
 $historyBlock
@@ -299,6 +301,10 @@ Jayra AI (jawab lengkap & kontekstual):"""
                             .replace(Regex("^(Halo|Hai|Hey|Hello)\\!?[,.\\s]+", RegexOption.IGNORE_CASE), "")
                             .replace(Regex("^(Saya Jayra AI[,.]?\\s*)", RegexOption.IGNORE_CASE), "")
                             .replace(Regex("^(Asisten[^.]+\\.\\s*)", RegexOption.IGNORE_CASE), "")
+                            .replace(Regex("(?i)^(okay|ok|sure|alright)[,.].*?(?=\\n|$)"), "")
+                            .replace(Regex("(?i)let me (think|see|check)[^.\\n]*[.\\n]"), "")
+                            .replace(Regex("(?i)^(first|second|third|so|now|well)[,.].*?(?=\\n)"), "")
+                            .replace(Regex("(?i)they (asked|want|need|might need)[^.\\n]*[.\\n]"), "")
                             .replace(Regex("\\n{3,}"), "\n\n")
                             .trim()
                         if (stripped.isBlank()) raw else stripped
@@ -325,8 +331,7 @@ Jayra AI (jawab lengkap & kontekstual):"""
                     _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false)
                     lastFailedPrompt = null
 
-                    saveMessageToFirestore(deliveredUserMsg)
-                    saveMessageToFirestore(aiMsg)
+                    saveBothToFirestoreSequential(deliveredUserMsg, aiMsg)
                 } else {
                     handleSendFailure(userMsg, "Semua endpoint AI gagal. Coba lagi nanti.")
                 }
@@ -348,6 +353,38 @@ Jayra AI (jawab lengkap & kontekstual):"""
 
         _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false)
         _toastEvents.tryEmit(errorMessage)
+    }
+
+    private fun saveBothToFirestoreSequential(userMsg: Message, aiMsg: Message) {
+        if (firestore == null) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val baseTime = System.currentTimeMillis()
+                val userData = hashMapOf(
+                    "id" to userMsg.id,
+                    "senderId" to userMsg.senderId,
+                    "senderName" to userMsg.senderName,
+                    "text" to EncryptionHelper.encryptString(userMsg.text),
+                    "timeFormatted" to userMsg.timestamp,
+                    "timestamp" to baseTime,
+                    "status" to userMsg.status.name
+                )
+                val aiData = hashMapOf(
+                    "id" to aiMsg.id,
+                    "senderId" to aiMsg.senderId,
+                    "senderName" to aiMsg.senderName,
+                    "text" to EncryptionHelper.encryptString(aiMsg.text),
+                    "timeFormatted" to aiMsg.timestamp,
+                    "timestamp" to (baseTime + 1L),
+                    "status" to aiMsg.status.name
+                )
+                val col = firestore.collection("assistant_chats")
+                    .document(currentUserId)
+                    .collection("messages")
+                col.document(userMsg.id).set(userData).await()
+                col.document(aiMsg.id).set(aiData).await()
+            } catch (_: Exception) {}
+        }
     }
 
     private fun saveMessageToFirestore(message: Message) {
