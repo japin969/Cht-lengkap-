@@ -2,31 +2,35 @@ package com.jayra.app.ui.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jayra.app.model.AuthUiState
-import com.jayra.app.util.iosGlass
+import com.jayra.app.model.Country
+import com.jayra.app.ui.theme.*
 
 @Composable
 fun RegisterScreen(
@@ -39,106 +43,200 @@ fun RegisterScreen(
     val password by viewModel.password.collectAsStateWithLifecycle()
     val country by viewModel.selectedCountry.collectAsStateWithLifecycle()
     val phone by viewModel.generatedPhoneNumber.collectAsStateWithLifecycle()
+    val availableCountries: List<Country> by viewModel.availableCountries.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val dark = isSystemInDarkTheme()
 
-    val bgGradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF0F172A))
-    )
+    var showCountryPicker by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 32.dp),
+    val bg = if (dark) IOSSystemBackgroundDark else IOSSystemGroupedBackground
+    val titleColor = if (dark) IOSLabelDark else IOSLabel
+    val subtitleColor = if (dark) IOSSecondaryLabelDark else IOSSecondaryLabel
+    val chevronColor = if (dark) IOSGray2Dark else IOSGray2
+    val phoneAccent = IOSGreen
+
+    Box(modifier = Modifier.fillMaxSize().background(bg)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .padding(horizontal = 24.dp)
+                .padding(top = 16.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
+            Row(modifier = Modifier.fillMaxWidth()) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Kembali",
+                        tint = IOSBlue
+                    )
                 }
-                Spacer(Modifier.height(16.dp))
-                Box(
-                    modifier = Modifier.size(80.dp).iosGlass(cornerRadius = 40, tint = Color.White.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Rounded.PersonAdd, contentDescription = "Register", tint = Color.White, modifier = Modifier.size(36.dp))
-                }
-                Spacer(Modifier.height(32.dp))
-                
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Brush.linearGradient(colors = listOf(IOSBlue, IOSIndigo))),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    text = "Bergabung dengan Jayra",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp,
+                    text = "J",
                     color = Color.White,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Buat identitas digital Anda hari ini.",
-                    fontSize = 16.sp,
-                    color = Color.White.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-1).sp
                 )
             }
 
-            item {
+            Spacer(Modifier.height(24.dp))
+
+            Text(
+                text = "Buat Akun",
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                color = titleColor,
+                letterSpacing = (-0.5).sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Bergabung dengan Jayra hari ini",
+                fontSize = 15.sp,
+                color = subtitleColor,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(32.dp))
+
+            IOSFieldGroup {
+                IOSGroupedTextField(
+                    label = "Email",
+                    value = email,
+                    onValueChange = viewModel::onEmailChange,
+                    placeholder = "nama@email.com",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    )
+                )
+                IOSDivider()
+                IOSGroupedTextField(
+                    label = "Kata Sandi",
+                    value = password,
+                    onValueChange = viewModel::onPasswordChange,
+                    placeholder = "Minimal 6 karakter",
+                    isPassword = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Next
+                    )
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            IOSFieldGroup {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showCountryPicker = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "NEGARA",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = subtitleColor,
+                            letterSpacing = 0.4.sp
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = country?.name ?: "Pilih Negara",
+                            fontSize = 17.sp,
+                            color = titleColor
+                        )
+                    }
+                    Text(
+                        text = "Ubah",
+                        fontSize = 15.sp,
+                        color = IOSBlue,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                IOSDivider()
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .iosGlass(cornerRadius = 24, tint = Color.White.copy(alpha = 0.05f), elevation = 12)
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
-                    Text("Daftar Akun", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-
-                    IOSTextField(
-                        value = email,
-                        onValueChange = viewModel::onEmailChange,
-                        placeholder = "Alamat Email",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
+                    Text(
+                        text = "NOMOR TELEPON",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = subtitleColor,
+                        letterSpacing = 0.4.sp
                     )
-                    IOSTextField(
-                        value = password,
-                        onValueChange = viewModel::onPasswordChange,
-                        placeholder = "Kata Sandi (min 6 karakter)",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                        isPassword = true
-                    )
-
-                    // Negara & Nomor (Glass Style)
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
-                            .iosGlass(cornerRadius = 14, tint = Color.White.copy(alpha = 0.05f), elevation = 0)
-                            .clickable { /* Buka dialog negara nanti */ }
-                            .padding(16.dp)
-                    ) {
-                        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Text(country?.name ?: "Pilih Negara", fontSize = 17.sp, color = Color.White)
-                            Text("Ubah", color = Color(0xFF5AC8FA), fontSize = 17.sp)
-                        }
-                    }
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
-                            .iosGlass(cornerRadius = 14, tint = Color.White.copy(alpha = 0.05f), elevation = 0)
-                            .padding(16.dp)
-                    ) {
-                        Text(phone.ifBlank { "+62..." }, fontSize = 17.sp, color = Color(0xFF34C759))
-                    }
-
-                    if (uiState is AuthUiState.Error) {
-                        IOSErrorMessage((uiState as AuthUiState.Error).message)
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-                    IOSButton(
-                        text = "Daftar",
-                        isLoading = uiState is AuthUiState.Loading,
-                        onClick = { viewModel.onRegisterClick(context, email, password) }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = phone.ifBlank { "Akan dibuat otomatis" },
+                        fontSize = 17.sp,
+                        color = if (phone.isBlank()) chevronColor else phoneAccent,
+                        fontWeight = if (phone.isBlank()) FontWeight.Normal else FontWeight.Medium
                     )
                 }
             }
+
+            Spacer(Modifier.height(24.dp))
+
+            if (uiState is AuthUiState.Error) {
+                IOSErrorMessage((uiState as AuthUiState.Error).message)
+                Spacer(Modifier.height(12.dp))
+            }
+
+            IOSPrimaryButton(
+                text = "Daftar",
+                isLoading = uiState is AuthUiState.Loading,
+                onClick = { viewModel.onRegisterClick(context, email, password) }
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Sudah punya akun? ",
+                    color = subtitleColor,
+                    fontSize = 15.sp
+                )
+                Text(
+                    text = "Masuk",
+                    color = IOSBlue,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { onBackClick() }
+                )
+            }
+        }
+
+        if (showCountryPicker) {
+            CountryPickerDialog(
+                countries = availableCountries,
+                selectedCountry = country,
+                onCountrySelected = { picked ->
+                    viewModel.onCountrySelected(picked)
+                    showCountryPicker = false
+                },
+                onDismiss = { showCountryPicker = false }
+            )
         }
     }
 

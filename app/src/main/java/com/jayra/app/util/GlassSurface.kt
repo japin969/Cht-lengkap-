@@ -2,55 +2,108 @@ package com.jayra.app.util
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
 
 /**
- * Glass effect untuk iOS 26 — adaptive per device:
- * - Aktif + API 31+ → real blur + gradient overlay + hairline border
- * - Aktif + API < 31 → gradient (semu, tanpa blur)
- * - Nonaktif → solid color
- *
- * 0 lag untuk HP kentang: kalau blur bikin fps turun, user bisa matikan via Settings.
+ * JAYRA-UI v2.0 — Faux Glass for iOS 26 aesthetic.
+ * Zero blur. Zero RenderEffect. Zero API-level branching.
+ * Visual identik di semua Android 7-16.
  */
+enum class GlassLevel { Subtle, Standard, Prominent }
+
 @Composable
 fun Modifier.glassSurface(
     solidColor: Color,
-    tintAlpha: Float = 0.85f,
-    blurRadius: Dp = 20.dp,
+    level: GlassLevel = GlassLevel.Standard,
+    cornerRadius: Dp = 20.dp,
+    showBorder: Boolean = true,
+    showShadow: Boolean = true
+): Modifier {
+    val enabled = GlassEffectPrefs.enabledState.value
+    val shape: Shape = RoundedCornerShape(cornerRadius)
+
+    val tintAlpha = when (level) {
+        GlassLevel.Subtle -> 0.92f
+        GlassLevel.Standard -> 0.80f
+        GlassLevel.Prominent -> 0.68f
+    }
+
+    var base = this
+
+    if (showShadow) {
+        base = base.shadow(
+            elevation = 6.dp,
+            shape = shape,
+            clip = false,
+            ambientColor = Color.Black.copy(alpha = 0.06f),
+            spotColor = Color.Black.copy(alpha = 0.12f)
+        )
+    }
+
+    base = base.clip(shape)
+        .background(solidColor.copy(alpha = if (enabled) tintAlpha else 1f))
+
+    if (enabled) {
+        base = base.background(
+            Brush.radialGradient(
+                colors = listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
+                center = Offset.Zero,
+                radius = 700f
+            )
+        )
+        base = base.background(
+            Brush.verticalGradient(
+                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.05f))
+            )
+        )
+    }
+
+    if (showBorder && enabled) {
+        base = base.border(
+            width = 0.75.dp,
+            color = Color.White.copy(alpha = 0.32f),
+            shape = shape
+        )
+    }
+
+    return base
+}
+
+/**
+ * Backward-compat overload untuk caller lama (ChatRoomScreen, CreateGroupScreen).
+ * Map parameter lama -> GlassLevel baru. Zero visual break, zero compile break.
+ */
+@Deprecated(
+    message = "Gunakan glassSurface(solidColor, level, cornerRadius) — versi faux glass v2.",
+    replaceWith = ReplaceWith("glassSurface(solidColor, level, cornerRadius)")
+)
+@Composable
+fun Modifier.glassSurface(
+    solidColor: Color,
+    tintAlpha: Float,
+    blurRadius: Dp,
     cornerRadius: Dp = 0.dp,
     overlayTop: Color = Color.White.copy(alpha = 0.08f),
     overlayBottom: Color = Color.Black.copy(alpha = 0.04f)
 ): Modifier {
-    val enabled = GlassEffectPrefs.enabledState.value
-    val shape: Shape = if (cornerRadius > 0.dp) RoundedCornerShape(cornerRadius) else RoundedCornerShape(0.dp)
-    var base = this
-    if (enabled && GlassEffectPrefs.supportsRealBlur()) {
-        // Android 12+ : real blur
-        base = base.blur(radius = blurRadius)
+    val mappedLevel = when {
+        tintAlpha >= 0.88f -> GlassLevel.Subtle
+        tintAlpha >= 0.75f -> GlassLevel.Standard
+        else -> GlassLevel.Prominent
     }
-    return base
-        .clip(shape)
-        .background(solidColor.copy(alpha = if (enabled) tintAlpha else 1f))
-        .background(
-            Brush.verticalGradient(
-                colors = if (enabled) listOf(overlayTop, Color.Transparent, overlayBottom)
-                else listOf(Color.Transparent, Color.Transparent)
-            )
-        )
-        .border(
-            width = if (enabled) 0.5.dp else 0.dp,
-            color = if (enabled) Color.White.copy(alpha = 0.25f) else Color.Transparent,
-            shape = shape
-        )
+    return this.glassSurface(
+        solidColor = solidColor,
+        level = mappedLevel,
+        cornerRadius = cornerRadius
+    )
 }
