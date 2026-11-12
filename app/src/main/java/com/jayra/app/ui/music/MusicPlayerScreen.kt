@@ -63,7 +63,7 @@ import com.jayra.app.data.Song
 import com.jayra.app.ui.theme.JayraBlue
 import com.jayra.app.ui.theme.JayraDarkChatBg
 import com.jayra.app.ui.theme.JayraDarkTopBar
-import com.jayra.app.ui.theme.JayraSearchDark
+import com.jayra.app.ui.theme.Color(0x1AFFFFFF)
 import com.jayra.app.ui.theme.JayraSubtext
 import com.jayra.app.ui.theme.JayraTheme
 import java.util.Locale
@@ -118,7 +118,7 @@ fun MusicPlayerContent(
     val isDark = isSystemInDarkTheme()
     val gradientBackground = Brush.verticalGradient(
         colors = if (isDark) {
-            listOf(JayraDarkTopBar, JayraDarkChatBg)
+            listOf(Color(0xFF1E3A5F), Color(0xFF4A2E6B))
         } else {
             listOf(Color(0xFF3B5B78), Color(0xFF1E2833))
         }
@@ -201,7 +201,7 @@ fun MusicPlayerContent(
                 .size(300.dp)
                 .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp))
                 .clip(RoundedCornerShape(16.dp))
-                .background(JayraSearchDark),
+                .background(Color(0x1AFFFFFF)),
             contentAlignment = Alignment.Center
         ) {
             if (song != null && song.coverUrl.isNotBlank()) {

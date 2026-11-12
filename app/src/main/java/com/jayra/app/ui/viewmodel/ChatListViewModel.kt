@@ -96,6 +96,23 @@ class ChatListViewModel(
         selectedFilter.value = filter
     }
 
+    val archivedChats: StateFlow<List<Chat>> = _rawChats
+        .combine(StateFlowStub()) { chats, _ ->
+            chats.filter { it.isArchived }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun StateFlowStub() = kotlinx.coroutines.flow.flowOf(Unit)
+
+    fun onUnarchiveChat(chatId: String) {
+        viewModelScope.launch {
+            try {
+                repository.unarchiveChat(chatId)
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+            }
+        }
+    }
+
     fun onSwipeArchive(chatId: String) {
         viewModelScope.launch {
             try {

@@ -81,6 +81,7 @@ fun ChatListScreen(
     onCommunitiesClick: () -> Unit = {},
     onStoriesClick: () -> Unit = {},
     onAiClick: () -> Unit = {},
+    onArchivedClick: () -> Unit = {},
     viewModel: ChatListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,13 +106,18 @@ fun ChatListScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val bgColor = Color(0xFFF2F2F7)
+    val bgGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF1E3A5F),  // Deep Blue (login)
+            Color(0xFF4A2E6B)   // Deep Purple (login)
+        )
+    )
 
-    Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
+    Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // ========== TOP BAR ==========
             Column(
-                modifier = Modifier.fillMaxWidth().background(Color(0xFFF2F2F7))
+                modifier = Modifier.fillMaxWidth()
             ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -122,7 +128,7 @@ fun ChatListScreen(
                     AppText(
                         text = "Cancel",
                         fontSize = 17.sp,
-                        color = Color(0xFF007AFF),
+                        color = Color(0xFF5AC8FA),
                         modifier = Modifier.clickable {
                             isSelectionMode = false
                             selectedChats.clear()
@@ -132,7 +138,7 @@ fun ChatListScreen(
                     AppText(
                         text = "Edit",
                         fontSize = 17.sp,
-                        color = Color(0xFF007AFF),
+                        color = Color(0xFF5AC8FA),
                         modifier = Modifier.clickable { isSelectionMode = true }
                     )
                 }
@@ -141,7 +147,7 @@ fun ChatListScreen(
                     fontSize = if (isSelectionMode) 22.sp else 34.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
-                    color = Color.Black
+                    color = Color.White
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -162,6 +168,7 @@ fun ChatListScreen(
                             DropdownMenuItem(text = { AppText("New Group") }, onClick = { showMenu = false; onCreateGroupClick() })
                             DropdownMenuItem(text = { AppText("New Broadcast") }, onClick = { showMenu = false })
                             DropdownMenuItem(text = { AppText("Starred Messages") }, onClick = { showMenu = false; onSavedMessagesClick() })
+                            DropdownMenuItem(text = { AppText("Archived") }, onClick = { showMenu = false; onArchivedClick() })
                             DropdownMenuItem(text = { AppText("Settings") }, onClick = { showMenu = false; onMyProfileClick() })
                         }
                     }
@@ -175,7 +182,7 @@ fun ChatListScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .height(36.dp)
-                    .background(Color(0x1F767680), RoundedCornerShape(10.dp))
+                    .background(Color(0x33FFFFFF), RoundedCornerShape(10.dp))
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -214,7 +221,7 @@ fun ChatListScreen(
                 ChatFilter.entries.forEach { filter ->
                     val isSelected = selectedFilter == filter
                     val bg by animateColorAsState(
-                        targetValue = if (isSelected) Color(0xFF007AFF) else Color(0xFFE5E5EA),
+                        targetValue = if (isSelected) Color(0xFF007AFF) else Color(0x33FFFFFF),
                         label = "chip_bg"
                     )
                     val textColor by animateColorAsState(
@@ -429,7 +436,7 @@ fun ChatRowContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer { scaleX = scale; scaleY = scale }
-                .background(Color.White)
+                .background(Color(0x1AFFFFFF))
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -464,7 +471,7 @@ fun ChatRowContent(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (chat.isPinned) {
                             Icon(Icons.Rounded.PushPin, null, tint = Color(0xFF8E8E93), modifier = Modifier.size(12.dp))

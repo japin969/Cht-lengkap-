@@ -546,6 +546,7 @@ private fun MainNavigationGraph(
                 }
             } else {
                 ChatListScreen(
+                    onArchivedClick = { navController.navigate("archived_chats") },
                     onChatClick = { chatId ->
                         navController.navigate("chat/$chatId")
                     },
@@ -697,6 +698,13 @@ private fun MainNavigationGraph(
         ) { backStackEntry ->
             val slug = backStackEntry.arguments?.getString("slug") ?: ""
             com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
+        }
+
+        composable("archived_chats") {
+            com.jayra.app.ui.chatlist.ArchivedChatsScreen(
+                onBack = { navController.popBackStack() },
+                onChatClick = { cid -> navController.navigate("chat/$cid") }
+            )
         }
 
         composable("creategroup") {
