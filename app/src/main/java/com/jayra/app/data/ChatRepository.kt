@@ -31,6 +31,7 @@ class ChatRepository(
         get() = auth?.currentUser?.uid ?: "user_telegram_me"
 
     private val _localChats = MutableStateFlow<List<Chat>>(emptyList())
+    private val _deletedIds = mutableSetOf<String>()
     private val _messagesByChat = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
 
     // DEV: seed dummy messages untuk test bubble iOS
@@ -174,11 +175,8 @@ class ChatRepository(
                     val remoteChats = snapshot.documents.mapNotNull { doc ->
                         doc.toObject(Chat::class.java)?.copy(id = doc.id)
                     }
-                    if (remoteChats.isNotEmpty()) {
-                        trySend(remoteChats)
-                    } else {
-                        trySend(_localChats.value)
-                    }
+                    val filtered = remoteChats.filter { it.id !in _deletedIds }
+                    if (filtered.isNotEmpty()) trySend(filtered) else trySend(_localChats.value)
                 }
             awaitClose { listener.remove() }
         } else {
@@ -831,11 +829,21 @@ class ChatRepository(
             list.map { if (it.id == chatId) it.copy(isArchived = true) else it }
         }
         try {
-            firestore?.collection("chats")?.document(chatId)?.update("archived", true)
+            firestore?.collection("chats")?.document(chatId)?.update("isArchived", true)
+        } catch (_: Exception) {}
+    }
+
+    fun unarchiveChat(chatId: String) {
+        _localChats.update { list ->
+            list.map { if (it.id == chatId) it.copy(isArchived = false) else it }
+        }
+        try {
+            firestore?.collection("chats")?.document(chatId)?.update("isArchived", false)
         } catch (_: Exception) {}
     }
 
     fun deleteChat(chatId: String) {
+        _deletedIds.add(chatId)
         _localChats.update { list -> list.filter { it.id != chatId } }
         try {
             firestore?.collection("chats")?.document(chatId)?.delete()

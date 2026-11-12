@@ -9,14 +9,12 @@
     <domain-config>
         <domain includeSubdomains="true">api.siputzx.my.id</domain>
         <trust-anchors>
-            <certificates src="@raw/siputzx_cert" />
             <certificates src="system" />
         </trust-anchors>
     </domain-config>
     <domain-config>
         <domain includeSubdomains="true">api.nexadev.my.id</domain>
         <trust-anchors>
-            <certificates src="@raw/nexadev_cert" />
             <certificates src="system" />
         </trust-anchors>
     </domain-config>

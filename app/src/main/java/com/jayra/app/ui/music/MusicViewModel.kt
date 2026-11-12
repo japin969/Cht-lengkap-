@@ -10,6 +10,7 @@ import com.jayra.app.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,9 +72,13 @@ class MusicViewModel @JvmOverloads constructor(
         )
     )
 
+    // History
+    private val prefs = application.getSharedPreferences("jayra_music_prefs", android.content.Context.MODE_PRIVATE)
+    private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+    val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
+
     init {
-        // Show curated songs by default
-        _uiState.value = MusicUiState.Success(curatedSongs)
+        loadHistory()
 
         // Observe search query with 300ms debounce
         viewModelScope.launch {
@@ -90,26 +95,69 @@ class MusicViewModel @JvmOverloads constructor(
         _searchQuery.value = query
     }
 
+    private fun loadHistory() {
+        val stored = prefs.getString("music_history", "") ?: ""
+        _searchHistory.value = if (stored.isBlank()) emptyList()
+            else stored.split("||").filter { it.isNotBlank() }
+    }
+
+    private fun addHistory(query: String) {
+        val current = _searchHistory.value.toMutableList()
+        current.remove(query)
+        current.add(0, query)
+        val capped = current.take(20)
+        _searchHistory.value = capped
+        prefs.edit().putString("music_history", capped.joinToString("||")).apply()
+    }
+
+    fun onHistoryClick(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun onClearHistory() {
+        _searchHistory.value = emptyList()
+        prefs.edit().remove("music_history").apply()
+    }
+
     private suspend fun executeSearch(query: String) {
+        if (query.isBlank()) {
+            _uiState.value = MusicUiState.Success(emptyList())
+            return
+        }
+        _uiState.value = MusicUiState.Loading
+        val results = mutableListOf<Song>()
         try {
-            val response = NexadevApi.create().searchYouTube(query)
-            if (response.isSuccessful && response.body()?.status == true) {
-                val body = response.body()!!
-                val song = Song(
-                    id = System.currentTimeMillis().toString(),
-                    title = body.title ?: "Unknown",
-                    artist = "YouTube Music",
-                    album = "YouTube Stream",
-                    duration = body.duration ?: "0:00",
-                    coverUrl = body.thumbnail ?: "",
-                    audioUrl = body.data?.url ?: ""
-                )
-                _uiState.value = MusicUiState.Success(listOf(song))
+            val spotifyDeferred = viewModelScope.async(Dispatchers.IO) {
+                try {
+                    val r = nexadevApi.searchSpotify(query)
+                    if (r.isSuccessful && r.body()?.status == true) {
+                        r.body()?.data?.let { s ->
+                            s.toSong(
+                                fallbackId = "sp_${System.currentTimeMillis()}"
+                            ).copy(source = "spotify")
+                        }
+                    } else null
+                } catch (_: Exception) { null }
+            }
+            val ytDeferred = viewModelScope.async(Dispatchers.IO) {
+                try {
+                    val r = nexadevApi.searchYouTube(query)
+                    if (r.isSuccessful && r.body()?.status == true) {
+                        r.body()?.toSong("yt_${System.currentTimeMillis()}")
+                            ?.copy(source = "youtube")
+                    } else null
+                } catch (_: Exception) { null }
+            }
+            spotifyDeferred.await()?.let { results.add(it) }
+            ytDeferred.await()?.let { results.add(it) }
+            if (results.isNotEmpty()) {
+                _uiState.value = MusicUiState.Success(results)
+                addHistory(query)
             } else {
-                _uiState.value = MusicUiState.Error("Lagu tidak ditemukan")
+                _uiState.value = MusicUiState.Empty
             }
         } catch (e: Exception) {
-            _uiState.value = MusicUiState.Error("Gagal mencari: ${e.localizedMessage}")
+            _uiState.value = MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
         }
     }
 

@@ -103,12 +103,16 @@ fun MusicHomeScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
 
     MusicHomeContent(
         uiState = uiState,
         searchQuery = searchQuery,
         currentSong = currentSong,
         isPlaying = isPlaying,
+        searchHistory = searchHistory,
+        onHistoryClick = viewModel::onHistoryClick,
+        onClearHistory = viewModel::onClearHistory,
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onSongClick = { song ->
             viewModel.onSongClick(song)
@@ -126,6 +130,9 @@ fun MusicHomeContent(
     searchQuery: String,
     currentSong: Song?,
     isPlaying: Boolean,
+    searchHistory: List<String> = emptyList(),
+    onHistoryClick: (String) -> Unit = {},
+    onClearHistory: () -> Unit = {},
     onSearchQueryChange: (String) -> Unit,
     onSongClick: (Song) -> Unit,
     onPlayPauseClick: () -> Unit,
@@ -133,10 +140,13 @@ fun MusicHomeContent(
     onBack: (() -> Unit)? = null
 ) {
     val isDark = isSystemInDarkTheme()
-    val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
-    val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
-    val searchBg = if (isDark) JayraSearchDark else JayraSearchLight
-    val textColor = if (isDark) Color.White else Color.Black
+    val loginGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
+        colors = listOf(Color(0xFF1E3A5F), Color(0xFF4A2E6B))
+    )
+    val topBarBg = Color.Transparent
+    val screenBg = Color.Transparent
+    val searchBg = Color(0x33FFFFFF)
+    val textColor = Color.White
     var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -146,7 +156,6 @@ fun MusicHomeContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .background(topBarBg)
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -238,7 +247,7 @@ fun MusicHomeContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(screenBg)
+                .background(loginGradient)
                 .padding(innerPadding)
         ) {
             // 1.2 Search Bar
@@ -254,7 +263,7 @@ fun MusicHomeContent(
                 Icon(
                     imageVector = Icons.Rounded.Search,
                     contentDescription = "Search",
-                    tint = JayraSubtext,
+                    tint = Color(0x99FFFFFF),
                     modifier = Modifier.size(16.dp)
                 )
 
@@ -265,7 +274,7 @@ fun MusicHomeContent(
                         Text(
                             text = "Cari lagu atau artis",
                             fontSize = 15.sp,
-                            color = JayraSubtext
+                            color = Color(0x99FFFFFF)
                         )
                     }
                     BasicTextField(
@@ -293,6 +302,51 @@ fun MusicHomeContent(
                             .size(16.dp)
                             .clickable { onSearchQueryChange("") }
                     )
+                }
+            }
+
+            // History (muncul saat search kosong)
+            if (searchQuery.isBlank() && searchHistory.isNotEmpty()) {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Pencarian terakhir",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0x99FFFFFF)
+                        )
+                        Text(
+                            text = "Hapus",
+                            fontSize = 13.sp,
+                            color = Color(0xFF5AC8FA),
+                            modifier = Modifier.clickable { onClearHistory() }
+                        )
+                    }
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 4.dp)
+                    ) {
+                        items(searchHistory, key = { it }) { q ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color(0x33FFFFFF))
+                                    .clickable { onHistoryClick(q) }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = q,
+                                    fontSize = 13.sp,
+                                    color = Color.White,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -361,14 +415,15 @@ private fun MusicSongItem(
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    val separatorColor = if (isDark) JayraSeparatorDark else JayraSeparatorLight
-    val titleColor = if (isCurrentSong) JayraBlue else if (isDark) Color.White else Color.Black
-    val searchBg = if (isDark) JayraSearchDark else JayraSearchLight
+    val separatorColor = Color(0x33FFFFFF)
+    val titleColor = if (isCurrentSong) Color(0xFF5AC8FA) else Color.White
+    val searchBg = Color(0x1AFFFFFF)
+    val subtitleColor = Color(0x99FFFFFF)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color(0x1AFFFFFF))
             .clickable(onClick = onClick)
             .testTag("song_item_${song.id}")
     ) {
@@ -401,7 +456,7 @@ private fun MusicSongItem(
                     Icon(
                         imageVector = Icons.Rounded.MusicNote,
                         contentDescription = "Cover",
-                        tint = JayraSubtext,
+                        tint = Color(0x99FFFFFF),
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -411,19 +466,40 @@ private fun MusicSongItem(
 
             // Column (weight 1f)
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = titleColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = song.title,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = titleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (song.source.isNotBlank()) {
+                        Spacer(Modifier.width(6.dp))
+                        val badge = if (song.source == "youtube") "YouJay" else "SpoJay"
+                        val badgeColor = if (song.source == "youtube") Color(0xFFFF3B30) else Color(0xFF34C759)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(badgeColor.copy(alpha = 0.85f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = badge,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = song.artist,
                     fontSize = 15.sp,
-                    color = JayraSubtext,
+                    color = subtitleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -431,7 +507,7 @@ private fun MusicSongItem(
                 Text(
                     text = song.duration,
                     fontSize = 13.sp,
-                    color = JayraSubtext
+                    color = subtitleColor
                 )
             }
 
@@ -470,21 +546,19 @@ private fun MusicMiniPlayer(
     onPlayPauseClick: () -> Unit,
     onClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    val barBg = if (isDark) Color(0xFF1E2833) else Color(0xFFF7F9FA)
-    val separatorColor = if (isDark) JayraSeparatorDark else JayraSeparatorLight
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(barBg)
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                colors = listOf(Color(0xB31E3A5F), Color(0xCC4A2E6B))
+            ))
             .clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(0.5.dp)
-                .background(separatorColor)
+                .background(Color(0x33FFFFFF))
         )
 
         Row(
@@ -528,14 +602,14 @@ private fun MusicMiniPlayer(
                     text = song.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (isDark) Color.White else Color.Black,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = song.artist,
                     fontSize = 13.sp,
-                    color = JayraSubtext,
+                    color = Color(0x99FFFFFF),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -548,7 +622,7 @@ private fun MusicMiniPlayer(
                 Icon(
                     imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = JayraBlue,
+                    tint = Color(0xFF5AC8FA),
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -571,7 +645,7 @@ private fun MusicEmptyState(
         Icon(
             imageVector = Icons.Rounded.MusicNote,
             contentDescription = "Music",
-            tint = JayraSubtext,
+            tint = Color(0x99FFFFFF),
             modifier = Modifier.size(64.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -579,14 +653,14 @@ private fun MusicEmptyState(
             text = "Cari lagu favoritmu",
             fontSize = 17.sp,
             fontWeight = FontWeight.Medium,
-            color = JayraSubtext,
+            color = Color(0xCCFFFFFF),
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "Ketik judul lagu atau nama artis",
             fontSize = 15.sp,
-            color = JayraSubtext,
+            color = Color(0x99FFFFFF),
             textAlign = TextAlign.Center
         )
     }
@@ -616,13 +690,13 @@ private fun MusicErrorState(
         Text(
             text = if (message.isNotBlank()) message else "Gagal memuat musik",
             fontSize = 17.sp,
-            color = JayraSubtext,
+            color = Color(0xCCFFFFFF),
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(containerColor = JayraBlue),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5AC8FA)),
             shape = RoundedCornerShape(10.dp)
         ) {
             Text(
@@ -639,8 +713,8 @@ private fun MusicErrorState(
 @Composable
 private fun MusicShimmerLoading() {
     val isDark = isSystemInDarkTheme()
-    val baseColor = if (isDark) Color(0xFF233040) else Color(0xFFD8DFE5)
-    val highlightColor = if (isDark) Color(0xFF324357) else Color(0xFFE8EEF3)
+    val baseColor = Color(0x1AFFFFFF)
+    val highlightColor = Color(0x33FFFFFF)
 
     val transition = rememberInfiniteTransition(label = "shimmer_transition")
     val translateAnim by transition.animateFloat(

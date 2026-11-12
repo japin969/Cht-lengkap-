@@ -12,5 +12,6 @@ data class Song(
     val album: String = "",
     val duration: String = "0:00",
     val coverUrl: String = "",
-    val audioUrl: String = ""
+    val audioUrl: String = "",
+    val source: String = ""   // "spotify" | "youtube"
 )
