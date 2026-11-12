@@ -375,9 +375,6 @@ fun SettingsContent(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(cardBg)
                                 ) {
-                                        }
-                                    )
-                                    
                                     InfoSwitchRow(
                                         icon = Icons.Rounded.SmartToy,
                                         iconTint = JayraBlue,
@@ -567,6 +564,7 @@ private fun SettingsLightPreview() {
             )
         }
     }
+}
 
 @Preview(name = "Settings Dark", showBackground = true)
 @Composable
