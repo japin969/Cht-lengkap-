@@ -143,8 +143,6 @@ data class Group(
     val adminApproval: Boolean = false,
     val inviteViaLinkEnabled: Boolean = true,
     val mediaVisibility: Boolean = true,
-    val descriptionDisplay: String
-        get() = description.ifBlank { "No description" },
     val permissions: Map<String, String> = mapOf(
         "send_messages" to "Semua Anggota",
         "send_media" to "Semua Anggota",
@@ -152,7 +150,10 @@ data class Group(
         "pin_messages" to "Semua Anggota",
         "change_info" to "Semua Anggota"
     )
-)
+) {
+    val descriptionDisplay: String
+        get() = description.ifBlank { "No description" }
+}
 
 @Immutable
 data class Channel(
