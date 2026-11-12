@@ -31,3 +31,5 @@ inter.zip
 inter_extracted/
 *.bak
 test_phone.svg
+backup_ios_glass_*/
+backup_before_*/
