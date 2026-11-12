@@ -285,10 +285,12 @@ fun AssistantScreenContent(
                     } else {
                         val listState = rememberLazyListState()
 
-                        val lastItemKey = uiState.messages.lastOrNull()?.id
-                        LaunchedEffect(lastItemKey, uiState.isLoading) {
+                        LaunchedEffect(uiState.messages.size, uiState.isLoading) {
                             val totalCount = uiState.messages.size + if (uiState.isLoading) 1 else 0
                             if (totalCount > 0) {
+                                // Double scroll: sekali sekarang, sekali setelah layout settle
+                                listState.animateScrollToItem(totalCount - 1)
+                                kotlinx.coroutines.delay(80)
                                 listState.animateScrollToItem(totalCount - 1)
                             }
                         }

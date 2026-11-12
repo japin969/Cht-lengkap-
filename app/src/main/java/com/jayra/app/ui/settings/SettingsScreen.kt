@@ -159,6 +159,7 @@ fun SettingsContent(
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("jayra_security_prefs", Context.MODE_PRIVATE) }
+    val glassEnabled = com.jayra.app.util.GlassEffectPrefs.enabledState.value
     var isAssistantEnabled by remember {
         mutableStateOf(prefs.getBoolean("assistant_ai_enabled", true))
     }
@@ -374,6 +375,14 @@ fun SettingsContent(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(cardBg)
                                 ) {
+                                    // iOS 26 Glass Effect toggle
+                                    GlassEffectToggleRow(
+                                        enabled = glassEnabled,
+                                        onToggle = { enabled ->
+                                            com.jayra.app.util.GlassEffectPrefs.set(context, enabled)
+                                        }
+                                    )
+                                    
                                     InfoSwitchRow(
                                         icon = Icons.Rounded.SmartToy,
                                         iconTint = JayraBlue,
@@ -592,3 +601,58 @@ private fun SettingsDarkPreview() {
         }
     }
 }
+
+@Composable
+private fun GlassEffectToggleRow(
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    val realBlurSupported = com.jayra.app.util.GlassEffectPrefs.supportsRealBlur()
+    val subtitle = when {
+        !enabled -> "Matikan efek — solid (0 lag)"
+        enabled && realBlurSupported -> "Aktifkan efek — blur asli iOS 26"
+        else -> "Aktifkan efek — blur ringan (anti lag)"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle(!enabled) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        com.airbnb.lottie.compose.LottieAnimation(
+            composition = com.airbnb.lottie.compose.rememberLottieComposition(
+                com.airbnb.lottie.compose.LottieCompositionSpec.RawRes(
+                    com.jayra.app.R.raw.toggle
+                )
+            ).value,
+            progress = { if (enabled) 1f else 0f },
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = if (enabled) "Aktifkan efek" else "Matikan efek",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF000000)
+            )
+            Text(
+                text = subtitle,
+                fontSize = 13.sp,
+                color = Color(0xFF8E8E93)
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        androidx.compose.material3.Switch(
+            checked = enabled,
+            onCheckedChange = { onToggle(it) },
+            colors = androidx.compose.material3.SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Color(0xFF34C759)
+            )
+        )
+    }
+}
+

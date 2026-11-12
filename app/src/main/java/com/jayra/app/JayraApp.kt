@@ -14,6 +14,7 @@ class JayraApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.jayra.app.util.GlassEffectPrefs.init(this)
         instance = this
 
         initTimber()

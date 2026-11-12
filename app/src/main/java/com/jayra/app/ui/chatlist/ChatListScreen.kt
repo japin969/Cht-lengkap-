@@ -65,6 +65,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
 import androidx.compose.runtime.LaunchedEffect
+import com.jayra.app.util.glassSurface
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,7 +111,7 @@ fun ChatListScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // ========== TOP BAR ==========
             Column(
-                modifier = Modifier.fillMaxWidth().background(Color(0xFFF2F2F7))
+                modifier = Modifier.fillMaxWidth().glassSurface(solidColor = Color(0xFFF2F2F7), tintAlpha = 0.85f, blurRadius = 20.dp)
             ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -174,7 +175,7 @@ fun ChatListScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .height(36.dp)
-                    .background(Color(0x1F767680), RoundedCornerShape(10.dp))
+                    .glassSurface(solidColor = Color(0x1F767680), tintAlpha = 0.9f, blurRadius = 12.dp, cornerRadius = 10.dp)
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -352,22 +353,20 @@ fun SwipeableChatRow(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { false }
-    )
-
-    LaunchedEffect(dismissState.currentValue) {
-        when (dismissState.currentValue) {
-            SwipeToDismissBoxValue.StartToEnd -> {
-                onArchive()
-                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onArchive()
+                    false // reset visual, item tetap ada karena cuma archive
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onDelete()
+                    true // dismiss visual, item hilang karena data flow
+                }
+                else -> false
             }
-            SwipeToDismissBoxValue.EndToStart -> {
-                onDelete()
-                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-            }
-            else -> {}
         }
-    }
+    )
 
     SwipeToDismissBox(
         state = dismissState,
