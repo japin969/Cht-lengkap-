@@ -12,6 +12,11 @@ import java.util.concurrent.TimeUnit
 
 interface SiputzxApi {
 
+    @GET("api/s/pinterest")
+    suspend fun searchPinterest(
+        @Query("query") query: String
+    ): Response<PinterestResponse>
+
     @GET("api/ai/gptoss120b")
     suspend fun askGptOss(
         @Query("prompt") prompt: String,

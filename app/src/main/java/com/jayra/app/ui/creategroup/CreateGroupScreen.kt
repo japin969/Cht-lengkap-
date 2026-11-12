@@ -5,82 +5,83 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.jayra.app.model.User
-import com.jayra.app.ui.theme.JayraBlue
-import com.jayra.app.ui.theme.JayraCardDark
-import com.jayra.app.ui.theme.JayraCardLight
-import com.jayra.app.ui.theme.JayraDarkChatBg
-import com.jayra.app.ui.theme.JayraDarkTopBar
-import com.jayra.app.ui.theme.JayraLightChatBg
-import com.jayra.app.ui.theme.JayraLightTopBar
-import com.jayra.app.ui.theme.JayraSubtext
-import com.jayra.app.ui.theme.JayraTheme
+import com.jayra.app.ui.theme.AppleEmojiFont
+import com.jayra.app.ui.theme.SFProFontFamily
+import com.jayra.app.util.glassSurface
+import java.io.File
+
+private val IOS_BLUE_LIGHT = Color(0xFF007AFF)
+private val IOS_BLUE_DARK = Color(0xFF0A84FF)
+private val IOS_BG_LIGHT = Color(0xFFF2F2F7)
+private val IOS_BG_DARK = Color(0xFF000000)
+private val IOS_GROUPED_LIGHT = Color(0xFFFFFFFF)
+private val IOS_GROUPED_DARK = Color(0xFF1C1C1E)
+private val IOS_SEPARATOR_LIGHT = Color(0xFFC6C6C8)
+private val IOS_SEPARATOR_DARK = Color(0xFF38383A)
+private val IOS_LABEL_LIGHT = Color(0xFF000000)
+private val IOS_LABEL_DARK = Color(0xFFFFFFFF)
+private val IOS_SECONDARY = Color(0xFF8E8E93)
+private val IOS_GREEN = Color(0xFF34C759)
+private val IOS_RED = Color(0xFFFF3B30)
+
+private val EMOJI_PALETTE = listOf(
+    "😀", "😁", "😂", "🤣", "😃", "😄", "😅", "😆",
+    "😉", "😊", "😋", "😎", "😍", "😘", "🥰", "😗",
+    "😙", "😚", "🙂", "🤗", "🤩", "🤔", "🤨", "😐",
+    "😑", "😶", "🙄", "😏", "😣", "😥", "😮", "🤐",
+    "😯", "😪", "😫", "🥱", "😴", "😌", "😛", "😜",
+    "😝", "🤤", "😒", "😓", "😔", "😕", "🙃", "🤑",
+    "😲", "🙁", "😖", "😞", "😟", "😤", "😢", "😭",
+    "😦", "😧", "😨", "😩", "🤯", "😬", "😰", "😱",
+    "🥵", "🥶", "😳", "🤪", "😵", "🥴", "😠", "😡",
+    "🤬", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "😇",
+    "🥳", "🥺", "🤠", "🤡", "🤥", "🤫", "🤭", "🧐"
+)
 
 @Composable
 fun CreateGroupScreen(
@@ -89,20 +90,46 @@ fun CreateGroupScreen(
     viewModel: CreateGroupViewModel = viewModel()
 ) {
     BackHandler { onBack() }
+    val context = LocalContext.current
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val groupName by viewModel.groupName.collectAsStateWithLifecycle()
     val groupAvatar by viewModel.groupAvatar.collectAsStateWithLifecycle()
     val selectedMemberIds by viewModel.selectedMemberIds.collectAsStateWithLifecycle()
     val contacts by viewModel.contacts.collectAsStateWithLifecycle()
+    val webQuery by viewModel.webSearchQuery.collectAsStateWithLifecycle()
+    val webResults by viewModel.webSearchResults.collectAsStateWithLifecycle()
+    val webLoading by viewModel.webSearchLoading.collectAsStateWithLifecycle()
+
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            viewModel.onPhotoSelected(uri.toString())
+    ) { uri: Uri? -> if (uri != null) viewModel.onPhotoSelected(uri.toString()) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && pendingCameraUri != null) {
+            viewModel.onPhotoSelected(pendingCameraUri.toString())
         }
+        pendingCameraUri = null
+    }
+
+    val launchCamera: () -> Unit = {
+        try {
+            val dir = File(context.cacheDir, "images").apply { mkdirs() }
+            val file = File(dir, "avatar_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            pendingCameraUri = uri
+            cameraLauncher.launch(uri)
+        } catch (_: Exception) {}
     }
 
     LaunchedEffect(uiState) {
@@ -118,22 +145,30 @@ fun CreateGroupScreen(
         selectedMemberIds = selectedMemberIds,
         contacts = contacts,
         isLoading = uiState is CreateGroupUiState.Loading,
+        webQuery = webQuery,
+        webResults = webResults,
+        webLoading = webLoading,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onGroupNameChange = viewModel::onGroupNameChange,
-        onPickPhoto = {
-            photoPickerLauncher.launch(
+        onPickFromGallery = {
+            galleryLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
             )
         },
+        onPickFromCamera = launchCamera,
+        onPickEmoji = { emoji -> viewModel.onPhotoSelected("emoji:$emoji") },
+        onPickWeb = { url -> viewModel.onPhotoSelected(url) },
+        onRemovePhoto = { viewModel.clearAvatar() },
+        onWebQueryChange = viewModel::onWebSearchQueryChange,
+        onWebSearch = { viewModel.searchWebImages() },
         onToggleMember = viewModel::toggleMember,
         onRemoveMember = viewModel::removeMember,
-        onCreateGroup = {
-            viewModel.createGroup(onSuccess = onGroupCreated)
-        }
+        onCreateGroup = { viewModel.createGroup(onSuccess = onGroupCreated) }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateGroupContent(
     groupName: String,
@@ -141,274 +176,486 @@ fun CreateGroupContent(
     selectedMemberIds: Set<String>,
     contacts: List<User>,
     isLoading: Boolean,
+    webQuery: String = "",
+    webResults: List<String> = emptyList(),
+    webLoading: Boolean = false,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
     onGroupNameChange: (String) -> Unit,
-    onPickPhoto: () -> Unit,
+    onPickFromGallery: () -> Unit = {},
+    onPickFromCamera: () -> Unit = {},
+    onPickEmoji: (String) -> Unit = {},
+    onPickWeb: (String) -> Unit = {},
+    onRemovePhoto: () -> Unit = {},
+    onWebQueryChange: (String) -> Unit = {},
+    onWebSearch: () -> Unit = {},
     onToggleMember: (String) -> Unit,
     onRemoveMember: (String) -> Unit,
     onCreateGroup: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
-    val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
-    val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
-    val cardBg = if (isDark) JayraCardDark else JayraCardLight
-    val canCreate = groupName.trim().isNotBlank() && selectedMemberIds.isNotEmpty() && !isLoading
+    val tint = if (isDark) IOS_BLUE_DARK else IOS_BLUE_LIGHT
+    val bg = if (isDark) IOS_BG_DARK else IOS_BG_LIGHT
+    val cardBg = if (isDark) IOS_GROUPED_DARK else IOS_GROUPED_LIGHT
+    val label = if (isDark) IOS_LABEL_DARK else IOS_LABEL_LIGHT
+    val sep = if (isDark) IOS_SEPARATOR_DARK else IOS_SEPARATOR_LIGHT
+
+    val canCreate = (groupName.trim().isNotBlank() || selectedMemberIds.isNotEmpty()) && !isLoading
 
     val selectedContacts = remember(selectedMemberIds, contacts) {
         contacts.filter { selectedMemberIds.contains(it.id) }
     }
 
+    var showActionSheet by remember { mutableStateOf(false) }
+    var showEmojiPicker by remember { mutableStateOf(false) }
+    var showWebSearch by remember { mutableStateOf(false) }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .background(topBarBg)
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.fillMaxWidth().glassSurface(solidColor = bg, tintAlpha = 0.85f, blurRadius = 16.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Back chevron
                     IconButton(
                         onClick = onBack,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("create_group_back")
+                        modifier = Modifier.size(44.dp).testTag("create_group_back")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
-                            tint = Color.White,
+                            tint = tint,
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    // Title center
                     Text(
-                        text = "Grup Baru",
+                        text = "New Group",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = label,
+                        fontFamily = SFProFontFamily
                     )
-                }
-
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(end = 16.dp)
-                            .size(24.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    TextButton(
-                        onClick = onCreateGroup,
-                        enabled = canCreate,
-                        modifier = Modifier.testTag("create_group_submit")
+                    // Create button
+                    Box(
+                        modifier = Modifier.size(44.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Buat",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (canCreate) Color.White else Color.White.copy(alpha = 0.45f)
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = tint,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Create",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (canCreate) tint else IOS_SECONDARY,
+                                fontFamily = SFProFontFamily,
+                                modifier = Modifier
+                                    .clickable(enabled = canCreate) { onCreateGroup() }
+                                    .testTag("create_group_submit")
+                            )
+                        }
                     }
                 }
             }
         },
-        containerColor = screenBg
+        containerColor = bg
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            modifier = Modifier.fillMaxSize().padding(innerPadding)
         ) {
-            // Profile & Name Section Card
+            // Avatar Section
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = cardBg)
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(IOS_SECONDARY.copy(alpha = 0.3f))
+                            .clickable { showActionSheet = true }
+                            .testTag("create_group_avatar_picker"),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // 120dp Circle Avatar Picker
-                        Box(
-                            modifier = Modifier
-                                .size(120.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF8E8E93))
-                                .clickable { onPickPhoto() }
-                                .testTag("create_group_avatar_picker"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (groupAvatar.isNotBlank()) {
-                                AsyncImage(
-                                    model = groupAvatar,
-                                    contentDescription = "Foto Grup",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color.Black.copy(alpha = 0.35f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.CameraAlt,
-                                        contentDescription = "Ganti Foto",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                }
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Rounded.CameraAlt,
-                                    contentDescription = "Pilih Foto",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(44.dp)
-                                )
+                        when {
+                            groupAvatar.startsWith("emoji:") -> {
+                                val emoji = groupAvatar.removePrefix("emoji:")
+                                Text(text = emoji, fontSize = 64.sp, fontFamily = AppleEmojiFont)
                             }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = "Ubah Foto Grup",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = JayraBlue,
-                            modifier = Modifier
-                                .clickable { onPickPhoto() }
-                                .padding(vertical = 4.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Form Nama Grup
-                        OutlinedTextField(
-                            value = groupName,
-                            onValueChange = onGroupNameChange,
-                            placeholder = {
-                                Text(
-                                    text = "Nama Grup",
-                                    fontSize = 17.sp,
-                                    color = JayraSubtext
-                                )
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("create_group_name_input"),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    if (canCreate) onCreateGroup()
-                                }
-                            ),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = JayraBlue,
-                                unfocusedBorderColor = JayraSubtext.copy(alpha = 0.4f),
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent
-                            ),
-                            supportingText = {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End
-                                ) {
-                                    Text(
-                                        text = "${groupName.length}/50",
-                                        fontSize = 12.sp,
-                                        color = JayraSubtext
-                                    )
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Selected Members Horizontal Row
-            if (selectedContacts.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "ANGGOTA TERPILIH (${selectedContacts.size})",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = JayraBlue,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
-                    )
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(selectedContacts, key = { it.id }) { user ->
-                            SelectedMemberBadge(
-                                user = user,
-                                onRemove = { onRemoveMember(user.id) }
+                            groupAvatar.isNotBlank() -> AsyncImage(
+                                model = groupAvatar,
+                                contentDescription = "Foto Grup",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            else -> Icon(
+                                imageVector = Icons.Rounded.CameraAlt,
+                                contentDescription = "Pilih Foto",
+                                tint = IOS_SECONDARY,
+                                modifier = Modifier.size(44.dp)
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Add Group Icon",
+                        fontSize = 15.sp,
+                        color = tint,
+                        fontFamily = SFProFontFamily,
+                        modifier = Modifier.clickable { showActionSheet = true }.padding(8.dp)
+                    )
                 }
             }
 
-            // Header Contact List
+            // Name field
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(cardBg)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (groupName.isEmpty()) {
+                            Text(
+                                text = "Group Name",
+                                fontSize = 17.sp,
+                                color = IOS_SECONDARY,
+                                fontFamily = SFProFontFamily
+                            )
+                        }
+                        BasicTextField(
+                            value = groupName,
+                            onValueChange = onGroupNameChange,
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                fontSize = 17.sp,
+                                color = label,
+                                fontFamily = SFProFontFamily
+                            ),
+                            cursorBrush = SolidColor(tint),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            modifier = Modifier.fillMaxWidth().testTag("create_group_name_input")
+                        )
+                    }
+                    Text(
+                        text = "${groupName.length}/100",
+                        fontSize = 13.sp,
+                        color = IOS_SECONDARY,
+                        fontFamily = SFProFontFamily
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp)
+                        .height(0.5.dp)
+                        .background(sep)
+                )
+            }
+
+            // Selected members horizontal
+            if (selectedContacts.isNotEmpty()) {
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(selectedContacts, key = { it.id }) { user ->
+                            SelectedMemberBadge(user = user, onRemove = { onRemoveMember(user.id) })
+                        }
+                    }
+                }
+            }
+
+            // Members section header
             item {
                 Text(
-                    text = "PILIH ANGGOTA",
+                    text = "MEMBERS",
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = JayraSubtext,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    fontWeight = FontWeight.Medium,
+                    color = IOS_SECONDARY,
+                    fontFamily = SFProFontFamily,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
 
-            // Contact List
+            // Contacts list
             items(contacts, key = { it.id }) { user ->
-                val isSelected = selectedMemberIds.contains(user.id)
-                ContactSelectRow(
+                ContactRow(
                     user = user,
-                    isSelected = isSelected,
+                    isSelected = selectedMemberIds.contains(user.id),
+                    label = label,
+                    cardBg = cardBg,
+                    tint = tint,
                     onToggle = { onToggleMember(user.id) }
                 )
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 76.dp),
-                    thickness = 0.5.dp,
-                    color = JayraSubtext.copy(alpha = 0.15f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 72.dp)
+                        .height(0.5.dp)
+                        .background(sep)
                 )
             }
 
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
+            item { Spacer(Modifier.height(24.dp)) }
+        }
+    }
+
+    // Action Sheet (5 pilihan)
+    if (showActionSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showActionSheet = false },
+            containerColor = cardBg,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                ActionSheetRow(
+                    icon = Icons.Rounded.PhotoCamera,
+                    label = "Take Photo",
+                    tint = tint,
+                    labelColor = label,
+                    onClick = { showActionSheet = false; onPickFromCamera() }
+                )
+                ActionSheetRow(
+                    icon = Icons.Rounded.Image,
+                    label = "Choose Photo",
+                    tint = tint,
+                    labelColor = label,
+                    onClick = { showActionSheet = false; onPickFromGallery() }
+                )
+                ActionSheetRow(
+                    icon = Icons.Rounded.EmojiEmotions,
+                    label = "Emoji & Sticker",
+                    tint = tint,
+                    labelColor = label,
+                    onClick = { showActionSheet = false; showEmojiPicker = true }
+                )
+                ActionSheetRow(
+                    icon = Icons.Rounded.Search,
+                    label = "Search Web",
+                    tint = tint,
+                    labelColor = label,
+                    onClick = { showActionSheet = false; showWebSearch = true }
+                )
+                if (groupAvatar.isNotBlank()) {
+                    ActionSheetRow(
+                        icon = Icons.Rounded.Delete,
+                        label = "Remove Photo",
+                        tint = IOS_RED,
+                        labelColor = IOS_RED,
+                        onClick = { showActionSheet = false; onRemovePhoto() }
+                    )
+                }
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+
+    // Emoji Picker
+    if (showEmojiPicker) {
+        ModalBottomSheet(
+            onDismissRequest = { showEmojiPicker = false },
+            containerColor = cardBg,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Text(
+                    text = "Emoji",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = label,
+                    fontFamily = SFProFontFamily
+                )
+                Spacer(Modifier.height(12.dp))
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(6),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(EMOJI_PALETTE.size) { i ->
+                        val emoji = EMOJI_PALETTE[i]
+                        Box(
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    onPickEmoji(emoji)
+                                    showEmojiPicker = false
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = emoji, fontSize = 32.sp, fontFamily = AppleEmojiFont)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+
+    // Search Web Modal
+    if (showWebSearch) {
+        ModalBottomSheet(
+            onDismissRequest = { showWebSearch = false },
+            containerColor = cardBg,
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+        ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Text(
+                    text = "Search Web",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = label,
+                    fontFamily = SFProFontFamily
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(IOS_SECONDARY.copy(alpha = 0.15f))
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = IOS_SECONDARY,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    BasicTextField(
+                        value = webQuery,
+                        onValueChange = onWebQueryChange,
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = 15.sp,
+                            color = label,
+                            fontFamily = SFProFontFamily
+                        ),
+                        cursorBrush = SolidColor(tint),
+                        modifier = Modifier.weight(1f),
+                        decorationBox = { inner ->
+                            if (webQuery.isEmpty()) {
+                                Text(
+                                    text = "Search images…",
+                                    fontSize = 15.sp,
+                                    color = IOS_SECONDARY,
+                                    fontFamily = SFProFontFamily
+                                )
+                            }
+                            inner()
+                        }
+                    )
+                    if (webQuery.isNotBlank()) {
+                        Text(
+                            text = "Go",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = tint,
+                            fontFamily = SFProFontFamily,
+                            modifier = Modifier.clickable { onWebSearch() }.padding(8.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                if (webLoading) {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = tint, modifier = Modifier.size(28.dp))
+                    }
+                } else if (webResults.isEmpty()) {
+                    Text(
+                        text = "Cari gambar, hasil muncul di sini",
+                        fontSize = 14.sp,
+                        color = IOS_SECONDARY,
+                        fontFamily = SFProFontFamily,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 450.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(webResults.size) { i ->
+                            val url = webResults[i]
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        onPickWeb(url)
+                                        showWebSearch = false
+                                    }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
 }
 
 @Composable
-fun SelectedMemberBadge(
-    user: User,
-    onRemove: () -> Unit
+private fun ActionSheetRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    labelColor: Color,
+    onClick: () -> Unit
 ) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(16.dp))
+        Text(
+            text = label,
+            fontSize = 17.sp,
+            color = labelColor,
+            fontFamily = SFProFontFamily
+        )
+    }
+}
+
+@Composable
+private fun SelectedMemberBadge(user: User, onRemove: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(56.dp)
     ) {
-        Box(
-            modifier = Modifier.size(44.dp)
-        ) {
+        Box(modifier = Modifier.size(44.dp)) {
             AsyncImage(
                 model = user.avatarUrl,
                 contentDescription = user.name,
@@ -417,16 +664,14 @@ fun SelectedMemberBadge(
                     .size(40.dp)
                     .clip(CircleShape)
                     .align(Alignment.Center)
-                    .border(1.dp, JayraBlue, CircleShape)
+                    .border(1.dp, IOS_BLUE_LIGHT, CircleShape)
             )
-
-            // Close badge
             Box(
                 modifier = Modifier
                     .size(18.dp)
                     .align(Alignment.TopEnd)
                     .clip(CircleShape)
-                    .background(Color(0xFFE74C3C))
+                    .background(IOS_RED)
                     .clickable { onRemove() }
                     .testTag("remove_selected_${user.id}"),
                 contentAlignment = Alignment.Center
@@ -439,29 +684,32 @@ fun SelectedMemberBadge(
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
+        Spacer(Modifier.height(4.dp))
         Text(
             text = user.name.split(" ").firstOrNull() ?: user.name,
             fontSize = 11.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = JayraSubtext
+            color = IOS_SECONDARY,
+            fontFamily = SFProFontFamily
         )
     }
 }
 
 @Composable
-fun ContactSelectRow(
+private fun ContactRow(
     user: User,
     isSelected: Boolean,
+    label: Color,
+    cardBg: Color,
+    tint: Color,
     onToggle: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
+            .background(cardBg)
             .clickable { onToggle() }
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -470,93 +718,47 @@ fun ContactSelectRow(
             model = user.avatarUrl,
             contentDescription = user.name,
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
+            modifier = Modifier.size(48.dp).clip(CircleShape)
         )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center
-        ) {
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
             Text(
                 text = user.name,
                 fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Medium,
+                color = label,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                fontFamily = SFProFontFamily
             )
-            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (user.isOnline) "online" else "terakhir dilihat baru-baru ini",
+                text = if (user.isOnline) "online" else "terakhir dilihat",
                 fontSize = 14.sp,
-                color = if (user.isOnline) JayraBlue else JayraSubtext,
+                color = if (user.isOnline) IOS_GREEN else IOS_SECONDARY,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                fontFamily = SFProFontFamily
             )
         }
-
-        Checkbox(
-            checked = isSelected,
-            onCheckedChange = { onToggle() },
-            colors = CheckboxDefaults.colors(
-                checkedColor = JayraBlue,
-                uncheckedColor = JayraSubtext
-            ),
-            modifier = Modifier.testTag("contact_checkbox_${user.id}")
-        )
-    }
-}
-
-@Preview(name = "Light Mode", showBackground = true)
-@Composable
-private fun CreateGroupScreenLightPreview() {
-    JayraTheme(darkTheme = false) {
-        Surface {
-            CreateGroupContent(
-                groupName = "Android Jetpack Team",
-                groupAvatar = "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400",
-                selectedMemberIds = setOf("1", "2"),
-                contacts = listOf(
-                    User(id = "1", name = "Pavel Durov", isOnline = true),
-                    User(id = "2", name = "Alex Rivera", isOnline = false),
-                    User(id = "3", name = "David Kim", isOnline = false)
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(if (isSelected) tint else Color.Transparent)
+                .border(
+                    width = if (isSelected) 0.dp else 1.5.dp,
+                    color = if (isSelected) tint else IOS_SECONDARY,
+                    shape = CircleShape
                 ),
-                isLoading = false,
-                onBack = {},
-                onGroupNameChange = {},
-                onPickPhoto = {},
-                onToggleMember = {},
-                onRemoveMember = {},
-                onCreateGroup = {}
-            )
-        }
-    }
-}
-
-@Preview(name = "Dark Mode", showBackground = true)
-@Composable
-private fun CreateGroupScreenDarkPreview() {
-    JayraTheme(darkTheme = true) {
-        Surface {
-            CreateGroupContent(
-                groupName = "",
-                groupAvatar = "",
-                selectedMemberIds = emptySet(),
-                contacts = listOf(
-                    User(id = "1", name = "Pavel Durov", isOnline = true),
-                    User(id = "2", name = "Alex Rivera", isOnline = false)
-                ),
-                isLoading = false,
-                onBack = {},
-                onGroupNameChange = {},
-                onPickPhoto = {},
-                onToggleMember = {},
-                onRemoveMember = {},
-                onCreateGroup = {}
-            )
+            contentAlignment = Alignment.Center
+        ) {
+            if (isSelected) {
+                Text(
+                    text = "✓",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
         }
     }
 }
