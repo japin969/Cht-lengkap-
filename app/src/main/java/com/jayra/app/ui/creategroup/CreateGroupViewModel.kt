@@ -31,6 +31,32 @@ class CreateGroupViewModel(
     private val _uiState = MutableStateFlow<CreateGroupUiState>(CreateGroupUiState.Idle)
     val uiState: StateFlow<CreateGroupUiState> = _uiState.asStateFlow()
 
+    private val _groupDescription = MutableStateFlow("")
+    val groupDescription: StateFlow<String> = _groupDescription.asStateFlow()
+
+    private val _disappearingDuration = MutableStateFlow("Mati")
+    val disappearingDuration: StateFlow<String> = _disappearingDuration.asStateFlow()
+
+    private val _adminApproval = MutableStateFlow(false)
+    val adminApproval: StateFlow<Boolean> = _adminApproval.asStateFlow()
+
+    private val _inviteViaLink = MutableStateFlow(true)
+    val inviteViaLink: StateFlow<Boolean> = _inviteViaLink.asStateFlow()
+
+    private val _mediaVisibility = MutableStateFlow(true)
+    val mediaVisibility: StateFlow<Boolean> = _mediaVisibility.asStateFlow()
+
+    private val _groupPermissions = MutableStateFlow(
+        mapOf(
+            "send_messages" to "Semua Anggota",
+            "send_media" to "Semua Anggota",
+            "add_members" to "Semua Anggota",
+            "pin_messages" to "Semua Anggota",
+            "change_info" to "Semua Anggota"
+        )
+    )
+    val groupPermissions: StateFlow<Map<String, String>> = _groupPermissions.asStateFlow()
+
     private val _groupName = MutableStateFlow("")
     val groupName: StateFlow<String> = _groupName.asStateFlow()
 
@@ -47,8 +73,21 @@ class CreateGroupViewModel(
             initialValue = emptyList()
         )
 
+    fun onGroupDescriptionChange(desc: String) {
+        if (desc.length <= 512) _groupDescription.value = desc
+    }
+
+    fun onDisappearingChange(value: String) { _disappearingDuration.value = value }
+    fun onAdminApprovalChange(v: Boolean) { _adminApproval.value = v }
+    fun onInviteViaLinkChange(v: Boolean) { _inviteViaLink.value = v }
+    fun onMediaVisibilityChange(v: Boolean) { _mediaVisibility.value = v }
+
+    fun onPermissionChange(key: String, value: String) {
+        _groupPermissions.update { it + (key to value) }
+    }
+
     fun onGroupNameChange(newName: String) {
-        if (newName.length <= 50) {
+        if (newName.length <= 100) {
             _groupName.value = newName
         }
     }
@@ -95,7 +134,12 @@ class CreateGroupViewModel(
                     name = name,
                     memberIds = members,
                     avatarUrl = avatar,
-                    description = ""
+                    description = _groupDescription.value.trim(),
+                    permissions = _groupPermissions.value,
+                    disappearingDuration = _disappearingDuration.value,
+                    adminApproval = _adminApproval.value,
+                    inviteViaLinkEnabled = _inviteViaLink.value,
+                    mediaVisibility = _mediaVisibility.value
                 )
                 chatRepository.createGroupChat(
                     chatId = newGroupId,

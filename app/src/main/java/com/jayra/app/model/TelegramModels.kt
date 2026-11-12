@@ -140,12 +140,17 @@ data class Group(
     val memberIds: List<String> = members,
     val adminIds: List<String> = emptyList(),
     val sensitiveContent: Boolean = false,
+    val adminApproval: Boolean = false,
+    val inviteViaLinkEnabled: Boolean = true,
+    val mediaVisibility: Boolean = true,
+    val descriptionDisplay: String
+        get() = description.ifBlank { "No description" },
     val permissions: Map<String, String> = mapOf(
         "send_messages" to "Semua Anggota",
         "send_media" to "Semua Anggota",
-        "add_members" to "Admin",
-        "pin_messages" to "Admin",
-        "change_info" to "Admin"
+        "add_members" to "Semua Anggota",
+        "pin_messages" to "Semua Anggota",
+        "change_info" to "Semua Anggota"
     )
 )
 
