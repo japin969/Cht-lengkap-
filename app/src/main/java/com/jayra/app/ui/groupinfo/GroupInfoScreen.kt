@@ -91,6 +91,7 @@ import com.jayra.app.ui.theme.JayraSuccessGreen
 import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.ui.theme.JayraYellow
 import com.jayra.app.ui.viewmodel.GroupInfoViewModel
+import com.jayra.app.ui.theme.SFProFontFamily
 
 @Composable
 fun GroupInfoScreen(
@@ -153,7 +154,9 @@ fun GroupInfoContent(
     onRetry: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
-    val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
+    val topBarBg = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    val topBarTint = if (isDark) Color(0xFF0A84FF) else Color(0xFF007AFF)
+    val topBarTitle = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
     val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
     val cardBg = if (isDark) JayraCardDark else JayraCardLight
 
@@ -181,7 +184,7 @@ fun GroupInfoContent(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White,
+                        tint = topBarTint,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -190,7 +193,8 @@ fun GroupInfoContent(
                     text = "Info Grup",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = topBarTitle,
+                    fontFamily = SFProFontFamily
                 )
 
                 val isAdmin = (uiState as? GroupInfoUiState.Success)?.group?.isAdmin == true
@@ -200,7 +204,8 @@ fun GroupInfoContent(
                             text = "Edit",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Medium,
-                            color = JayraBlue
+                            color = topBarTint,
+                            fontFamily = SFProFontFamily
                         )
                     }
                 } else {
@@ -317,9 +322,9 @@ fun GroupInfoContent(
                                                     }
                                                 )
                                             }
-                                        } else if (group.isAdmin) {
+                                        } else {
                                             Text(
-                                                text = "Tambah deskripsi grup",
+                                                text = if (group.isAdmin) "Add group description" else "No description",
                                                 fontSize = 17.sp,
                                                 color = JayraSubtext
                                             )

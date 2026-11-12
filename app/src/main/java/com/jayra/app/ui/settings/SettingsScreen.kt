@@ -645,13 +645,9 @@ private fun GlassEffectToggleRow(
             )
         }
         Spacer(Modifier.width(8.dp))
-        androidx.compose.material3.Switch(
+        com.jayra.app.ui.theme.IOSLottieToggle(
             checked = enabled,
-            onCheckedChange = { onToggle(it) },
-            colors = androidx.compose.material3.SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF34C759)
-            )
+            onCheckedChange = onToggle
         )
     }
 }

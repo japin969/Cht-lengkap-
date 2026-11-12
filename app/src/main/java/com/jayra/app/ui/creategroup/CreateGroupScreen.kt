@@ -97,6 +97,12 @@ fun CreateGroupScreen(
     val groupAvatar by viewModel.groupAvatar.collectAsStateWithLifecycle()
     val selectedMemberIds by viewModel.selectedMemberIds.collectAsStateWithLifecycle()
     val contacts by viewModel.contacts.collectAsStateWithLifecycle()
+    val groupDescription by viewModel.groupDescription.collectAsStateWithLifecycle()
+    val groupPermissions by viewModel.groupPermissions.collectAsStateWithLifecycle()
+    val disappearingDuration by viewModel.disappearingDuration.collectAsStateWithLifecycle()
+    val adminApproval by viewModel.adminApproval.collectAsStateWithLifecycle()
+    val inviteViaLink by viewModel.inviteViaLink.collectAsStateWithLifecycle()
+    val mediaVisibility by viewModel.mediaVisibility.collectAsStateWithLifecycle()
     val webQuery by viewModel.webSearchQuery.collectAsStateWithLifecycle()
     val webResults by viewModel.webSearchResults.collectAsStateWithLifecycle()
     val webLoading by viewModel.webSearchLoading.collectAsStateWithLifecycle()
@@ -141,6 +147,12 @@ fun CreateGroupScreen(
 
     CreateGroupContent(
         groupName = groupName,
+        groupDescription = groupDescription,
+        groupPermissions = groupPermissions,
+        disappearingDuration = disappearingDuration,
+        adminApproval = adminApproval,
+        inviteViaLink = inviteViaLink,
+        mediaVisibility = mediaVisibility,
         groupAvatar = groupAvatar,
         selectedMemberIds = selectedMemberIds,
         contacts = contacts,
@@ -151,6 +163,12 @@ fun CreateGroupScreen(
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onGroupNameChange = viewModel::onGroupNameChange,
+        onGroupDescriptionChange = viewModel::onGroupDescriptionChange,
+        onPermissionChange = viewModel::onPermissionChange,
+        onDisappearingChange = viewModel::onDisappearingChange,
+        onAdminApprovalChange = viewModel::onAdminApprovalChange,
+        onInviteViaLinkChange = viewModel::onInviteViaLinkChange,
+        onMediaVisibilityChange = viewModel::onMediaVisibilityChange,
         onPickFromGallery = {
             galleryLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -172,6 +190,12 @@ fun CreateGroupScreen(
 @Composable
 fun CreateGroupContent(
     groupName: String,
+    groupDescription: String = "",
+    groupPermissions: Map<String, String> = emptyMap(),
+    disappearingDuration: String = "Mati",
+    adminApproval: Boolean = false,
+    inviteViaLink: Boolean = true,
+    mediaVisibility: Boolean = true,
     groupAvatar: String,
     selectedMemberIds: Set<String>,
     contacts: List<User>,
@@ -182,6 +206,12 @@ fun CreateGroupContent(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onBack: () -> Unit,
     onGroupNameChange: (String) -> Unit,
+    onGroupDescriptionChange: (String) -> Unit = {},
+    onPermissionChange: (String, String) -> Unit = { _, _ -> },
+    onDisappearingChange: (String) -> Unit = {},
+    onAdminApprovalChange: (Boolean) -> Unit = {},
+    onInviteViaLinkChange: (Boolean) -> Unit = {},
+    onMediaVisibilityChange: (Boolean) -> Unit = {},
     onPickFromGallery: () -> Unit = {},
     onPickFromCamera: () -> Unit = {},
     onPickEmoji: (String) -> Unit = {},
@@ -200,7 +230,7 @@ fun CreateGroupContent(
     val label = if (isDark) IOS_LABEL_DARK else IOS_LABEL_LIGHT
     val sep = if (isDark) IOS_SEPARATOR_DARK else IOS_SEPARATOR_LIGHT
 
-    val canCreate = (groupName.trim().isNotBlank() || selectedMemberIds.isNotEmpty()) && !isLoading
+    val canCreate = groupName.trim().isNotBlank() && selectedMemberIds.isNotEmpty() && !isLoading
 
     val selectedContacts = remember(selectedMemberIds, contacts) {
         contacts.filter { selectedMemberIds.contains(it.id) }
@@ -365,6 +395,270 @@ fun CreateGroupContent(
                         .height(0.5.dp)
                         .background(sep)
                 )
+            }
+
+            // Description
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(cardBg)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (groupDescription.isEmpty()) {
+                            Text(
+                                text = "Add group description...",
+                                fontSize = 17.sp,
+                                color = IOS_SECONDARY,
+                                fontFamily = SFProFontFamily
+                            )
+                        }
+                        BasicTextField(
+                            value = groupDescription,
+                            onValueChange = onGroupDescriptionChange,
+                            maxLines = 4,
+                            textStyle = TextStyle(
+                                fontSize = 17.sp,
+                                color = label,
+                                fontFamily = SFProFontFamily
+                            ),
+                            cursorBrush = SolidColor(tint),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Text(
+                        text = "${groupDescription.length}/512",
+                        fontSize = 13.sp,
+                        color = IOS_SECONDARY,
+                        fontFamily = SFProFontFamily
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp)
+                        .height(0.5.dp)
+                        .background(sep)
+                )
+            }
+
+            // Group Permissions Card
+            item {
+                var pickerKey by remember { mutableStateOf<String?>(null) }
+                val permLabels = listOf(
+                    "send_messages" to "Kirim Pesan",
+                    "send_media" to "Kirim Media",
+                    "add_members" to "Tambah Anggota",
+                    "pin_messages" to "Sematkan Pesan",
+                    "change_info" to "Ubah Info Grup"
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 8.dp)
+                ) {
+                    Text(
+                        text = "IZIN GRUP",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = IOS_SECONDARY,
+                        fontFamily = SFProFontFamily,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                    Column(modifier = Modifier.fillMaxWidth().background(cardBg)) {
+                        permLabels.forEachIndexed { idx, (key, lbl) ->
+                            val value = groupPermissions[key] ?: "Semua Anggota"
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { pickerKey = key }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = lbl,
+                                    fontSize = 17.sp,
+                                    color = label,
+                                    fontFamily = SFProFontFamily,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = value,
+                                    fontSize = 15.sp,
+                                    color = tint,
+                                    fontFamily = SFProFontFamily
+                                )
+                            }
+                            if (idx < permLabels.lastIndex) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp)
+                                        .height(0.5.dp)
+                                        .background(sep)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (pickerKey != null) {
+                    AlertDialog(
+                        onDismissRequest = { pickerKey = null },
+                        title = { Text("Izin", fontFamily = SFProFontFamily) },
+                        text = {
+                            Column {
+                                listOf("Semua Anggota", "Admin").forEach { opt ->
+                                    Text(
+                                        text = opt,
+                                        fontSize = 17.sp,
+                                        color = tint,
+                                        fontFamily = SFProFontFamily,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onPermissionChange(pickerKey!!, opt)
+                                                pickerKey = null
+                                            }
+                                            .padding(vertical = 12.dp)
+                                    )
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { pickerKey = null }) {
+                                Text("Tutup", color = tint, fontFamily = SFProFontFamily)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Section 3: Settings (Disappearing, Admin Approval, Invite Link, Lock, Media Visibility)
+            item {
+                var showDisappearingDialog by remember { mutableStateOf(false) }
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp)
+                ) {
+                    Text(
+                        text = "PENGATURAN",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = IOS_SECONDARY,
+                        fontFamily = SFProFontFamily,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                    Column(modifier = Modifier.fillMaxWidth().background(cardBg)) {
+                        // Disappearing messages
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showDisappearingDialog = true }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Pesan Sementara",
+                                fontSize = 17.sp,
+                                color = label,
+                                fontFamily = SFProFontFamily,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = disappearingDuration,
+                                fontSize = 15.sp,
+                                color = tint,
+                                fontFamily = SFProFontFamily
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp)
+                                .height(0.5.dp)
+                                .background(sep)
+                        )
+                        // Admin Approval
+                        SettingToggleRow(
+                            label = "Persetujuan Admin",
+                            checked = adminApproval,
+                            tint = tint,
+                            labelColor = label,
+                            onCheckedChange = onAdminApprovalChange
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp)
+                                .height(0.5.dp)
+                                .background(sep)
+                        )
+                        // Invite via link
+                        SettingToggleRow(
+                            label = "Undangan Lewat Link",
+                            checked = inviteViaLink,
+                            tint = tint,
+                            labelColor = label,
+                            onCheckedChange = onInviteViaLinkChange
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp)
+                                .height(0.5.dp)
+                                .background(sep)
+                        )
+                        // Media visibility
+                        SettingToggleRow(
+                            label = "Media Masuk ke Galeri",
+                            checked = mediaVisibility,
+                            tint = tint,
+                            labelColor = label,
+                            onCheckedChange = onMediaVisibilityChange
+                        )
+                    }
+                }
+
+                if (showDisappearingDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDisappearingDialog = false },
+                        title = { Text("Pesan Sementara", fontFamily = SFProFontFamily) },
+                        text = {
+                            Column {
+                                listOf("Mati", "24 Jam", "7 Hari", "90 Hari").forEach { opt ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onDisappearingChange(opt)
+                                                showDisappearingDialog = false
+                                            }
+                                            .padding(vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = opt,
+                                            fontSize = 17.sp,
+                                            color = tint,
+                                            fontFamily = SFProFontFamily,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (disappearingDuration == opt) {
+                                            Text("✓", fontSize = 17.sp, color = tint, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showDisappearingDialog = false }) {
+                                Text("Tutup", color = tint, fontFamily = SFProFontFamily)
+                            }
+                        }
+                    )
+                }
             }
 
             // Selected members horizontal
@@ -762,3 +1056,33 @@ private fun ContactRow(
         }
     }
 }
+
+@Composable
+private fun SettingToggleRow(
+    label: String,
+    checked: Boolean,
+    tint: Color,
+    labelColor: Color,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 17.sp,
+            color = labelColor,
+            fontFamily = SFProFontFamily,
+            modifier = Modifier.weight(1f)
+        )
+        com.jayra.app.ui.theme.IOSLottieToggle(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
+}
+

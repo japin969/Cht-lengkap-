@@ -219,7 +219,18 @@ class GroupRepository(
         name: String,
         memberIds: List<String>,
         avatarUrl: String = "",
-        description: String = ""
+        description: String = "",
+        permissions: Map<String, String> = mapOf(
+            "send_messages" to "Semua Anggota",
+            "send_media" to "Semua Anggota",
+            "add_members" to "Semua Anggota",
+            "pin_messages" to "Semua Anggota",
+            "change_info" to "Semua Anggota"
+        ),
+        disappearingDuration: String = "Mati",
+        adminApproval: Boolean = false,
+        inviteViaLinkEnabled: Boolean = true,
+        mediaVisibility: Boolean = true
     ): String {
         val newGroupId = "group_${System.currentTimeMillis()}"
         val allMembers = (listOf("user_telegram_me") + memberIds).distinct()
@@ -233,7 +244,7 @@ class GroupRepository(
             starredCount = 0,
             isMuted = false,
             isCustomNotification = false,
-            disappearingDuration = "Mati",
+            disappearingDuration = disappearingDuration,
             isLocked = false,
             isAdmin = true,
             creatorId = "user_telegram_me",
@@ -244,13 +255,10 @@ class GroupRepository(
                 "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120"
             ),
             sensitiveContent = false,
-            permissions = mapOf(
-                "send_messages" to "Semua Anggota",
-                "send_media" to "Semua Anggota",
-                "add_members" to "Admin",
-                "pin_messages" to "Admin",
-                "change_info" to "Admin"
-            )
+            adminApproval = adminApproval,
+            inviteViaLinkEnabled = inviteViaLinkEnabled,
+            mediaVisibility = mediaVisibility,
+            permissions = permissions
         )
         _localGroups.update { it + (newGroupId to newGroup) }
         try {

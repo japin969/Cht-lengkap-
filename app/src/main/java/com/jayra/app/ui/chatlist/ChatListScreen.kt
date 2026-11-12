@@ -111,7 +111,7 @@ fun ChatListScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // ========== TOP BAR ==========
             Column(
-                modifier = Modifier.fillMaxWidth().glassSurface(solidColor = Color(0xFFF2F2F7), tintAlpha = 0.85f, blurRadius = 20.dp)
+                modifier = Modifier.fillMaxWidth().background(Color(0xFFF2F2F7))
             ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -175,7 +175,7 @@ fun ChatListScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .height(36.dp)
-                    .glassSurface(solidColor = Color(0x1F767680), tintAlpha = 0.9f, blurRadius = 12.dp, cornerRadius = 10.dp)
+                    .background(Color(0x1F767680), RoundedCornerShape(10.dp))
                     .padding(horizontal = 10.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -361,7 +361,7 @@ fun SwipeableChatRow(
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
                     onDelete()
-                    true // dismiss visual, item hilang karena data flow
+                    false
                 }
                 else -> false
             }
