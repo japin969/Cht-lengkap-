@@ -63,7 +63,7 @@ import com.jayra.app.data.Song
 import com.jayra.app.ui.theme.JayraBlue
 import com.jayra.app.ui.theme.JayraDarkChatBg
 import com.jayra.app.ui.theme.JayraDarkTopBar
-import com.jayra.app.ui.theme.Color(0x1AFFFFFF)
+import androidx.compose.ui.graphics.Color
 import com.jayra.app.ui.theme.JayraSubtext
 import com.jayra.app.ui.theme.JayraTheme
 import java.util.Locale
