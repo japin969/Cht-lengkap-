@@ -104,6 +104,7 @@ import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.ui.viewmodel.ChatRoomViewModel
 import com.jayra.app.util.MarkdownParser
 import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.Brush
 
 @Composable
 fun ChatRoomScreen(
@@ -232,7 +233,14 @@ fun ChatRoomContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(topBarBg)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                topBarBg.copy(alpha = 0.96f),
+                                topBarBg.copy(alpha = 0.88f)
+                            )
+                        )
+                    )
             ) {
                 Row(
                     modifier = Modifier

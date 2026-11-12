@@ -198,25 +198,28 @@ class AssistantViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             try {
                 val aiText = withContext(Dispatchers.IO) {
-                    val historyBlock = historySnapshot.dropLast(1).takeLast(6).joinToString("\n") { m ->
+                    val historyBlock = historySnapshot.dropLast(1).takeLast(10).joinToString("\n") { m ->
                         val role = if (m.senderId == "jayra_ai") "Jayra AI" else "User"
-                        "$role: ${m.text.take(280)}"
+                        "$role: ${m.text.take(500)}"
                     }
-                    val prompt = """Kamu adalah Jayra AI, asisten pribadi cerdas.
+                    val prompt = """Kamu adalah Jayra AI — asisten pribadi serbaguna seperti Meta AI.
 
-ATURAN WAJIB:
-1. JANGAN pernah menyapa "Halo/Hai/Hey/Hello" jika ini lanjutan percakapan. LANGSUNG jawab.
-2. Jangan perkenalan "Saya Jayra AI" — user sudah tahu. Langsung ke inti.
-3. Jawab dalam bahasa user. Ringkas, tajam, actionable.
-4. Jangan berhalusinasi. Jika tidak tahu, bilang tidak tahu.
-5. Markdown seperlunya.
+GAYA JAWABAN (WAJIB):
+1. Jawab LENGKAP dan KONTEKSTUAL. Jangan one-liner kecuali memang pertanyaan sepele.
+2. Jika pertanyaan butuh langkah/rencana, berikan poin-poin terstruktur (list/heading).
+3. Sambungkan ke riwayat percakapan — jika user merujuk "di atas", "yang tadi", pahami konteksnya.
+4. Jangan mengulang sapaan "Halo/Hai" atau "Saya Jayra AI" setelah pesan pertama.
+5. Jangan pernah menampilkan token kontrol seperti <|start|>, <|end|>, <|im_start|>, <|assistant|> — output hanya teks bersih.
+6. Bahasa sesuai bahasa user (Indonesia/English/dll). Nada ramah, cerdas, tidak bertele-tele.
+7. Jika tidak yakin, katakan tidak tahu. Jangan halusinasi.
+8. Gunakan markdown untuk struktur (heading, bullet, bold, code block) bila membantu.
 
 Riwayat percakapan:
 $historyBlock
 
 User: $sanitized
 
-Jayra AI:"""
+Jayra AI (jawab lengkap & kontekstual):"""
 
                     // Fallback berlapis: 11 endpoint AI (prioritas Siputzx karena cepat + stabil)
                     var localAiText: String? = null
@@ -291,9 +294,12 @@ Jayra AI:"""
 
                     localAiText?.let { raw ->
                         val stripped = raw
+                            .replace(Regex("<\\|[^|>]*\\|>"), "")            // <|start|> <|end|> dll
+                            .replace(Regex("(?i)\\b(im_start|im_end|start|end|assistant|system|user)\\b(?=[\\s:])"), "")
                             .replace(Regex("^(Halo|Hai|Hey|Hello)\\!?[,.\\s]+", RegexOption.IGNORE_CASE), "")
                             .replace(Regex("^(Saya Jayra AI[,.]?\\s*)", RegexOption.IGNORE_CASE), "")
                             .replace(Regex("^(Asisten[^.]+\\.\\s*)", RegexOption.IGNORE_CASE), "")
+                            .replace(Regex("\\n{3,}"), "\n\n")
                             .trim()
                         if (stripped.isBlank()) raw else stripped
                     }
