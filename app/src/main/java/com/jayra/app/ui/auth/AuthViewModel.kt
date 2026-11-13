@@ -118,7 +118,7 @@ class AuthViewModel(
         }
     }
 
-    private fun mapFirebaseError(e: Exception): String {
+    private fun mapFirebaseError(e: Throwable): String {
         return when ((e as? FirebaseAuthException)?.errorCode) {
             "ERROR_TOO_MANY_REQUESTS" -> "Terlalu banyak permintaan. Tunggu 1 menit."
             "ERROR_INVALID_EMAIL" -> "Format email tidak valid."
