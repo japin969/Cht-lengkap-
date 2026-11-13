@@ -38,8 +38,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -166,7 +166,7 @@ fun IOSPrimaryButton(
     isLoading: Boolean = false
 ) {
     val dark = isSystemInDarkTheme()
-    val haptic = LocalHapticFeedback.current
+    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -191,7 +191,7 @@ fun IOSPrimaryButton(
                 indication = null,
                 enabled = enabled && !isLoading,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     onClick()
                 }
             ),
@@ -228,7 +228,7 @@ fun IOSTextButton(
     modifier: Modifier = Modifier,
     fontWeight: FontWeight = FontWeight.Medium
 ) {
-    val haptic = LocalHapticFeedback.current
+    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val alpha by animateFloatAsState(
@@ -248,7 +248,7 @@ fun IOSTextButton(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     onClick()
                 }
             )
@@ -288,7 +288,7 @@ fun IOSGroupedTextField(
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     var isFocused by remember { mutableStateOf(false) }
-    val haptic = LocalHapticFeedback.current
+    val view = LocalView.current
     val dark = isSystemInDarkTheme()
 
     val labelColor by animateColorAsState(
@@ -349,7 +349,7 @@ fun IOSGroupedTextField(
             if (isPassword) {
                 IconButton(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         passwordVisible = !passwordVisible
                     },
                     modifier = Modifier.size(28.dp)
