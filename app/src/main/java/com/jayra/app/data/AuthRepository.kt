@@ -4,6 +4,7 @@ import android.content.Context
 import com.jayra.app.R
 import com.jayra.app.model.UserAccount
 import com.google.firebase.Firebase
+import com.google.firebase.auth.ActionCodeSettings
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.auth.userProfileChangeRequest
@@ -62,7 +63,13 @@ class AuthRepository(
 
     suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
         return try {
-            auth.sendPasswordResetEmail(email).await()
+            // CSO APPROVED: ActionCodeSettings untuk redirect ke landing page aman
+            val actionCodeSettings = ActionCodeSettings.newBuilder()
+                .setUrl("https://jayraresetpass.pages.dev/reset-password")
+                .setHandleCodeInApp(false) // WAJIB FALSE untuk Plan B (Web Flow)
+                .build()
+
+            auth.sendPasswordResetEmail(email, actionCodeSettings).await()
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
