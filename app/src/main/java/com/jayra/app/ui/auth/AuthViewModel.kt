@@ -37,9 +37,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
@@ -72,8 +73,12 @@ class AuthViewModel(
     private val _generatedPhoneNumber = MutableStateFlow("")
     val generatedPhoneNumber: StateFlow<String> = _generatedPhoneNumber.asStateFlow()
 
-    private val _forgotPasswordEvent = Channel<String>(Channel.BUFFERED)
-    val forgotPasswordEvent: Flow<String> = _forgotPasswordEvent.receiveAsFlow()
+    private val _forgotPasswordEvent = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val forgotPasswordEvent: SharedFlow<String> = _forgotPasswordEvent.asSharedFlow()
 
     private val _loginHeaderSubtitle = MutableStateFlow(
         "Masuk ke akun Jayra Anda untuk menyinkronkan pesan terenkripsi di seluruh perangkat."
@@ -219,6 +224,8 @@ class AuthViewModel(
                         ensureFirestoreAccountExists(fallbackEmail = cleanEmail)
                         persistEncryptedSession(context)
                         _uiState.value = AuthUiState.Success
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         _uiState.value = AuthUiState.Error(mapFirebaseError(e))
                     }
@@ -249,7 +256,7 @@ class AuthViewModel(
                 authRepository.sendPasswordResetEmail(cleanEmail).fold(
                     onSuccess = {
                         _uiState.value = AuthUiState.Idle
-                        _forgotPasswordEvent.send(
+                        _forgotPasswordEvent.emit(
                             "Email reset password terkirim ke $cleanEmail. Cek inbox Anda."
                         )
                     },
@@ -358,6 +365,8 @@ class AuthViewModel(
                     countryName = defaultCountry.name
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             // Handled via structured FirestoreErrorHandler inside AuthRepository
         }
