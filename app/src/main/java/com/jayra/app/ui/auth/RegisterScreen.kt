@@ -1,7 +1,12 @@
 package com.jayra.app.ui.auth
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,16 +16,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,6 +36,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jayra.app.model.AuthUiState
 import com.jayra.app.model.Country
 import com.jayra.app.ui.theme.*
+
+// ═══════════════════════════════════════════════════════════
+// RegisterScreen — iOS 26 Liquid Glass Edition
+// ═══════════════════════════════════════════════════════════
+// v2.3: iOS 26 backdrop (shared), IOSWordmark, iOS back button
+//       (chevron + "Kembali"), AnimatedVisibility error,
+//       IOSTextButton utk "Masuk" link (haptic + alpha).
+//       Signature publik tidak berubah.
+// ═══════════════════════════════════════════════════════════
 
 @Composable
 fun RegisterScreen(
@@ -46,19 +59,20 @@ fun RegisterScreen(
     val phone by viewModel.generatedPhoneNumber.collectAsStateWithLifecycle()
     val availableCountries: List<Country> by viewModel.availableCountries.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val dark = isSystemInDarkTheme()
 
-    // BUG-006: success-once guard (survive rotasi)
     var showCountryPicker by rememberSaveable { mutableStateOf(false) }
     var successHandled by rememberSaveable { mutableStateOf(false) }
 
-    val bg = if (dark) IOSSystemBackgroundDark else IOSSystemGroupedBackground
     val titleColor = if (dark) IOSLabelDark else IOSLabel
     val subtitleColor = if (dark) IOSSecondaryLabelDark else IOSSecondaryLabel
     val chevronColor = if (dark) IOSGray2Dark else IOSGray2
     val phoneAccent = IOSGreen
 
-    Box(modifier = Modifier.fillMaxSize().background(bg)) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        IOSAuthBackdrop()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -68,33 +82,39 @@ fun RegisterScreen(
                 .padding(top = 16.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Kembali",
-                        tint = IOSBlue
-                    )
-                }
+            // iOS-style back button: chevron + "Kembali" + haptic
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                        onBackClick()
+                    }
+                    .padding(vertical = 8.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Kembali",
+                    tint = IOSBlue,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "Kembali",
+                    fontSize = 17.sp,
+                    color = IOSBlue,
+                    fontWeight = FontWeight.Normal
+                )
             }
 
             Spacer(Modifier.height(8.dp))
 
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Brush.linearGradient(colors = listOf(IOSBlue, IOSIndigo))),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "J",
-                    color = Color.White,
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1).sp
-                )
-            }
+            IOSWordmark()
 
             Spacer(Modifier.height(24.dp))
 
@@ -147,7 +167,13 @@ fun RegisterScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showCountryPicker = true }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                            showCountryPicker = true
+                        }
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -198,9 +224,18 @@ fun RegisterScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            if (uiState is AuthUiState.Error) {
-                IOSErrorMessage((uiState as AuthUiState.Error).message)
-                Spacer(Modifier.height(12.dp))
+            AnimatedVisibility(
+                visible = uiState is AuthUiState.Error,
+                enter = slideInVertically(
+                    animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                    initialOffsetY = { -it / 2 }
+                ) + fadeIn(),
+                exit = fadeOut()
+            ) {
+                Column {
+                    IOSErrorMessage((uiState as? AuthUiState.Error)?.message.orEmpty())
+                    Spacer(Modifier.height(12.dp))
+                }
             }
 
             IOSPrimaryButton(
@@ -213,15 +248,18 @@ fun RegisterScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Sudah punya akun? ", color = subtitleColor, fontSize = 15.sp)
                 Text(
+                    text = "Sudah punya akun? ",
+                    color = subtitleColor,
+                    fontSize = 15.sp
+                )
+                IOSTextButton(
                     text = "Masuk",
-                    color = IOSBlue,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable { onBackClick() }
+                    onClick = onBackClick,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -239,7 +277,6 @@ fun RegisterScreen(
         }
     }
 
-    // BUG-006: success-once guard dengan rememberSaveable (survive rotasi)
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success && !successHandled) {
             successHandled = true
