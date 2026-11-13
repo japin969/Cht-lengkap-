@@ -32,10 +32,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jayra.app.ui.theme.*
+import com.jayra.app.util.glassSurface
+import io.github.nadeemiqbal.liquidglass.rememberLiquidGlassState
 
 // ═══════════════════════════════════════════════════════════
-// JAYRA-UI v2.0 — iOS Auth Components
-// Pure faux-glass aesthetic. Zero blur. Zero lag.
+// JAYRA-UI v2.0 — iOS Auth Components (Liquid Glass Edition)
 // ═══════════════════════════════════════════════════════════
 
 @Composable
@@ -54,15 +55,14 @@ fun IOSPrimaryButton(
         label = "ios_button_scale"
     )
     val bgColor = if (enabled) IOSBlue else IOSGray3
-    val shape = RoundedCornerShape(12.dp)
+    val glassState = rememberLiquidGlassState()
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp)
+            .height(52.dp)
             .scale(scale)
-            .clip(shape)
-            .background(bgColor)
+            .glassSurface(solidColor = bgColor, cornerRadius = 12.dp, state = glassState)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -111,11 +111,12 @@ fun IOSFieldGroup(
 ) {
     val dark = isSystemInDarkTheme()
     val bg = if (dark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
+    val glassState = rememberLiquidGlassState()
+    
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(bg),
+            .glassSurface(solidColor = bg, cornerRadius = 12.dp, state = glassState),
         content = content
     )
 }
@@ -137,13 +138,11 @@ fun IOSGroupedTextField(
     val textColor = if (dark) IOSLabelDark else IOSLabel
     val placeholderColor = if (dark) IOSGray2Dark else IOSGray2
     val iconTint = if (dark) IOSGray2Dark else IOSGray2
-    val bg = if (dark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(bg)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Text(
             text = label.uppercase(),
@@ -228,7 +227,7 @@ fun IOSErrorMessage(message: String, modifier: Modifier = Modifier) {
     }
 }
 
-// ── Backward compatibility wrappers ──────────────────────
+// Backward compatibility wrappers
 @Composable
 fun IOSButton(
     text: String,
