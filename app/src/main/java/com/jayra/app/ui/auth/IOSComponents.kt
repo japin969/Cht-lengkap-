@@ -1,13 +1,21 @@
 package com.jayra.app.ui.auth
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,13 +30,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jayra.app.ui.theme.*
@@ -36,8 +52,110 @@ import com.jayra.app.util.glassSurface
 import io.github.nadeemiqbal.liquidglass.rememberLiquidGlassState
 
 // ═══════════════════════════════════════════════════════════
-// JAYRA-UI v2.0 — iOS Auth Components (Liquid Glass Edition)
+// JAYRA-UI v2.3 — iOS 26 "Auth Shared Kit"
 // ═══════════════════════════════════════════════════════════
+// v2.3 delta dari v2.2:
+//  • IOSAuthBackdrop: public, dipakai LoginScreen + RegisterScreen
+//    (1 vertical gradient + 1 radial orb, draw-phase only, static)
+//  • IOSTextButton: tambah param fontWeight (default Medium) — backward compat
+// ═══════════════════════════════════════════════════════════
+
+private val JellySpring = spring<Float>(dampingRatio = 0.55f, stiffness = 450f)
+private val SmoothSpring = spring<Float>(dampingRatio = 0.85f, stiffness = 400f)
+
+/**
+ * iOS 26 wallpaper backdrop — 1 vertical gradient + 1 radial orb.
+ * Static, draw-phase only. Aman API 24+.
+ */
+@Composable
+fun IOSAuthBackdrop(modifier: Modifier = Modifier) {
+    val dark = isSystemInDarkTheme()
+    val gradientTop = if (dark) Color(0xFF0A0A14) else Color(0xFFE8F0FC)
+    val gradientBottom = if (dark) Color(0xFF000000) else Color(0xFFF2F2F7)
+    val orbColor = if (dark) {
+        Color(0xFF0A84FF).copy(alpha = 0.16f)
+    } else {
+        Color(0xFF007AFF).copy(alpha = 0.10f)
+    }
+
+    Box(
+        modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(gradientTop, gradientBottom)))
+    ) {
+        Box(
+            Modifier
+                .size(500.dp)
+                .align(Alignment.TopEnd)
+                .offset(x = 250.dp, y = (-250).dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(orbColor, Color.Transparent)
+                    ),
+                    shape = CircleShape
+                )
+        )
+    }
+}
+
+internal fun Modifier.iosLiquidGlass(
+    cornerRadius: Dp,
+    dark: Boolean
+): Modifier {
+    val specularAlpha = if (dark) 0.32f else 0.20f
+    val borderTopAlpha = if (dark) 0.42f else 0.30f
+    val borderBotAlpha = if (dark) 0.08f else 0.06f
+
+    return this
+        .drawWithContent {
+            drawContent()
+            val cornerPx = cornerRadius.toPx()
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = specularAlpha),
+                        Color.Transparent
+                    ),
+                    startY = 0f,
+                    endY = 24.dp.toPx()
+                ),
+                cornerRadius = CornerRadius(cornerPx, cornerPx),
+                size = size
+            )
+        }
+        .border(
+            width = 0.6.dp,
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = borderTopAlpha),
+                    Color.White.copy(alpha = borderBotAlpha),
+                    Color.White.copy(alpha = borderTopAlpha * 0.5f)
+                )
+            ),
+            shape = RoundedCornerShape(cornerRadius)
+        )
+}
+
+@Composable
+fun IOSWordmark(modifier: Modifier = Modifier) {
+    val dark = isSystemInDarkTheme()
+    Box(
+        modifier = modifier
+            .size(72.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Brush.linearGradient(colors = listOf(IOSBlue, IOSIndigo)))
+            .iosLiquidGlass(18.dp, dark),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "J",
+            color = Color.White,
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-1).sp
+        )
+    }
+}
 
 @Composable
 fun IOSPrimaryButton(
@@ -47,44 +165,58 @@ fun IOSPrimaryButton(
     enabled: Boolean = true,
     isLoading: Boolean = false
 ) {
+    val dark = isSystemInDarkTheme()
+    val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled && !isLoading) 0.96f else 1f,
-        animationSpec = spring(dampingRatio = 0.55f, stiffness = 500f),
+        targetValue = if (isPressed && enabled && !isLoading) 0.95f else 1f,
+        animationSpec = JellySpring,
         label = "ios_button_scale"
     )
     val bgColor = if (enabled) IOSBlue else IOSGray3
     val glassState = rememberLiquidGlassState()
+    val shape = RoundedCornerShape(12.dp)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
             .scale(scale)
+            .clip(shape)
             .glassSurface(solidColor = bgColor, cornerRadius = 12.dp, state = glassState)
+            .iosLiquidGlass(12.dp, dark)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 enabled = enabled && !isLoading,
-                onClick = onClick
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                    onClick()
+                }
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                color = Color.White,
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp
-            )
-        } else {
-            Text(
-                text = text,
-                color = Color.White,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.2).sp
-            )
+        AnimatedContent(
+            targetState = isLoading,
+            transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(100)) },
+            label = "ios_button_state"
+        ) { loading ->
+            if (loading) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text = text,
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.2).sp
+                )
+            }
         }
     }
 }
@@ -93,14 +225,33 @@ fun IOSPrimaryButton(
 fun IOSTextButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fontWeight: FontWeight = FontWeight.Medium
 ) {
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val alpha by animateFloatAsState(
+        targetValue = if (isPressed) 0.35f else 1f,
+        animationSpec = SmoothSpring,
+        label = "ios_text_button_alpha"
+    )
+
     Text(
         text = text,
         color = IOSBlue,
         fontSize = 15.sp,
-        fontWeight = FontWeight.Medium,
-        modifier = modifier.clickable { onClick() }
+        fontWeight = fontWeight,
+        modifier = modifier
+            .graphicsLayer { this.alpha = alpha }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                    onClick()
+                }
+            )
     )
 }
 
@@ -112,11 +263,14 @@ fun IOSFieldGroup(
     val dark = isSystemInDarkTheme()
     val bg = if (dark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
     val glassState = rememberLiquidGlassState()
-    
+    val shape = RoundedCornerShape(12.dp)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .glassSurface(solidColor = bg, cornerRadius = 12.dp, state = glassState),
+            .clip(shape)
+            .glassSurface(solidColor = bg, cornerRadius = 12.dp, state = glassState)
+            .iosLiquidGlass(12.dp, dark),
         content = content
     )
 }
@@ -133,8 +287,20 @@ fun IOSGroupedTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+    var isFocused by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
     val dark = isSystemInDarkTheme()
-    val labelColor = if (isError) IOSRed else if (dark) IOSSecondaryLabelDark else IOSSecondaryLabel
+
+    val labelColor by animateColorAsState(
+        targetValue = when {
+            isError -> IOSRed
+            isFocused -> IOSBlue
+            dark -> IOSSecondaryLabelDark
+            else -> IOSSecondaryLabel
+        },
+        animationSpec = tween(200),
+        label = "ios_field_label_color"
+    )
     val textColor = if (dark) IOSLabelDark else IOSLabel
     val placeholderColor = if (dark) IOSGray2Dark else IOSGray2
     val iconTint = if (dark) IOSGray2Dark else IOSGray2
@@ -175,12 +341,17 @@ fun IOSGroupedTextField(
                     keyboardOptions = keyboardOptions,
                     visualTransformation = if (isPassword && !passwordVisible)
                         PasswordVisualTransformation() else VisualTransformation.None,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { isFocused = it.isFocused }
                 )
             }
             if (isPassword) {
                 IconButton(
-                    onClick = { passwordVisible = !passwordVisible },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                        passwordVisible = !passwordVisible
+                    },
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
@@ -227,7 +398,8 @@ fun IOSErrorMessage(message: String, modifier: Modifier = Modifier) {
     }
 }
 
-// Backward compatibility wrappers
+// ── Backward compat wrappers ──────────────────────────────
+
 @Composable
 fun IOSButton(
     text: String,
