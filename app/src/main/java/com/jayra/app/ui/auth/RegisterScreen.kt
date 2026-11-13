@@ -49,7 +49,7 @@ fun RegisterScreen(
     val dark = isSystemInDarkTheme()
 
     // BUG-006: success-once guard (survive rotasi)
-    var showCountryPicker by remember { mutableStateOf(false) }
+    var showCountryPicker by rememberSaveable { mutableStateOf(false) }
     var successHandled by rememberSaveable { mutableStateOf(false) }
 
     val bg = if (dark) IOSSystemBackgroundDark else IOSSystemGroupedBackground
