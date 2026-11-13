@@ -117,7 +117,7 @@ class AuthRepository(
             throw e
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.GET, docRef.path)
-            throw e
+            return Result.failure(e)
         }
     }
 

@@ -35,3 +35,5 @@ backup_ios_glass_*/
 backup_before_*/
 backup_liquid_glass_v2/
 backup_qa_auth_fix/
+
+*.bak
