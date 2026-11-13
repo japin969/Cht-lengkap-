@@ -35,6 +35,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
@@ -66,6 +69,9 @@ class AuthViewModel(
 
     private val _generatedPhoneNumber = MutableStateFlow("")
     val generatedPhoneNumber: StateFlow<String> = _generatedPhoneNumber.asStateFlow()
+
+    private val _forgotPasswordEvent = Channel<String>(Channel.BUFFERED)
+    val forgotPasswordEvent: Flow<String> = _forgotPasswordEvent.receiveAsFlow()
 
     private val _loginHeaderSubtitle = MutableStateFlow(
         "Masuk ke akun Jayra Anda untuk menyinkronkan pesan terenkripsi di seluruh perangkat."
@@ -240,6 +246,30 @@ class AuthViewModel(
                 onFailure = { error ->
                     _uiState.value = AuthUiState.Error(
                         error.localizedMessage ?: "Email atau password salah"
+                    )
+                }
+            )
+        }
+    }
+
+    fun onForgotPasswordClick(emailInput: String = _email.value) {
+        val cleanEmail = emailInput.trim()
+        if (!Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+            _uiState.value = AuthUiState.Error("Format email tidak valid")
+            return
+        }
+        _uiState.value = AuthUiState.Loading
+        viewModelScope.launch {
+            authRepository.sendPasswordResetEmail(cleanEmail).fold(
+                onSuccess = {
+                    _uiState.value = AuthUiState.Idle
+                    _forgotPasswordEvent.send(
+                        "Email reset password terkirim ke $cleanEmail. Cek inbox Anda."
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = AuthUiState.Error(
+                        error.localizedMessage ?: "Gagal mengirim email reset password"
                     )
                 }
             )
