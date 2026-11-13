@@ -224,6 +224,8 @@ class AuthViewModel(
                         ensureFirestoreAccountExists(fallbackEmail = cleanEmail)
                         persistEncryptedSession(context)
                         _uiState.value = AuthUiState.Success
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         _uiState.value = AuthUiState.Error(mapFirebaseError(e))
                     }
@@ -363,6 +365,8 @@ class AuthViewModel(
                     countryName = defaultCountry.name
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             // Handled via structured FirestoreErrorHandler inside AuthRepository
         }
