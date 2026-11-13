@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +40,10 @@ fun LoginScreen(
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
 
+    // BUG-002 + BUG-006: dialog state + success-once guard (survive rotasi)
+    var showForgotPassword by rememberSaveable { mutableStateOf(false) }
+    var successHandled by rememberSaveable { mutableStateOf(false) }
+
     val bg = if (dark) IOSSystemBackgroundDark else IOSSystemGroupedBackground
     val titleColor = if (dark) IOSLabelDark else IOSLabel
     val subtitleColor = if (dark) IOSSecondaryLabelDark else IOSSecondaryLabel
@@ -58,9 +63,7 @@ fun LoginScreen(
             modifier = Modifier
                 .size(72.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(
-                    Brush.linearGradient(colors = listOf(IOSBlue, IOSIndigo))
-                ),
+                .background(Brush.linearGradient(colors = listOf(IOSBlue, IOSIndigo))),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -125,7 +128,7 @@ fun LoginScreen(
         ) {
             IOSTextButton(
                 text = "Lupa Sandi?",
-                onClick = { /* TODO: forgot password flow */ }
+                onClick = { showForgotPassword = true }
             )
         }
 
@@ -148,24 +151,14 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(0.5.dp)
-                    .background(separator)
-            )
+            Box(Modifier.weight(1f).height(0.5.dp).background(separator))
             Text(
                 text = "atau",
                 color = subtitleColor,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(0.5.dp)
-                    .background(separator)
-            )
+            Box(Modifier.weight(1f).height(0.5.dp).background(separator))
         }
 
         Spacer(Modifier.height(24.dp))
@@ -174,11 +167,7 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "Belum punya akun? ",
-                color = subtitleColor,
-                fontSize = 15.sp
-            )
+            Text(text = "Belum punya akun? ", color = subtitleColor, fontSize = 15.sp)
             Text(
                 text = "Daftar",
                 color = IOSBlue,
@@ -189,7 +178,19 @@ fun LoginScreen(
         }
     }
 
-    if (uiState is AuthUiState.Success) {
-        LaunchedEffect(Unit) { onLoginSuccess() }
+    if (showForgotPassword) {
+        ForgotPasswordDialog(
+            viewModel = viewModel,
+            initialEmail = email,
+            onDismiss = { showForgotPassword = false }
+        )
+    }
+
+    // BUG-006: success-once guard dengan rememberSaveable (survive rotasi)
+    LaunchedEffect(uiState) {
+        if (uiState is AuthUiState.Success && !successHandled) {
+            successHandled = true
+            onLoginSuccess()
+        }
     }
 }
