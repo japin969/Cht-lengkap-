@@ -22,9 +22,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -59,7 +59,7 @@ fun RegisterScreen(
     val phone by viewModel.generatedPhoneNumber.collectAsStateWithLifecycle()
     val availableCountries: List<Country> by viewModel.availableCountries.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
+    val view = LocalView.current
     val dark = isSystemInDarkTheme()
 
     var showCountryPicker by rememberSaveable { mutableStateOf(false) }
@@ -91,7 +91,7 @@ fun RegisterScreen(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         onBackClick()
                     }
                     .padding(vertical = 8.dp, horizontal = 4.dp),
@@ -171,7 +171,7 @@ fun RegisterScreen(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LightImpact)
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             showCountryPicker = true
                         }
                         .padding(horizontal = 16.dp, vertical = 14.dp),
