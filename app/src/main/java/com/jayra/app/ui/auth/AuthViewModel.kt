@@ -21,6 +21,7 @@ import com.jayra.app.di.AppModule
 import com.jayra.app.model.AuthUiState
 import com.jayra.app.model.Country
 import com.jayra.app.security.EncryptionHelper
+import com.jayra.app.util.findActivity
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -29,6 +30,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
+import com.google.firebase.auth.FirebaseAuthException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -116,45 +118,18 @@ class AuthViewModel(
         }
     }
 
-    fun attemptSilentAutoSignIn(context: Context) {
-        if (auth.currentUser != null) {
-            _uiState.value = AuthUiState.Success
-            return
-        }
-
-        val clientId = try {
-            context.getString(R.string.default_web_client_id)
-        } catch (_: Exception) {
-            return
-        }
-        if (clientId.isBlank()) return
-
-        val credentialManager = CredentialManager.create(context)
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(true)
-            .setServerClientId(clientId)
-            .setAutoSelectEnabled(true)
-            .build()
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
-            .build()
-
-        viewModelScope.launch {
-            try {
-                val result = credentialManager.getCredential(context, request)
-                val credential = result.credential
-                if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-                    val authCredential = GoogleAuthProvider.getCredential(googleIdToken, null)
-                    auth.signInWithCredential(authCredential).await()
-                    persistEncryptedSession(context)
-                    _uiState.value = AuthUiState.Success
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                // Silent auto sign-in unavailable; remain in Idle state for interactive sign-in
-            }
+    private fun mapFirebaseError(e: Exception): String {
+        return when ((e as? FirebaseAuthException)?.errorCode) {
+            "ERROR_TOO_MANY_REQUESTS" -> "Terlalu banyak permintaan. Tunggu 1 menit."
+            "ERROR_INVALID_EMAIL" -> "Format email tidak valid."
+            "ERROR_NETWORK_REQUEST_FAILED" -> "Cek koneksi internet Anda."
+            "ERROR_USER_DISABLED" -> "Akun ini dinonaktifkan."
+            "ERROR_WEAK_PASSWORD" -> "Kata sandi terlalu lemah (min 6 karakter)."
+            "ERROR_EMAIL_ALREADY_IN_USE" -> "Email sudah terdaftar."
+            "ERROR_INVALID_CREDENTIAL", "ERROR_USER_NOT_FOUND", "ERROR_WRONG_PASSWORD" ->
+                "Email atau password salah."
+            "ERROR_OPERATION_NOT_ALLOWED" -> "Metode login ini tidak diaktifkan."
+            else -> e.localizedMessage ?: "Terjadi kesalahan. Coba lagi."
         }
     }
 
@@ -163,7 +138,7 @@ class AuthViewModel(
         emailInput: String = _email.value,
         passwordInput: String = _password.value
     ) {
-        val cleanEmail = emailInput.trim()
+        val cleanEmail = emailInput.trim().lowercase()
         if (!Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
             _uiState.value = AuthUiState.Error("Format email tidak valid")
             return
@@ -181,40 +156,44 @@ class AuthViewModel(
 
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
-            authRepository.signUp(cleanEmail, passwordInput).fold(
-                onSuccess = {
-                    try {
-                        auth.currentUser?.getIdToken(true)?.await()
-                        val saveResult = authRepository.saveRegisteredUser(
-                            email = cleanEmail,
-                            phoneNumber = phone,
-                            countryName = country.name
-                        )
-                        saveResult.fold(
-                            onSuccess = {
-                                persistEncryptedSession(
-                                    context,
-                                    phoneNumber = phone,
-                                    countryName = country.name
-                                )
-                                _uiState.value = AuthUiState.Success
-                            },
-                            onFailure = { error ->
-                                _uiState.value = AuthUiState.Error(
-                                    error.localizedMessage ?: "Akun dibuat, tapi gagal menyimpan profil"
-                                )
-                            }
-                        )
-                    } catch (e: Exception) {
-                        _uiState.value = AuthUiState.Error(e.localizedMessage ?: "Gagal menyimpan profil")
+            try {
+                authRepository.signUp(cleanEmail, passwordInput).fold(
+                    onSuccess = {
+                        try {
+                            auth.currentUser?.getIdToken(true)?.await()
+                            val saveResult = authRepository.saveRegisteredUser(
+                                email = cleanEmail,
+                                phoneNumber = phone,
+                                countryName = country.name
+                            )
+                            saveResult.fold(
+                                onSuccess = {
+                                    persistEncryptedSession(
+                                        context,
+                                        phoneNumber = phone,
+                                        countryName = country.name
+                                    )
+                                    _uiState.value = AuthUiState.Success
+                                },
+                                onFailure = { error ->
+                                    _uiState.value = AuthUiState.Error(mapFirebaseError(error))
+                                }
+                            )
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            _uiState.value = AuthUiState.Error(mapFirebaseError(e))
+                        }
+                    },
+                    onFailure = { error ->
+                        _uiState.value = AuthUiState.Error(mapFirebaseError(error))
                     }
-                },
-                onFailure = { error ->
-                    _uiState.value = AuthUiState.Error(
-                        error.localizedMessage ?: "Registrasi gagal"
-                    )
+                )
+            } finally {
+                if (_uiState.value is AuthUiState.Loading) {
+                    _uiState.value = AuthUiState.Idle
                 }
-            )
+            }
         }
     }
 
@@ -223,7 +202,7 @@ class AuthViewModel(
         emailInput: String = _email.value,
         passwordInput: String = _password.value
     ) {
-        val cleanEmail = emailInput.trim()
+        val cleanEmail = emailInput.trim().lowercase()
         if (!Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches() || passwordInput.length < 6) {
             _uiState.value = AuthUiState.Error("Email atau password salah")
             return
@@ -231,7 +210,8 @@ class AuthViewModel(
 
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
-            authRepository.signIn(cleanEmail, passwordInput).fold(
+            try {
+                authRepository.signIn(cleanEmail, passwordInput).fold(
                 onSuccess = {
                     try {
                         // Tunggu Auth state benar-benar terpropagasi ke Firestore
@@ -240,39 +220,48 @@ class AuthViewModel(
                         persistEncryptedSession(context)
                         _uiState.value = AuthUiState.Success
                     } catch (e: Exception) {
-                        _uiState.value = AuthUiState.Error(e.localizedMessage ?: "Gagal memuat profil pengguna")
+                        _uiState.value = AuthUiState.Error(mapFirebaseError(e))
                     }
                 },
                 onFailure = { error ->
                     _uiState.value = AuthUiState.Error(
-                        error.localizedMessage ?: "Email atau password salah"
+                        mapFirebaseError(error)
                     )
                 }
             )
+            } finally {
+                if (_uiState.value is AuthUiState.Loading) {
+                    _uiState.value = AuthUiState.Idle
+                }
+            }
         }
     }
 
     fun onForgotPasswordClick(emailInput: String = _email.value) {
-        val cleanEmail = emailInput.trim()
+        val cleanEmail = emailInput.trim().lowercase()
         if (!Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
             _uiState.value = AuthUiState.Error("Format email tidak valid")
             return
         }
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
-            authRepository.sendPasswordResetEmail(cleanEmail).fold(
-                onSuccess = {
+            try {
+                authRepository.sendPasswordResetEmail(cleanEmail).fold(
+                    onSuccess = {
+                        _uiState.value = AuthUiState.Idle
+                        _forgotPasswordEvent.send(
+                            "Email reset password terkirim ke $cleanEmail. Cek inbox Anda."
+                        )
+                    },
+                    onFailure = { error ->
+                        _uiState.value = AuthUiState.Error(mapFirebaseError(error))
+                    }
+                )
+            } finally {
+                if (_uiState.value is AuthUiState.Loading) {
                     _uiState.value = AuthUiState.Idle
-                    _forgotPasswordEvent.send(
-                        "Email reset password terkirim ke $cleanEmail. Cek inbox Anda."
-                    )
-                },
-                onFailure = { error ->
-                    _uiState.value = AuthUiState.Error(
-                        error.localizedMessage ?: "Gagal mengirim email reset password"
-                    )
                 }
-            )
+            }
         }
     }
 
@@ -296,12 +285,18 @@ class AuthViewModel(
     ) {
         if (auth.currentUser != null) {
             viewModelScope.launch {
-                onAuthenticated()
+                try {
+                    onAuthenticated()
+                } finally {
+                    if (_uiState.value is AuthUiState.Loading) {
+                        _uiState.value = AuthUiState.Idle
+                    }
+                }
             }
             return
         }
 
-        val activity = context as? Activity
+        val activity = context.findActivity()
         if (activity == null) {
             _uiState.value = AuthUiState.Error("Konteks aktivitas tidak tersedia untuk autentikasi")
             return
@@ -333,13 +328,18 @@ class AuthViewModel(
                     _uiState.value = AuthUiState.Error("Tipe kredensial tidak dikenali")
                 }
             } catch (e: GetCredentialCancellationException) {
-                Log.w(TAG, "Google Sign-In cancelled or dismissed: ${e.message}", e)
+                Log.w(TAG, "Google Sign-In cancelled")
                 _uiState.value = AuthUiState.Idle
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.e(TAG, "Google Sign-In failed", e)
-                _uiState.value = AuthUiState.Error(e.localizedMessage ?: "Email atau password salah")
+                val code = (e as? FirebaseAuthException)?.errorCode ?: e.javaClass.simpleName
+                Log.e(TAG, "Google Sign-In failed: $code")
+                _uiState.value = AuthUiState.Error(mapFirebaseError(e))
+            } finally {
+                if (_uiState.value is AuthUiState.Loading) {
+                    _uiState.value = AuthUiState.Idle
+                }
             }
         }
     }
@@ -388,7 +388,7 @@ class AuthViewModel(
             try {
                 credentialManager.clearCredentialState(ClearCredentialStateRequest())
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to clear credential state", e)
+                Log.e(TAG, "Failed to clear credential state: ${e.javaClass.simpleName}")
             } finally {
                 _uiState.value = AuthUiState.Idle
                 onComplete()

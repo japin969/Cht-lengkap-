@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,7 +48,9 @@ fun RegisterScreen(
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
 
+    // BUG-006: success-once guard (survive rotasi)
     var showCountryPicker by remember { mutableStateOf(false) }
+    var successHandled by rememberSaveable { mutableStateOf(false) }
 
     val bg = if (dark) IOSSystemBackgroundDark else IOSSystemGroupedBackground
     val titleColor = if (dark) IOSLabelDark else IOSLabel
@@ -212,11 +215,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = "Sudah punya akun? ",
-                    color = subtitleColor,
-                    fontSize = 15.sp
-                )
+                Text(text = "Sudah punya akun? ", color = subtitleColor, fontSize = 15.sp)
                 Text(
                     text = "Masuk",
                     color = IOSBlue,
@@ -240,7 +239,11 @@ fun RegisterScreen(
         }
     }
 
-    if (uiState is AuthUiState.Success) {
-        LaunchedEffect(Unit) { onRegisterSuccess() }
+    // BUG-006: success-once guard dengan rememberSaveable (survive rotasi)
+    LaunchedEffect(uiState) {
+        if (uiState is AuthUiState.Success && !successHandled) {
+            successHandled = true
+            onRegisterSuccess()
+        }
     }
 }
