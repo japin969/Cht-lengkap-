@@ -214,6 +214,13 @@ fun IOSWordmark(modifier: Modifier = Modifier) {
         label = "wordmark_alpha"
     )
 
+    val tier = remember(GlassEffectPrefs.enabledState.value) {
+        GlassEffectPrefs.resolveTier()
+    }
+    val spec = remember(tier, dark) {
+        LiquidGlassSpecV2.forTier(tier, dark)
+    }
+
     Box(
         modifier = modifier
             .size(72.dp)
@@ -222,9 +229,11 @@ fun IOSWordmark(modifier: Modifier = Modifier) {
                 scaleY = scaleState.value
                 alpha = alphaState.value
             }
-            .clip(RoundedCornerShape(18.dp))
-            .background(Brush.linearGradient(colors = listOf(IOSBlue, IOSIndigo)))
-            .iosLiquidGlass(18.dp, dark),
+            .glassSurfaceV2(
+                spec = spec.surface,
+                baseBrush = Brush.linearGradient(colors = listOf(IOSBlue, IOSIndigo)),
+                cornerRadius = 18.dp
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -261,13 +270,31 @@ fun IOSPrimaryButton(
         LiquidGlassSpecV2.forTier(tier, dark)
     }
 
+    val buttonSpec = if (enabled) {
+        spec.primaryButton
+    } else {
+        spec.primaryButton.copy(
+            fillAlpha = 0.30f,
+            sheenGradient = null,
+            borderGradient = null,
+            pressGlowEnabled = false
+        )
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
             .scale(scale)
-            .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
-            .glassSurfaceV2(spec.primaryButton, cornerRadius = 12.dp)
+            .glassSurfaceV2(buttonSpec, cornerRadius = 12.dp)
+            .graphicsLayer {
+                alpha = if (enabled) 1f else 0.55f
+                if (isPressed && spec.primaryButton.pressGlowEnabled && enabled && !isLoading) {
+                    shadowElevation = 8.dp.toPx()
+                    shape = RoundedCornerShape(12.dp)
+                    ambientShadowColor = spec.primaryButton.fillColor
+                    spotShadowColor = spec.primaryButton.fillColor
+                }
+            }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
