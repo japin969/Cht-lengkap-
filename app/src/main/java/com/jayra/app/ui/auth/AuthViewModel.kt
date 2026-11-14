@@ -196,7 +196,9 @@ class AuthViewModel(
                 )
             } finally {
                 if (_uiState.value is AuthUiState.Loading) {
-                    _uiState.value = AuthUiState.Idle
+                    _uiState.value = AuthUiState.Error(
+                        "Pendaftaran tidak selesai. Cek koneksi internet lalu coba lagi."
+                    )
                 }
             }
         }
@@ -238,7 +240,9 @@ class AuthViewModel(
             )
             } finally {
                 if (_uiState.value is AuthUiState.Loading) {
-                    _uiState.value = AuthUiState.Idle
+                    _uiState.value = AuthUiState.Error(
+                        "Login tidak selesai. Cek koneksi internet lalu coba lagi."
+                    )
                 }
             }
         }
@@ -266,7 +270,9 @@ class AuthViewModel(
                 )
             } finally {
                 if (_uiState.value is AuthUiState.Loading) {
-                    _uiState.value = AuthUiState.Idle
+                    _uiState.value = AuthUiState.Error(
+                        "Reset password tidak selesai. Cek koneksi lalu coba lagi."
+                    )
                 }
             }
         }
