@@ -518,7 +518,7 @@ private fun MainNavigationGraph(
                 },
                 onLoginSuccess = {
                     navController.navigate(MainViewModel.ROUTE_CHAT_LIST) {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
@@ -531,7 +531,7 @@ private fun MainNavigationGraph(
                 },
                 onRegisterSuccess = {
                     navController.navigate(MainViewModel.ROUTE_CHAT_LIST) {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

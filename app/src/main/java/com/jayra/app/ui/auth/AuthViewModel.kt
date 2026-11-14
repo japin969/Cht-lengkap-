@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
@@ -167,13 +168,23 @@ class AuthViewModel(
                 authRepository.signUp(cleanEmail, passwordInput).fold(
                     onSuccess = {
                         try {
-                            auth.currentUser?.getIdToken(true)?.await()
-                            val saveResult = authRepository.saveRegisteredUser(
-                                email = cleanEmail,
-                                phoneNumber = phone,
-                                countryName = country.name
-                            )
-                            saveResult.fold(
+                            // Register wajib fail-fast, capped 10s.
+                            val saveResult = withTimeoutOrNull(10_000) {
+                                try {
+                                    auth.currentUser?.getIdToken(true)?.await()
+                                } catch (e: CancellationException) { throw e }
+                                  catch (_: Exception) { }
+                                authRepository.saveRegisteredUser(
+                                    email = cleanEmail,
+                                    phoneNumber = phone,
+                                    countryName = country.name
+                                )
+                            }
+                            if (saveResult == null) {
+                                _uiState.value = AuthUiState.Error(
+                                    "Pendaftaran timeout 10s. Cek koneksi lalu coba lagi."
+                                )
+                            } else saveResult.fold(
                                 onSuccess = {
                                     persistEncryptedSession(
                                         context,
@@ -223,9 +234,18 @@ class AuthViewModel(
                 authRepository.signIn(cleanEmail, passwordInput).fold(
                 onSuccess = {
                     try {
-                        // Tunggu Auth state benar-benar terpropagasi ke Firestore
-                        auth.currentUser?.getIdToken(true)?.await()
-                        ensureFirestoreAccountExists(fallbackEmail = cleanEmail)
+                        // Best-effort Firestore+token, capped 8s (non-critical utk navigasi).
+                        // Timeout -> graceful degradation, tetap emit Success.
+                        withTimeoutOrNull(8_000) {
+                            try {
+                                auth.currentUser?.getIdToken(true)?.await()
+                            } catch (e: CancellationException) { throw e }
+                              catch (_: Exception) { }
+                            try {
+                                ensureFirestoreAccountExists(fallbackEmail = cleanEmail)
+                            } catch (e: CancellationException) { throw e }
+                              catch (_: Exception) { }
+                        }
                         persistEncryptedSession(context)
                         _uiState.value = AuthUiState.Success
                     } catch (e: CancellationException) {

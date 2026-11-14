@@ -358,10 +358,12 @@ fun IOSPrimaryButton(
             label = "ios_button_state"
         ) { loading ->
             if (loading) {
-                IOSSpinner(
+                Text(
+                    text = "Memuat...",
                     color = Color.White,
-                    size = 20.dp,
-                    strokeWidth = 2.dp
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = (-0.2).sp
                 )
             } else {
                 Text(
