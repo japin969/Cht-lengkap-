@@ -41,6 +41,8 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
@@ -378,12 +380,18 @@ class AuthViewModel(
         }
     }
 
-    private fun persistEncryptedSession(
+    /**
+     * Session persistence involves AndroidKeyStore load + AES/GCM cipher op,
+     * which is BLOCKING IO (documented: KeyStore.load can take 100-500ms on
+     * low-end devices, worse on cold start). Must run on IO dispatcher to keep
+     * the Main thread free for Compose rendering (anti-freeze on spinner).
+     */
+    private suspend fun persistEncryptedSession(
         context: Context,
         phoneNumber: String? = null,
         countryName: String? = null
-    ) {
-        val uid = auth.currentUser?.uid ?: return
+    ) = withContext(Dispatchers.IO) {
+        val uid = auth.currentUser?.uid ?: return@withContext
         EncryptionHelper.saveEncryptedPref(context.applicationContext, KEY_SESSION_UID, uid)
         if (!phoneNumber.isNullOrBlank()) {
             EncryptionHelper.saveEncryptedPref(context.applicationContext, KEY_SESSION_PHONE, phoneNumber)
@@ -395,12 +403,14 @@ class AuthViewModel(
 
     fun signOut(context: Context, onComplete: () -> Unit = {}) {
         auth.signOut()
-        EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_UID)
-        EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_PHONE)
-        EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_COUNTRY)
         val credentialManager = CredentialManager.create(context)
         viewModelScope.launch {
             try {
+                withContext(Dispatchers.IO) {
+                    EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_UID)
+                    EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_PHONE)
+                    EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_COUNTRY)
+                }
                 credentialManager.clearCredentialState(ClearCredentialStateRequest())
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to clear credential state: ${e.javaClass.simpleName}")
