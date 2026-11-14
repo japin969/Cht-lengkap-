@@ -54,8 +54,7 @@ import androidx.compose.ui.unit.sp
 import com.jayra.app.ui.theme.*
 import com.jayra.app.util.GlassEffectPrefs
 import com.jayra.app.util.GlassTier
-import com.jayra.app.util.glassSurface
-import io.github.nadeemiqbal.liquidglass.rememberLiquidGlassState
+import com.jayra.app.util.glassSurfaceV2
 
 // ═══════════════════════════════════════════════════════════
 // JAYRA-UI v2.4 — iOS 26 "Auth Shared Kit"
@@ -80,60 +79,82 @@ fun IOSAuthBackdrop(modifier: Modifier = Modifier) {
     val tier = remember(GlassEffectPrefs.enabledState.value) {
         GlassEffectPrefs.resolveTier()
     }
-    val animateOrb = tier == GlassTier.HIGH || tier == GlassTier.MEDIUM
-
-    val gradientTop = if (dark) Color(0xFF0A0A14) else Color(0xFFE8F0FC)
-    val gradientBottom = if (dark) Color(0xFF000000) else Color(0xFFF2F2F7)
-    val orbColor = if (dark) {
-        Color(0xFF0A84FF).copy(alpha = 0.16f)
-    } else {
-        Color(0xFF007AFF).copy(alpha = 0.10f)
+    val spec = remember(tier, dark) {
+        LiquidGlassSpecV2.forTier(tier, dark)
     }
-
-    // Transition always runs; value only read inside graphicsLayer when animateOrb.
-    val ambient = rememberInfiniteTransition(label = "auth_ambient")
-    val orbDxState = ambient.animateFloat(
-        initialValue = 0f,
-        targetValue = 14f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 20000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "orb_dx"
-    )
-    val orbDyState = ambient.animateFloat(
-        initialValue = 0f,
-        targetValue = 10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 26000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "orb_dy"
-    )
+    val driftEnabled = spec.backdrop.ambientDriftEnabled
 
     Box(
-        modifier
+        modifier = modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(gradientTop, gradientBottom)))
-    ) {
-        Box(
-            Modifier
-                .size(500.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 250.dp, y = (-250).dp)
-                .graphicsLayer {
-                    if (animateOrb) {
-                        translationX = orbDxState.value
-                        translationY = orbDyState.value
-                    }
-                }
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(orbColor, Color.Transparent)
-                    ),
-                    shape = CircleShape
+            .background(
+                Brush.verticalGradient(
+                    *spec.backdrop.gradientStops
+                        .map { it.position to it.color }
+                        .toTypedArray()
                 )
-        )
+            )
+    ) {
+        if (driftEnabled) {
+            // HIGH/MEDIUM: group drift (Varian 3) — 1 graphicsLayer for all orbs
+            val ambient = rememberInfiniteTransition(label = "auth_ambient")
+            val dxState = ambient.animateFloat(
+                initialValue = 0f, targetValue = 14f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 20000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "orb_dx"
+            )
+            val dyState = ambient.animateFloat(
+                initialValue = 0f, targetValue = 10f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 26000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "orb_dy"
+            )
+            OrbsLayer(
+                orbs = spec.backdrop.radialOrbs,
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    translationX = dxState.value
+                    translationY = dyState.value
+                }
+            )
+        } else {
+            // LOW/OFF: zero animation, zero transition
+            OrbsLayer(
+                orbs = spec.backdrop.radialOrbs,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Composable
+private fun OrbsLayer(
+    orbs: List<com.jayra.app.ui.theme.OrbSpec>,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(modifier) {
+        val minDim = minOf(maxWidth, maxHeight)
+        orbs.forEach { orb ->
+            val orbSize = minDim * orb.radiusRatio * 2f
+            Box(
+                Modifier
+                    .size(orbSize)
+                    .offset(
+                        x = maxWidth * orb.centerXRatio - orbSize / 2f,
+                        y = maxHeight * orb.centerYRatio - orbSize / 2f
+                    )
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(orb.color, Color.Transparent)
+                        ),
+                        shape = CircleShape
+                    )
+            )
+        }
     }
 }
 
@@ -233,18 +254,20 @@ fun IOSPrimaryButton(
         animationSpec = JellySpring,
         label = "ios_button_scale"
     )
-    val bgColor = if (enabled) IOSBlue else if (dark) IOSGray3Dark else IOSGray3
-    val glassState = rememberLiquidGlassState()
-    val shape = RoundedCornerShape(12.dp)
+    val tier = remember(GlassEffectPrefs.enabledState.value) {
+        GlassEffectPrefs.resolveTier()
+    }
+    val spec = remember(tier, dark) {
+        LiquidGlassSpecV2.forTier(tier, dark)
+    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
             .scale(scale)
-            .clip(shape)
-            .glassSurface(solidColor = bgColor, cornerRadius = 12.dp, state = glassState)
-            .iosLiquidGlass(12.dp, dark)
+            .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
+            .glassSurfaceV2(spec.primaryButton, cornerRadius = 12.dp)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -322,16 +345,18 @@ fun IOSFieldGroup(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val dark = isSystemInDarkTheme()
+    val tier = remember(GlassEffectPrefs.enabledState.value) {
+        GlassEffectPrefs.resolveTier()
+    }
+    val spec = remember(tier, dark) {
+        LiquidGlassSpecV2.forTier(tier, dark)
+    }
     val bg = if (dark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
-    val glassState = rememberLiquidGlassState()
-    val shape = RoundedCornerShape(12.dp)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape)
-            .glassSurface(solidColor = bg, cornerRadius = 12.dp, state = glassState)
-            .iosLiquidGlass(12.dp, dark),
+            .glassSurfaceV2(spec.surface, solidColor = bg, cornerRadius = 12.dp),
         content = content
     )
 }
