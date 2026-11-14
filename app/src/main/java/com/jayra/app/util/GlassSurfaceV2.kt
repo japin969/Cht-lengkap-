@@ -4,6 +4,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -42,6 +43,11 @@ fun Modifier.glassSurfaceV2(
     val shape = RoundedCornerShape(cornerRadius)
     val strokeWidth = BORDER_STROKE_DP.dp
     return this
+        .shadow(
+            elevation = spec.shadowElevationDp.dp,
+            shape = shape,
+            clip = false
+        )
         .clip(shape)
         .drawWithContent {
             val radiusPx = cornerRadius.toPx()
@@ -75,6 +81,64 @@ fun Modifier.glassSurfaceV2(
                 )
             }
             // 5) Border via drawRoundRect + Stroke (NOT .border() modifier)
+            if (spec.borderGradient.isNotEmpty()) {
+                val strokePx = strokeWidth.toPx()
+                drawRoundRect(
+                    brush = stopsBrush(spec.borderGradient),
+                    topLeft = Offset(strokePx / 2f, strokePx / 2f),
+                    size = Size(size.width - strokePx, size.height - strokePx),
+                    cornerRadius = CornerRadius(radiusPx, radiusPx),
+                    style = Stroke(width = strokePx)
+                )
+            }
+        }
+}
+
+/**
+ * Overload for surfaces with a Brush base (e.g. brand gradient).
+ * Preserves base gradient; sheen/glare/border overlay on top.
+ */
+fun Modifier.glassSurfaceV2(
+    spec: GlassSurfaceSpec,
+    baseBrush: Brush,
+    cornerRadius: Dp = 12.dp
+): Modifier {
+    val shape = RoundedCornerShape(cornerRadius)
+    val strokeWidth = BORDER_STROKE_DP.dp
+    return this
+        .shadow(
+            elevation = spec.shadowElevationDp.dp,
+            shape = shape,
+            clip = false
+        )
+        .clip(shape)
+        .drawWithContent {
+            val radiusPx = cornerRadius.toPx()
+            drawRoundRect(
+                brush = baseBrush,
+                cornerRadius = CornerRadius(radiusPx, radiusPx),
+                size = size
+            )
+            drawContent()
+            if (spec.sheenGradient.isNotEmpty()) {
+                drawRoundRect(
+                    brush = stopsBrush(spec.sheenGradient),
+                    cornerRadius = CornerRadius(radiusPx, radiusPx),
+                    size = size
+                )
+            }
+            if (spec.glareRadiusRatio != null) {
+                val glareRadius = size.minDimension * spec.glareRadiusRatio
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color.White.copy(alpha = GLARE_ALPHA), Color.Transparent),
+                        center = Offset(0f, 0f),
+                        radius = glareRadius
+                    ),
+                    radius = glareRadius,
+                    center = Offset(0f, 0f)
+                )
+            }
             if (spec.borderGradient.isNotEmpty()) {
                 val strokePx = strokeWidth.toPx()
                 drawRoundRect(
