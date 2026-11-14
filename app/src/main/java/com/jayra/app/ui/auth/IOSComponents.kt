@@ -2,7 +2,11 @@ package com.jayra.app.ui.auth
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -48,16 +52,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jayra.app.ui.theme.*
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassTier
 import com.jayra.app.util.glassSurface
 import io.github.nadeemiqbal.liquidglass.rememberLiquidGlassState
 
 // ═══════════════════════════════════════════════════════════
-// JAYRA-UI v2.3 — iOS 26 "Auth Shared Kit"
+// JAYRA-UI v2.4 — iOS 26 "Auth Shared Kit"
 // ═══════════════════════════════════════════════════════════
-// v2.3 delta dari v2.2:
-//  • IOSAuthBackdrop: public, dipakai LoginScreen + RegisterScreen
-//    (1 vertical gradient + 1 radial orb, draw-phase only, static)
-//  • IOSTextButton: tambah param fontWeight (default Medium) — backward compat
+// v2.4 delta dari v2.3:
+//  • IOSAuthBackdrop: ambient orb drift (deferred read, tier-gated)
+//  • IOSWordmark: entrance scale + fade (plays once on mount)
+//  • IOSGroupedTextField: password icon crossfade 150ms
 // ═══════════════════════════════════════════════════════════
 
 private val JellySpring = spring<Float>(dampingRatio = 0.55f, stiffness = 450f)
@@ -65,11 +71,17 @@ private val SmoothSpring = spring<Float>(dampingRatio = 0.85f, stiffness = 400f)
 
 /**
  * iOS 26 wallpaper backdrop — 1 vertical gradient + 1 radial orb.
- * Static, draw-phase only. Aman API 24+.
+ * HIGH/MEDIUM tier: ambient drift (deferred read, zero recomposition).
+ * LOW/OFF tier: static (no drift), for 3GB RAM no-lag guarantee.
  */
 @Composable
 fun IOSAuthBackdrop(modifier: Modifier = Modifier) {
     val dark = isSystemInDarkTheme()
+    val tier = remember(GlassEffectPrefs.enabledState.value) {
+        GlassEffectPrefs.resolveTier()
+    }
+    val animateOrb = tier == GlassTier.HIGH || tier == GlassTier.MEDIUM
+
     val gradientTop = if (dark) Color(0xFF0A0A14) else Color(0xFFE8F0FC)
     val gradientBottom = if (dark) Color(0xFF000000) else Color(0xFFF2F2F7)
     val orbColor = if (dark) {
@@ -77,6 +89,27 @@ fun IOSAuthBackdrop(modifier: Modifier = Modifier) {
     } else {
         Color(0xFF007AFF).copy(alpha = 0.10f)
     }
+
+    // Transition always runs; value only read inside graphicsLayer when animateOrb.
+    val ambient = rememberInfiniteTransition(label = "auth_ambient")
+    val orbDxState = ambient.animateFloat(
+        initialValue = 0f,
+        targetValue = 14f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 20000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "orb_dx"
+    )
+    val orbDyState = ambient.animateFloat(
+        initialValue = 0f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 26000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "orb_dy"
+    )
 
     Box(
         modifier
@@ -88,6 +121,12 @@ fun IOSAuthBackdrop(modifier: Modifier = Modifier) {
                 .size(500.dp)
                 .align(Alignment.TopEnd)
                 .offset(x = 250.dp, y = (-250).dp)
+                .graphicsLayer {
+                    if (animateOrb) {
+                        translationX = orbDxState.value
+                        translationY = orbDyState.value
+                    }
+                }
                 .background(
                     Brush.radialGradient(
                         colors = listOf(orbColor, Color.Transparent)
@@ -139,9 +178,29 @@ internal fun Modifier.iosLiquidGlass(
 @Composable
 fun IOSWordmark(modifier: Modifier = Modifier) {
     val dark = isSystemInDarkTheme()
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appeared = true }
+
+    // Deferred read pattern — scale/alpha only applied in draw phase.
+    val scaleState = animateFloatAsState(
+        targetValue = if (appeared) 1f else 0.86f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        label = "wordmark_scale"
+    )
+    val alphaState = animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = tween(durationMillis = 320),
+        label = "wordmark_alpha"
+    )
+
     Box(
         modifier = modifier
             .size(72.dp)
+            .graphicsLayer {
+                scaleX = scaleState.value
+                scaleY = scaleState.value
+                alpha = alphaState.value
+            }
             .clip(RoundedCornerShape(18.dp))
             .background(Brush.linearGradient(colors = listOf(IOSBlue, IOSIndigo)))
             .iosLiquidGlass(18.dp, dark),
@@ -174,7 +233,7 @@ fun IOSPrimaryButton(
         animationSpec = JellySpring,
         label = "ios_button_scale"
     )
-    val bgColor = if (enabled) IOSBlue else IOSGray3
+    val bgColor = if (enabled) IOSBlue else if (dark) IOSGray3Dark else IOSGray3
     val glassState = rememberLiquidGlassState()
     val shape = RoundedCornerShape(12.dp)
 
@@ -354,13 +413,19 @@ fun IOSGroupedTextField(
                     },
                     modifier = Modifier.size(28.dp)
                 ) {
-                    Icon(
-                        imageVector = if (passwordVisible) Icons.Rounded.Visibility
-                        else Icons.Rounded.VisibilityOff,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    AnimatedContent(
+                        targetState = passwordVisible,
+                        transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(150)) },
+                        label = "password_icon_crossfade"
+                    ) { visible ->
+                        Icon(
+                            imageVector = if (visible) Icons.Rounded.Visibility
+                            else Icons.Rounded.VisibilityOff,
+                            contentDescription = if (visible) "Sembunyikan kata sandi" else "Tampilkan kata sandi",
+                            tint = iconTint,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
