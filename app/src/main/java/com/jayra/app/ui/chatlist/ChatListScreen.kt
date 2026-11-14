@@ -66,6 +66,33 @@ import java.util.*
 import kotlin.math.roundToInt
 import androidx.compose.runtime.LaunchedEffect
 import com.jayra.app.util.glassSurface
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassTier
+import com.jayra.app.ui.theme.IOSBlue
+import com.jayra.app.ui.theme.IOSGreen
+import com.jayra.app.ui.theme.IOSRed
+import com.jayra.app.ui.theme.IOSGray2
+import com.jayra.app.ui.theme.IOSSecondaryLabel
+import com.jayra.app.ui.theme.IOSSecondaryLabelDark
+import com.jayra.app.ui.theme.IOSSecondarySystemBackground
+import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalHapticFeedback
+import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.isSystemInDarkTheme
+import kotlinx.coroutines.launch
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +114,8 @@ fun ChatListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     var showMenu by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedChats = remember { mutableStateListOf<String>() }
@@ -126,9 +155,10 @@ fun ChatListScreen(
             ) {
                 if (isSelectionMode) {
                     AppText(
-                        text = "Cancel",
+                        text = "X",
                         fontSize = 17.sp,
-                        color = Color(0xFF5AC8FA),
+                        fontWeight = FontWeight.SemiBold,
+                        color = IOSBlue,
                         modifier = Modifier.clickable {
                             isSelectionMode = false
                             selectedChats.clear()
@@ -143,13 +173,23 @@ fun ChatListScreen(
                     )
                 }
                 AppText(
-                    text = if (isSelectionMode) "${selectedChats.size} Dipilih" else "Chat",
-                    fontSize = if (isSelectionMode) 22.sp else 34.sp,
+                    text = if (isSelectionMode) "${selectedChats.size} dipilih" else "Chat",
+                    fontSize = if (isSelectionMode) 17.sp else 34.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
                     color = Color.White
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isSelectionMode) {
+                    AppText(
+                        text = "Pilih Semua",
+                        fontSize = 17.sp,
+                        color = IOSBlue,
+                        modifier = Modifier.clickable {
+                            selectedChats.clear()
+                            selectedChats.addAll((uiState as? ChatListUiState.Success)?.chats?.map { it.id } ?: emptyList())
+                        }
+                    )
+                } else Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Rounded.Add,
                         contentDescription = "New Chat",
@@ -176,28 +216,34 @@ fun ChatListScreen(
             }
 
             }
-            // ========== SEARCH BAR ==========
+            // ========== SEARCH BAR (A3 Glass) ==========
+            val searchIsDark = isSystemInDarkTheme()
+            val searchTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+            val searchSpec = remember(searchTier, searchIsDark) { LiquidGlassSpecV2.forTier(searchTier, searchIsDark) }
+            val searchBg = if (searchIsDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
+            val searchPlaceholderColor = if (searchIsDark) IOSSecondaryLabelDark else IOSSecondaryLabel
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .height(36.dp)
-                    .background(Color(0x33FFFFFF), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .height(44.dp)
+                    .glassSurfaceV2(searchSpec.surface, solidColor = searchBg, cornerRadius = 22.dp)
+                    .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Search, null, tint = Color(0xFF8E8E93), modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.Rounded.Search, null, tint = searchPlaceholderColor, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
                     BasicTextField(
                         value = searchQuery,
                         onValueChange = viewModel::onSearchQueryChange,
                         modifier = Modifier.weight(1f),
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, color = Color.Black, fontFamily = com.jayra.app.ui.theme.SFProFontFamily),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, color = Color.White, fontFamily = com.jayra.app.ui.theme.SFProFontFamily),
                         singleLine = true,
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(IOSBlue),
                         decorationBox = { innerTextField ->
                             Box {
-                                if (searchQuery.isEmpty()) AppText("Search", fontSize = 17.sp, color = Color(0xFF8E8E93))
+                                if (searchQuery.isEmpty()) AppText("Cari", fontSize = 17.sp, color = searchPlaceholderColor)
                                 innerTextField()
                             }
                         }
@@ -206,7 +252,7 @@ fun ChatListScreen(
                         Icon(
                             imageVector = Icons.Rounded.Delete,
                             contentDescription = "Clear",
-                            tint = Color(0xFF8E8E93),
+                            tint = searchPlaceholderColor,
                             modifier = Modifier.size(16.dp).clickable { viewModel.onSearchQueryChange("") }
                         )
                     }
@@ -260,7 +306,19 @@ fun ChatListScreen(
                                         }
                                     },
                                     onDelete = { viewModel.deleteChat(chat.id) },
-                                    onArchive = { viewModel.archiveChat(chat.id) },
+                                    onArchive = {
+                                        viewModel.archiveChat(chat.id)
+                                        coroutineScope.launch {
+                                            val result = snackbarHostState.showSnackbar(
+                                                message = "Chat diarsipkan",
+                                                actionLabel = "Batal",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                viewModel.onUnarchiveChat(chat.id)
+                                            }
+                                        }
+                                    },
                                     onPin = { viewModel.togglePin(chat.id) },
                                     onMute = { viewModel.toggleMute(chat.id) }
                                 )
@@ -305,13 +363,36 @@ fun ChatListScreen(
         }
 
         // ========== ACTION BAR (Selection Mode) ==========
-        if (isSelectionMode && selectedChats.isNotEmpty()) {
+        AnimatedVisibility(
+            visible = isSelectionMode && selectedChats.isNotEmpty(),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f)
+            ) + fadeIn(tween(250)),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = tween(200)
+            ) + fadeOut(tween(200))
+        ) {
+            val barTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+            val barDark = isSystemInDarkTheme()
+            val barSpec = remember(barTier, barDark) { LiquidGlassSpecV2.forTier(barTier, barDark) }
+            val barBg = if (barDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
             Row(
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.White).padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .height(56.dp)
+                    .glassSurfaceV2(barSpec.surface, solidColor = barBg, cornerRadius = 20.dp)
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 ActionBarItem(Icons.Rounded.Archive, "Arsipkan") { selectedChats.forEach { viewModel.archiveChat(it) }; selectedChats.clear() }
                 ActionBarItem(Icons.Rounded.Delete, "Hapus", isDestructive = true) { selectedChats.forEach { viewModel.deleteChat(it) }; selectedChats.clear() }
+                ActionBarItem(Icons.Rounded.NotificationsOff, "Bisukan") { selectedChats.forEach { viewModel.onMuteToggle(it) }; selectedChats.clear() }
+                ActionBarItem(Icons.Rounded.PushPin, "Sematkan") { selectedChats.forEach { viewModel.onPinToggle(it) }; selectedChats.clear() }
                 ActionBarItem(Icons.Rounded.MarkChatRead, "Tandai") { selectedChats.clear() }
             }
         }
@@ -320,6 +401,12 @@ fun ChatListScreen(
         if (isPaused) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f)))
         }
+
+        // ========== SNACKBAR HOST ==========
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp)
+        )
     }
 }
 
@@ -359,15 +446,16 @@ fun SwipeableChatRow(
     onMute: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.StartToEnd -> {
                     onArchive()
-                    false // reset visual, item tetap ada karena cuma archive
+                    false
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onDelete()
+                    showDeleteDialog = true
                     false
                 }
                 else -> false
@@ -396,6 +484,22 @@ fun SwipeableChatRow(
         ChatRowContent(chat, isSelectionMode, isSelected, onClick, onPin, onMute, onArchive, onDelete, { showMenu = true })
     }
 
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Hapus chat ini?") },
+            text = { Text("Chat \"${chat.name}\" akan dihapus permanen.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete()
+                    showDeleteDialog = false
+                }) { Text("Hapus", color = IOSRed) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") }
+            }
+        )
+    }
     if (showMenu) {
         ModalBottomSheet(onDismissRequest = { showMenu = false }, containerColor = Color.White, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
             Column(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
@@ -426,10 +530,18 @@ fun ChatRowContent(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val isDark = isSystemInDarkTheme()
+    val haptic = LocalHapticFeedback.current
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f), // iOS natural
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
         label = "item_press_jelly"
+    )
+    val highlightOverlay by animateColorAsState(
+        targetValue = if (isPressed) {
+            if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f)
+        } else Color.Transparent,
+        label = "item_press_highlight"
     )
     Column {
         Row(
@@ -437,19 +549,22 @@ fun ChatRowContent(
                 .fillMaxWidth()
                 .graphicsLayer { scaleX = scale; scaleY = scale }
                 .background(Color(0x1AFFFFFF))
+                .background(highlightOverlay)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
-                    onClick = onClick,
-                    onLongClick = { if (!isSelectionMode) onLongPress() }
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onClick()
+                    },
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        if (!isSelectionMode) onLongPress()
+                    }
                 )
                 .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isSelectionMode) {
-                Checkbox(checked = isSelected, onCheckedChange = { onClick() }, colors = CheckboxDefaults.colors(checkedColor = Color(0xFF007AFF)))
-                Spacer(Modifier.width(8.dp))
-            }
             Box {
                 AsyncImage(
                     model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff&size=112" },
@@ -464,45 +579,45 @@ fun ChatRowContent(
                             .size(14.dp)
                             .background(Color.White, CircleShape)
                             .padding(2.dp)
-                            .background(Color(0xFF34C759), CircleShape)
+                            .background(IOSGreen, CircleShape)
                     )
                 }
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    AppText(chat.name, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    AppText(chat.name, fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (chat.isPinned) {
-                            Icon(Icons.Rounded.PushPin, null, tint = Color(0xFF8E8E93), modifier = Modifier.size(12.dp))
+                            Icon(Icons.Rounded.PushPin, null, tint = IOSGray2, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
                         }
                         if (chat.isMuted) {
-                            Icon(Icons.Rounded.NotificationsOff, null, tint = Color(0xFF8E8E93), modifier = Modifier.size(12.dp))
+                            Icon(Icons.Rounded.NotificationsOff, null, tint = IOSGray2, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
                         }
-                        AppText(chat.timestamp, fontSize = 13.sp, color = Color(0xFF8E8E93))
+                        AppText(chat.timestamp, fontSize = 13.sp, color = IOSGray2)
                     }
                 }
                 Spacer(Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (chat.hasDraft) {
-                        AppText("Draft: ", fontSize = 15.sp, color = Color(0xFF34C759), fontWeight = FontWeight.SemiBold)
+                        AppText("Draf: ", fontSize = 15.sp, color = IOSRed, fontWeight = FontWeight.SemiBold)
                     }
                     AppText(
                         text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
                         fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                        color = if (chat.hasDraft) Color(0xFF34C759) else Color.Gray
+                        color = if (chat.hasDraft) IOSRed else Color.Gray
                     )
                     when (chat.lastMessageStatus) {
-                        MessageStatus.SENT -> Icon(Icons.Rounded.Check, null, tint = Color(0xFF8E8E93), modifier = Modifier.size(14.dp))
+                        MessageStatus.SENT -> Icon(Icons.Rounded.Check, null, tint = IOSGray2, modifier = Modifier.size(14.dp))
                         MessageStatus.DELIVERED -> Icon(Icons.Rounded.DoneAll, null, tint = Color(0xFF8E8E93), modifier = Modifier.size(14.dp))
-                        MessageStatus.READ -> Icon(Icons.Rounded.DoneAll, null, tint = Color(0xFF007AFF), modifier = Modifier.size(14.dp))
+                        MessageStatus.READ -> Icon(Icons.Rounded.DoneAll, null, tint = IOSBlue, modifier = Modifier.size(14.dp))
                         else -> {}
                     }
                     if (chat.unreadCount > 0) {
                         Spacer(Modifier.width(8.dp))
-                        Box(modifier = Modifier.size(20.dp).background(Color(0xFF34C759), CircleShape), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(20.dp).background(IOSGreen, CircleShape), contentAlignment = Alignment.Center) {
                             AppText(
                                 text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
                                 color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
@@ -511,8 +626,22 @@ fun ChatRowContent(
                     }
                 }
             }
+            if (isSelectionMode) {
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .background(if (isSelected) IOSBlue else Color.Transparent, CircleShape)
+                        .border(1.5.dp, if (isSelected) IOSBlue else IOSGray2, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
         }
-        Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.33.dp).background(Color(0xFFC6C6C8)))
+        Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.5.dp).background(IOSGray2.copy(alpha = 0.4f)))
     }
 }
 
