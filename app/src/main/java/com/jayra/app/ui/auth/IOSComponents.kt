@@ -13,6 +13,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,9 +40,13 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
@@ -53,6 +58,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jayra.app.ui.theme.*
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.jayra.app.util.GlassEffectPrefs
 import com.jayra.app.util.GlassTier
 import com.jayra.app.util.glassSurface
@@ -217,6 +227,91 @@ fun IOSWordmark(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Dual-mode spinner dispatcher.
+ *  - LOW / OFF tier  → IOSSpinnerCanvas (Mode 1: graphicsLayer, zero-alloc per frame)
+ *  - MEDIUM / HIGH   → IOSSpinnerLottie (Mode 2: Lottie asset loading-v4.json)
+ * Contract unchanged: IOSPrimaryButton tidak tahu mode mana yang aktif.
+ */
+@Composable
+private fun IOSSpinner(
+    modifier: Modifier = Modifier,
+    color: Color = Color.White,
+    size: Dp = 20.dp,
+    strokeWidth: Dp = 2.dp
+) {
+    val tier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+    if (tier == GlassTier.LOW || tier == GlassTier.OFF) {
+        IOSSpinnerCanvas(modifier, color, size, strokeWidth)
+    } else {
+        IOSSpinnerLottie(modifier, size)
+    }
+}
+
+/** Mode 1 — Canvas spinner. Draw-only, no per-frame recomposition. */
+@Composable
+private fun IOSSpinnerCanvas(
+    modifier: Modifier,
+    color: Color,
+    size: Dp,
+    strokeWidth: Dp
+) {
+    val transition = rememberInfiniteTransition(label = "ios_spinner")
+    val angle = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ios_spinner_angle"
+    )
+    Canvas(
+        modifier = modifier
+            .size(size)
+            .graphicsLayer { rotationZ = angle.value }
+    ) {
+        val strokePx = strokeWidth.toPx()
+        val radius = (this.size.minDimension - strokePx) / 2f
+        drawCircle(
+            color = color.copy(alpha = 0.25f),
+            radius = radius,
+            style = Stroke(width = strokePx)
+        )
+        drawArc(
+            color = color,
+            startAngle = 0f,
+            sweepAngle = 270f,
+            useCenter = false,
+            topLeft = Offset(strokePx / 2f, strokePx / 2f),
+            size = Size(this.size.width - strokePx, this.size.height - strokePx),
+            style = Stroke(width = strokePx, cap = StrokeCap.Round)
+        )
+    }
+}
+
+/** Mode 2 — Lottie spinner. Fallback ke Canvas jika asset gagal load (anti blank-screen). */
+@Composable
+private fun IOSSpinnerLottie(modifier: Modifier, size: Dp) {
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.Asset("loading-v4.json")
+    )
+    val comp = composition
+    if (comp != null) {
+        val progress by animateLottieCompositionAsState(
+            composition = comp,
+            iterations = LottieConstants.IterateForever
+        )
+        LottieAnimation(
+            composition = comp,
+            progress = { progress },
+            modifier = modifier.size(size)
+        )
+    } else {
+        IOSSpinnerCanvas(modifier, Color.White, size, 2.dp)
+    }
+}
+
 @Composable
 fun IOSPrimaryButton(
     text: String,
@@ -263,9 +358,9 @@ fun IOSPrimaryButton(
             label = "ios_button_state"
         ) { loading ->
             if (loading) {
-                CircularProgressIndicator(
+                IOSSpinner(
                     color = Color.White,
-                    modifier = Modifier.size(20.dp),
+                    size = 20.dp,
                     strokeWidth = 2.dp
                 )
             } else {
