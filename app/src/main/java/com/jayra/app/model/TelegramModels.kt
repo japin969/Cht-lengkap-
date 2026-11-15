@@ -60,7 +60,9 @@ data class Chat(
     val hasDraft: Boolean = false,
     val draftText: String = "",
     val isOnline: Boolean = false,
-    val lastMessageStatus: MessageStatus = MessageStatus.SENT
+    val lastMessageStatus: MessageStatus = MessageStatus.SENT,
+    val lastMessageIsOutgoing: Boolean = false,
+    val timestampMillis: Long = 0L
 )
 
 @Immutable

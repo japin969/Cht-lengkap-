@@ -25,7 +25,16 @@ import java.util.UUID
 
 class ChatRepository(
     private val firestore: FirebaseFirestore? = com.jayra.app.di.AppModule.firestore,
-    private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
+    private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() 
+    suspend fun toggleFavorite(chatId: String) {
+        _localChats.update { list ->
+            list.map { c ->
+                if (c.id == chatId) c.copy(isFavorite = !c.isFavorite) else c
+            }
+        }
+    }
+
+} catch (_: Exception) { null }
 ) {
     val currentUserId: String
         get() = auth?.currentUser?.uid ?: "user_telegram_me"
@@ -349,7 +358,7 @@ class ChatRepository(
         // Update last message in chat list
         _localChats.update { list ->
             list.map { c ->
-                if (c.id == chatId) c.copy(lastMessage = text, timestamp = timeString) else c
+                if (c.id == chatId) c.copy(lastMessage = text, timestamp = timeString, lastMessageIsOutgoing = true, timestampMillis = System.currentTimeMillis()) else c
             }
         }
 
@@ -669,7 +678,7 @@ class ChatRepository(
 
         _localChats.update { list ->
             list.map { c ->
-                if (c.id == chatId) c.copy(lastMessage = summaryText, timestamp = timeString) else c
+                if (c.id == chatId) c.copy(lastMessage = summaryText, timestamp = timeString, lastMessageIsOutgoing = false, timestampMillis = System.currentTimeMillis()) else c
             }
         }
 
@@ -1077,7 +1086,7 @@ class ChatRepository(
                     if (exists) {
                         list.map { c ->
                             if (c.id == targetChatId) {
-                                c.copy(lastMessage = previewLabel.take(120), timestamp = timeString)
+                                c.copy(lastMessage = previewLabel.take(120), timestamp = timeString, lastMessageIsOutgoing = true, timestampMillis = System.currentTimeMillis())
                             } else c
                         }
                     } else if (targetChatId == uid) {
@@ -1088,7 +1097,9 @@ class ChatRepository(
                                 lastMessage = previewLabel.take(120),
                                 timestamp = timeString,
                                 isPinned = true,
-                                participants = listOf(uid)
+                                participants = listOf(uid),
+                                lastMessageIsOutgoing = true,
+                                timestampMillis = System.currentTimeMillis()
                             )
                         ) + list
                     } else {

@@ -94,6 +94,14 @@ import coil.compose.AsyncImage
 import com.jayra.app.model.GlobalSearchStrings
 import com.jayra.app.model.GlobalSearchUiState
 import com.jayra.app.model.SearchFilter
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.ui.theme.IOSBlue
+import com.jayra.app.ui.theme.IOSSecondarySystemBackground
+import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
+import com.jayra.app.ui.theme.IOSSecondaryLabel
+import com.jayra.app.ui.theme.IOSSecondaryLabelDark
 import com.jayra.app.model.SearchResult
 import com.jayra.app.model.SearchResultType
 import com.jayra.app.ui.theme.JayraBlue
@@ -396,13 +404,15 @@ fun GlobalSearchFilterRow(
             key = { it.name }
         ) { filter ->
             val isSelected = filter == selectedFilter
-            val chipBg by animateColorAsState(
-                targetValue = if (isSelected) JayraBlue else inactiveChipBg,
-                animationSpec = tween(durationMillis = 200),
-                label = "chip_bg_${filter.name}"
-            )
+            val spec = LiquidGlassSpecV2.forTier(GlassEffectPrefs.resolveTier(), isDark)
+            val unselectedSolid = if (isDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
+            val chipModifier = if (isSelected) {
+                Modifier.background(IOSBlue.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
+            } else {
+                Modifier.glassSurfaceV2(spec.surface, solidColor = unselectedSolid, cornerRadius = 18.dp)
+            }
             val chipTextColor by animateColorAsState(
-                targetValue = if (isSelected) Color(0xFFFFFFFF) else JayraSubtext,
+                targetValue = if (isSelected) IOSBlue else (if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel),
                 animationSpec = tween(durationMillis = 200),
                 label = "chip_text_${filter.name}"
             )
@@ -411,10 +421,8 @@ fun GlobalSearchFilterRow(
             }
 
             Box(
-                modifier = Modifier
+                modifier = chipModifier
                     .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(chipBg)
                     .clickable(onClick = onChipClick)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag("global_search_chip_${filter.name.lowercase()}"),
