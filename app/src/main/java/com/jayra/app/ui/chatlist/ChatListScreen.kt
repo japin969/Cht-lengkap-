@@ -33,7 +33,6 @@ import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.material3.SwipeToDismissBox
@@ -662,15 +661,6 @@ fun ChatRowContent(
                         }
                         if (chat.isMuted) {
                             Icon(Icons.Rounded.NotificationsOff, null, tint = IOSGray2, modifier = Modifier.size(12.dp))
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        if (chat.disappearingSeconds != null && chat.disappearingSeconds > 0) {
-                            Icon(
-                                Icons.Rounded.Timer,
-                                null,
-                                tint = IOSGray2,
-                                modifier = Modifier.size(12.dp)
-                            )
                             Spacer(Modifier.width(4.dp))
                         }
                         AppText(chat.timestamp, fontSize = 13.sp, color = IOSGray2)
