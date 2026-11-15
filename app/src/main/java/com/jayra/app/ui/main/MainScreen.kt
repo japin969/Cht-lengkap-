@@ -62,6 +62,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.jayra.app.R
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -154,29 +156,29 @@ class MainViewModel(
         NavItem(
             route = ROUTE_CHAT_LIST,
             label = "Chat",
-            icon = Icons.Rounded.Chat,
+            iconRes = R.drawable.ic_sf_chat,
             lottieAsset = "message_circle"
         ),
         NavItem(
             route = ROUTE_CALLS,
             label = "Panggilan",
-            icon = Icons.Rounded.Call,
+            iconRes = R.drawable.ic_sf_phone,
             lottieAsset = "phone"
         ),
         NavItem(
             route = ROUTE_MUSIC_HOME,
             label = "Musik",
-            icon = Icons.Rounded.MusicNote
+            iconRes = R.drawable.ic_sf_music
         ),
         NavItem(
             route = ROUTE_DRAMA_HOME,
-            icon = Icons.Rounded.PlayArrow,
+            iconRes = R.drawable.ic_sf_play,
             label = "VidHub"
         ),
         NavItem(
             route = ROUTE_SETTINGS,
             label = "Pengaturan",
-            icon = Icons.Rounded.Settings,
+            iconRes = R.drawable.ic_sf_gear,
             lottieAsset = "settings"
         )
     )
@@ -446,18 +448,18 @@ fun JayraBottomNavigationBar(
                                         }
                                     ) {
                                         Icon(
-                                            imageVector = item.icon,
+                                            painter = painterResource(id = item.iconRes),
                                             contentDescription = item.label,
                                             tint = animatedTint,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(25.dp)
                                         )
                                     }
                                 } else {
                                     Icon(
-                                        imageVector = item.icon,
+                                        painter = painterResource(id = item.iconRes),
                                         contentDescription = item.label,
                                         tint = animatedTint,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(25.dp)
                                     )
                                 }
                             }
@@ -1172,10 +1174,10 @@ private fun MainScreenPreviewContent(
     val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
     val textColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
     val previewTabs = listOf(
-        NavItem("chat_list", "Chat", Icons.Rounded.Chat, badgeCount = unreadCount),
-        NavItem("calls", "Panggilan", Icons.Rounded.Call),
-        NavItem("music_home", "Musik", Icons.Rounded.MusicNote),
-        NavItem("settings", "Pengaturan", Icons.Rounded.Settings)
+        NavItem("chat_list", "Chat", R.drawable.ic_sf_chat, badgeCount = unreadCount),
+        NavItem("calls", "Panggilan", R.drawable.ic_sf_phone),
+        NavItem("music_home", "Musik", R.drawable.ic_sf_music),
+        NavItem("settings", "Pengaturan", R.drawable.ic_sf_gear)
     )
 
     Scaffold(
