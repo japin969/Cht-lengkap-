@@ -231,6 +231,11 @@ fun ChatListScreen(
                                 .glassSurfaceV2(menuSpec.surface, solidColor = menuSolid, cornerRadius = 16.dp)
                         ) {
                             DropdownMenuItem(
+                                text = { AppText("Jayra AI") },
+                                onClick = { showMenu = false },
+                                modifier = Modifier.height(44.dp)
+                            )
+                            DropdownMenuItem(
                                 text = { AppText("New Group") },
                                 onClick = { showMenu = false; onCreateGroupClick() },
                                 modifier = Modifier.height(44.dp)
@@ -262,7 +267,7 @@ fun ChatListScreen(
             val searchIsDark = isSystemInDarkTheme()
             val searchTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
             val searchSpec = remember(searchTier, searchIsDark) { LiquidGlassSpecV2.forTier(searchTier, searchIsDark) }
-            val searchBg = if (searchIsDark) androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.9f) else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)
+            val searchBg = androidx.compose.ui.graphics.Color(0x1F767680)
             val searchPlaceholderColor = if (searchIsDark) IOSSecondaryLabelDark else IOSSecondaryLabel
             Box(
                 modifier = Modifier
@@ -274,7 +279,7 @@ fun ChatListScreen(
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Search, null, tint = searchPlaceholderColor, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.Search, null, tint = androidx.compose.ui.graphics.Color(0x8A8A8E), modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(8.dp))
                     BasicTextField(
                         value = searchQuery,
@@ -375,48 +380,6 @@ fun ChatListScreen(
                         }
                     }
                     is ChatListUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AppText("Error: ${state.message}", color = Color.Red) }
-                }
-            }
-        }
-
-        // ========== FAB ==========
-        if (!isSelectionMode) {
-            val fabView = androidx.compose.ui.platform.LocalView.current
-            val fabTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
-            val fabDark = isSystemInDarkTheme()
-            val fabSpec = remember(fabTier, fabDark) { LiquidGlassSpecV2.forTier(fabTier, fabDark) }
-            Column(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val interactionAi = remember { MutableInteractionSource() }
-                val pressedAi by interactionAi.collectIsPressedAsState()
-                val scaleAi by animateFloatAsState(if (pressedAi) 0.92f else 1f, spring(dampingRatio = 0.85f, stiffness = 400f))
-                Box(
-                    modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleAi; scaleY = scaleAi }
-                        .glassSurfaceV2(fabSpec.surface, solidColor = com.jayra.app.ui.theme.IOSPurple.copy(alpha = 0.90f), cornerRadius = 26.dp)
-                        .clickable(interactionSource = interactionAi, indication = null) {
-                            fabView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                            onAiClick()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(PoeLogo, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
-                }
-                val interactionFab = remember { MutableInteractionSource() }
-                val pressedFab by interactionFab.collectIsPressedAsState()
-                val scaleFab by animateFloatAsState(if (pressedFab) 0.92f else 1f, spring(dampingRatio = 0.85f, stiffness = 400f))
-                Box(
-                    modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleFab; scaleY = scaleFab }
-                        .glassSurfaceV2(fabSpec.surface, solidColor = IOSBlue, cornerRadius = 26.dp)
-                        .clickable(interactionSource = interactionFab, indication = null) {
-                            fabView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                            onContactsClick()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Rounded.Edit, "New Chat", tint = Color.White, modifier = Modifier.size(22.dp))
                 }
             }
         }
@@ -606,6 +569,11 @@ fun ChatRowContent(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val rowBg by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isPressed) androidx.compose.ui.graphics.Color(0x1F000000) else androidx.compose.ui.graphics.Color.Transparent,
+        animationSpec = androidx.compose.animation.core.tween(0),
+        label = "row_bg"
+    )
     val isDark = isSystemInDarkTheme()
     val view = LocalView.current
     val scale by animateFloatAsState(
@@ -624,8 +592,7 @@ fun ChatRowContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer { scaleX = scale; scaleY = scale }
-                .background(Color(0x1AFFFFFF))
-                .background(highlightOverlay)
+                .background(rowBg)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -645,7 +612,7 @@ fun ChatRowContent(
                 AsyncImage(
                     model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff&size=112" },
                     contentDescription = chat.name,
-                    modifier = Modifier.size(56.dp).clip(CircleShape),
+                    modifier = Modifier.size(56.dp).clip(com.jayra.app.ui.theme.squircle(25)),
                     contentScale = ContentScale.Crop
                 )
                 androidx.compose.animation.AnimatedVisibility(
@@ -676,7 +643,7 @@ fun ChatRowContent(
                             Icon(Icons.Rounded.NotificationsOff, null, tint = IOSGray2, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
                         }
-                        AppText(chat.timestamp, fontSize = 13.sp, color = IOSGray2)
+                        AppText(chat.timestamp, fontSize = 13.sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.4f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.4f))
                     }
                 }
                 Spacer(Modifier.height(2.dp))
@@ -685,12 +652,12 @@ fun ChatRowContent(
                         AppText("Draf: ", fontSize = 15.sp, color = IOSRed, fontWeight = FontWeight.SemiBold)
                     }
                     if (chat.lastMessageIsOutgoing && !chat.hasDraft) {
-                        AppText("Anda: ", fontSize = 15.sp, color = IOSSecondaryLabel)
+                        AppText("Anda: ", fontSize = 15.sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f))
                     }
                     AppText(
                         text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
                         fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                        color = if (chat.hasDraft) IOSRed else Color.Gray
+                        color = if (chat.hasDraft) IOSRed else if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)
                     )
                     when (chat.lastMessageStatus) {
                         MessageStatus.SENT -> Icon(Icons.Rounded.Check, null, tint = IOSGray2, modifier = Modifier.size(14.dp))
@@ -724,7 +691,13 @@ fun ChatRowContent(
                 }
             }
         }
-        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(start = 84.dp), thickness = 0.5.dp, color = com.jayra.app.ui.theme.IOSSeparator.copy(alpha = 0.5f))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 78.dp, end = 16.dp)
+                .height(0.5.dp)
+                .background(com.jayra.app.ui.theme.IOSSeparator.copy(alpha = 0.36f))
+        )
     }
 }
 

@@ -28,7 +28,7 @@ import com.jayra.app.ui.theme.GradientStop
 // Overload 2: ButtonSpec (self-contained fill + sheen + border)
 // ═══════════════════════════════════════════════════════════
 
-private const val BORDER_STROKE_DP = 0.75f
+private const val BORDER_STROKE_DP = 1.0f
 private const val GLARE_ALPHA = 0.10f
 
 /**
