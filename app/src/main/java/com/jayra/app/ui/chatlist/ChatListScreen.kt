@@ -67,6 +67,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import com.jayra.app.util.glassSurface
 import com.jayra.app.util.glassSurfaceV2
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
@@ -140,7 +141,13 @@ fun ChatListScreen(
     }
 
     val focusManager = LocalFocusManager.current
-    LaunchedEffect(Unit) { focusManager.clearFocus() }
+    LaunchedEffect(Unit) {
+        // Wait for first frame so Android system auto-focus completes,
+        // then force-clear. Combined with manifest windowSoftInputMode=
+        // stateHidden|adjustResize this prevents auto keyboard on launch.
+        withFrameNanos { }
+        focusManager.clearFocus(force = true)
+    }
 
     val bgDark = isSystemInDarkTheme()
     val bgTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
