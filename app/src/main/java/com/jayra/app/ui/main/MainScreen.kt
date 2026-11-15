@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
@@ -357,7 +358,7 @@ fun JayraBottomNavigationBar(
         tonalElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
-            .androidx.compose.ui.draw.shadow(elevation = 4.dp, spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.1f))
+            .shadow(elevation = 4.dp, spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.1f))
             .navigationBarsPadding()
             .testTag("jayra_bottom_navigation_bar")
     ) {
