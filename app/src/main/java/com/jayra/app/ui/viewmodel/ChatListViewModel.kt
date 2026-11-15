@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -67,6 +68,22 @@ class ChatListViewModel(
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ChatListUiState.Loading)
+
+    /**
+     * Derived index of first unread chat in current uiState.chats list.
+     * - Returns -1 if no unread or state not Success.
+     * - Reactive to filter + sort changes (derived from uiState, not _rawChats).
+     * - Contract for Designer: consume via collectAsStateWithLifecycle(),
+     *   insert "Pesan belum dibaca" divider at this index in LazyColumn itemsIndexed.
+     */
+    val firstUnreadIndex: StateFlow<Int> = uiState
+        .map { state ->
+            when (state) {
+                is ChatListUiState.Success -> state.chats.indexOfFirst { it.unreadCount > 0 }
+                else -> -1
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), -1)
 
     init {
         loadChats()
