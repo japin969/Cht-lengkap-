@@ -84,7 +84,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.TextButton
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.launch
@@ -531,7 +531,7 @@ fun ChatRowContent(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val isDark = isSystemInDarkTheme()
-    val haptic = LocalHapticFeedback.current
+    val view = LocalView.current
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
         animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
@@ -554,11 +554,11 @@ fun ChatRowContent(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         onClick()
                     },
                     onLongClick = {
-                        haptic.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                         if (!isSelectionMode) onLongPress()
                     }
                 )
