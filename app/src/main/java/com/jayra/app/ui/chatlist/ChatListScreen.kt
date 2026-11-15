@@ -33,6 +33,8 @@ import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -469,7 +471,7 @@ fun EmptyState(onStartChat: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            androidx.compose.material.icons.rounded.ChatBubbleOutline,
+            Icons.Rounded.ChatBubbleOutline,
             null,
             tint = subtitleColor,
             modifier = Modifier.size(64.dp)
@@ -664,7 +666,7 @@ fun ChatRowContent(
                         }
                         if (chat.disappearingSeconds != null && chat.disappearingSeconds > 0) {
                             Icon(
-                                androidx.compose.material.icons.rounded.Timer,
+                                Icons.Rounded.Timer,
                                 null,
                                 tint = IOSGray2,
                                 modifier = Modifier.size(12.dp)
