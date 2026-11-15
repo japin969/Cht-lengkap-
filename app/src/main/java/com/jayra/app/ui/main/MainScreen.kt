@@ -62,8 +62,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.jayra.app.R
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -156,29 +154,29 @@ class MainViewModel(
         NavItem(
             route = ROUTE_CHAT_LIST,
             label = "Chat",
-            iconRes = R.drawable.ic_sf_chat,
+            icon = Icons.Rounded.Chat,
             lottieAsset = "message_circle"
         ),
         NavItem(
             route = ROUTE_CALLS,
             label = "Panggilan",
-            iconRes = R.drawable.ic_sf_phone,
+            icon = Icons.Rounded.Call,
             lottieAsset = "phone"
         ),
         NavItem(
             route = ROUTE_MUSIC_HOME,
             label = "Musik",
-            iconRes = R.drawable.ic_sf_music
+            icon = Icons.Rounded.MusicNote
         ),
         NavItem(
             route = ROUTE_DRAMA_HOME,
-            iconRes = R.drawable.ic_sf_play,
+            icon = Icons.Rounded.PlayArrow,
             label = "VidHub"
         ),
         NavItem(
             route = ROUTE_SETTINGS,
             label = "Pengaturan",
-            iconRes = R.drawable.ic_sf_gear,
+            icon = Icons.Rounded.Settings,
             lottieAsset = "settings"
         )
     )
@@ -312,10 +310,24 @@ fun MainScreen(
         containerColor = screenBg,
         bottomBar = {
             if (showBottomBar) {
-                JayraBottomNavigationBar(
-                    items = navItems,
-                    currentRoute = currentRoute,
-                    onItemClick = { route ->
+                com.jayra.app.ui.component.LiquidNavBar(
+                    selectedIndex = when (currentRoute) {
+                        "chat_list" -> 0
+                        "calls" -> 1
+                        "music_home" -> 2
+                        "vidhub" -> 3
+                        "settings" -> 4
+                        else -> 0
+                    },
+                    onSelect = { index ->
+                        val route = when (index) {
+                            0 -> "chat_list"
+                            1 -> "calls"
+                            2 -> "music_home"
+                            3 -> "vidhub"
+                            4 -> "settings"
+                            else -> "chat_list"
+                        }
                         navController.navigate(route) {
                             popUpTo(MainViewModel.ROUTE_CHAT_LIST) {
                                 saveState = true
@@ -323,7 +335,8 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    isFolded = false // Placeholder, nanti bisa dihubungkan ke scroll state
                 )
             }
         }
@@ -448,18 +461,18 @@ fun JayraBottomNavigationBar(
                                         }
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = item.iconRes),
+                                            imageVector = item.icon,
                                             contentDescription = item.label,
                                             tint = animatedTint,
-                                            modifier = Modifier.size(25.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                 } else {
                                     Icon(
-                                        painter = painterResource(id = item.iconRes),
+                                        imageVector = item.icon,
                                         contentDescription = item.label,
                                         tint = animatedTint,
-                                        modifier = Modifier.size(25.dp)
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
                             }
@@ -1174,10 +1187,10 @@ private fun MainScreenPreviewContent(
     val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
     val textColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
     val previewTabs = listOf(
-        NavItem("chat_list", "Chat", R.drawable.ic_sf_chat, badgeCount = unreadCount),
-        NavItem("calls", "Panggilan", R.drawable.ic_sf_phone),
-        NavItem("music_home", "Musik", R.drawable.ic_sf_music),
-        NavItem("settings", "Pengaturan", R.drawable.ic_sf_gear)
+        NavItem("chat_list", "Chat", Icons.Rounded.Chat, badgeCount = unreadCount),
+        NavItem("calls", "Panggilan", Icons.Rounded.Call),
+        NavItem("music_home", "Musik", Icons.Rounded.MusicNote),
+        NavItem("settings", "Pengaturan", Icons.Rounded.Settings)
     )
 
     Scaffold(
