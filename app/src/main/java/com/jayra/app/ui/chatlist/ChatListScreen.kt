@@ -208,12 +208,38 @@ fun ChatListScreen(
                             tint = Color(0xFF007AFF),
                             modifier = Modifier.size(26.dp).clickable { showMenu = true }
                         )
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(text = { AppText("New Group") }, onClick = { showMenu = false; onCreateGroupClick() })
-                            DropdownMenuItem(text = { AppText("New Broadcast") }, onClick = { showMenu = false })
-                            DropdownMenuItem(text = { AppText("Starred Messages") }, onClick = { showMenu = false; onSavedMessagesClick() })
-                            DropdownMenuItem(text = { AppText("Archived") }, onClick = { showMenu = false; onArchivedClick() })
-                            DropdownMenuItem(text = { AppText("Settings") }, onClick = { showMenu = false; onMyProfileClick() })
+                        val menuTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+                        val menuDark = isSystemInDarkTheme()
+                        val menuSpec = remember(menuTier, menuDark) { LiquidGlassSpecV2.forTier(menuTier, menuDark) }
+                        val menuSolid = if (menuDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier
+                                .glassSurfaceV2(menuSpec.surface, solidColor = menuSolid, cornerRadius = 16.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { AppText("New Group") },
+                                onClick = { showMenu = false; onCreateGroupClick() },
+                                modifier = Modifier.height(44.dp)
+                            )
+                            // Hidden until Broadcast screen exists (Batch future)
+                            // DropdownMenuItem(text = { AppText("New Broadcast") }, onClick = { showMenu = false })
+                            DropdownMenuItem(
+                                text = { AppText("Starred Messages") },
+                                onClick = { showMenu = false; onSavedMessagesClick() },
+                                modifier = Modifier.height(44.dp)
+                            )
+                            DropdownMenuItem(
+                                text = { AppText("Archived") },
+                                onClick = { showMenu = false; onArchivedClick() },
+                                modifier = Modifier.height(44.dp)
+                            )
+                            DropdownMenuItem(
+                                text = { AppText("Settings") },
+                                onClick = { showMenu = false; onMyProfileClick() },
+                                modifier = Modifier.height(44.dp)
+                            )
                         }
                     }
                 }
@@ -268,24 +294,30 @@ fun ChatListScreen(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                val chipTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+                val chipDark = isSystemInDarkTheme()
+                val chipSpec = remember(chipTier, chipDark) { LiquidGlassSpecV2.forTier(chipTier, chipDark) }
+                val chipSolid = if (chipDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
                 ChatFilter.entries.forEach { filter ->
                     val isSelected = selectedFilter == filter
                     val bg by animateColorAsState(
-                        targetValue = if (isSelected) Color(0xFF007AFF) else Color(0x33FFFFFF),
+                        targetValue = if (isSelected) IOSBlue.copy(alpha = 0.15f) else Color.Transparent,
                         label = "chip_bg"
                     )
                     val textColor by animateColorAsState(
-                        targetValue = if (isSelected) Color.White else Color(0xFF3C3C43).copy(alpha = 0.6f),
+                        targetValue = if (isSelected) IOSBlue else IOSSecondaryLabel,
                         label = "chip_text"
                     )
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(bg)
+                            .height(32.dp)
+                            .glassSurfaceV2(chipSpec.surface, solidColor = chipSolid, cornerRadius = 18.dp)
+                            .background(bg, RoundedCornerShape(18.dp))
                             .clickable { viewModel.onFilterChange(filter) }
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        AppText(filter.label, fontSize = 14.sp, color = textColor, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal)
+                        AppText(filter.label, fontSize = 15.sp, color = textColor, fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium)
                     }
                 }
             }
@@ -337,6 +369,10 @@ fun ChatListScreen(
 
         // ========== FAB ==========
         if (!isSelectionMode) {
+            val fabView = androidx.compose.ui.platform.LocalView.current
+            val fabTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+            val fabDark = isSystemInDarkTheme()
+            val fabSpec = remember(fabTier, fabDark) { LiquidGlassSpecV2.forTier(fabTier, fabDark) }
             Column(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.End,
@@ -344,22 +380,28 @@ fun ChatListScreen(
             ) {
                 val interactionAi = remember { MutableInteractionSource() }
                 val pressedAi by interactionAi.collectIsPressedAsState()
-                val scaleAi by animateFloatAsState(if (pressedAi) 0.9f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f))
+                val scaleAi by animateFloatAsState(if (pressedAi) 0.92f else 1f, spring(dampingRatio = 0.85f, stiffness = 400f))
                 Box(
                     modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleAi; scaleY = scaleAi }
-                        .iosGlass(cornerRadius = 26, tint = Color(0xFF6E48AA).copy(alpha = 0.95f))
-                        .clickable(interactionSource = interactionAi, indication = null) { onAiClick() },
+                        .glassSurfaceV2(fabSpec.surface, solidColor = com.jayra.app.ui.theme.IOSPurple.copy(alpha = 0.90f), cornerRadius = 26.dp)
+                        .clickable(interactionSource = interactionAi, indication = null) {
+                            fabView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                            onAiClick()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(PoeLogo, "Jayra AI", tint = Color.White, modifier = Modifier.size(24.dp))
                 }
                 val interactionFab = remember { MutableInteractionSource() }
                 val pressedFab by interactionFab.collectIsPressedAsState()
-                val scaleFab by animateFloatAsState(if (pressedFab) 0.9f else 1f, spring(dampingRatio = 0.5f, stiffness = 400f))
+                val scaleFab by animateFloatAsState(if (pressedFab) 0.92f else 1f, spring(dampingRatio = 0.85f, stiffness = 400f))
                 Box(
                     modifier = Modifier.size(52.dp).graphicsLayer { scaleX = scaleFab; scaleY = scaleFab }
-                        .background(Color(0xFF007AFF), CircleShape)
-                        .clickable(interactionSource = interactionFab, indication = null) { onContactsClick() },
+                        .glassSurfaceV2(fabSpec.surface, solidColor = IOSBlue, cornerRadius = 26.dp)
+                        .clickable(interactionSource = interactionFab, indication = null) {
+                            fabView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                            onContactsClick()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Rounded.Edit, "New Chat", tint = Color.White, modifier = Modifier.size(22.dp))
@@ -416,25 +458,31 @@ fun ChatListScreen(
 }
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun EmptyState(onStartChat: () -> Unit) {
+    val isDarkEmpty = androidx.compose.foundation.isSystemInDarkTheme()
+    val titleColor = if (isDarkEmpty) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel
+    val subtitleColor = if (isDarkEmpty) com.jayra.app.ui.theme.IOSSecondaryLabelDark else IOSSecondaryLabel
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Rounded.Search, null, tint = Color(0xFF8E8E93), modifier = Modifier.size(64.dp))
-        Spacer(Modifier.height(16.dp))
-        AppText("Belum ada chat", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
-        Spacer(Modifier.height(8.dp))
-        AppText("Mulai percakapan baru dengan tombol di bawah", fontSize = 15.sp, color = Color(0xFF8E8E93), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = onStartChat,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            AppText("Mulai Chat", color = Color.White, fontWeight = FontWeight.SemiBold)
-        }
+        Icon(
+            androidx.compose.material.icons.rounded.ChatBubbleOutline,
+            null,
+            tint = subtitleColor,
+            modifier = Modifier.size(64.dp)
+        )
+        Spacer(Modifier.height(12.dp))
+        AppText("Belum ada chat", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = titleColor)
+        Spacer(Modifier.height(4.dp))
+        AppText(
+            "Mulai percakapan baru",
+            fontSize = 15.sp,
+            color = subtitleColor,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
 
@@ -612,6 +660,15 @@ fun ChatRowContent(
                         }
                         if (chat.isMuted) {
                             Icon(Icons.Rounded.NotificationsOff, null, tint = IOSGray2, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        if (chat.disappearingSeconds != null && chat.disappearingSeconds > 0) {
+                            Icon(
+                                androidx.compose.material.icons.rounded.Timer,
+                                null,
+                                tint = IOSGray2,
+                                modifier = Modifier.size(12.dp)
+                            )
                             Spacer(Modifier.width(4.dp))
                         }
                         AppText(chat.timestamp, fontSize = 13.sp, color = IOSGray2)
