@@ -467,8 +467,8 @@ fun SwipeableChatRow(
         state = dismissState,
         backgroundContent = {
             val color = when (dismissState.dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF007AFF) // Archive — iOS Blue
-                SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF3B30) // Delete — iOS Red
+                SwipeToDismissBoxValue.StartToEnd -> IOSBlue // Archive — iOS Blue
+                SwipeToDismissBoxValue.EndToStart -> IOSRed // Delete — iOS Red
                 else -> Color.Transparent
             }
             Box(modifier = Modifier.fillMaxSize().background(color), contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
