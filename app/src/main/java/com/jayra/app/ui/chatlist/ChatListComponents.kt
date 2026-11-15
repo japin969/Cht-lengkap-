@@ -371,31 +371,23 @@ fun ShimmerChatList(itemCount: Int = 8) {
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 1200, easing = androidx.compose.animation.core.LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "shimmer_anim"
     )
 
-    val isDark = isSystemInDarkTheme()
-    val shimmerColors = if (isDark) {
-        listOf(
-            Color(0xFF232E3C),
-            Color(0xFF2E3D4F),
-            Color(0xFF232E3C)
-        )
-    } else {
-        listOf(
-            Color(0xFFE4E7EB),
-            Color(0xFFF3F5F7),
-            Color(0xFFE4E7EB)
-        )
-    }
+    val fill = com.jayra.app.ui.theme.IOSFill
+    val shimmerColors = listOf(
+        fill.copy(alpha = 0.6f),
+        Color.Transparent,
+        fill.copy(alpha = 0.6f)
+    )
 
-    val brush = Brush.linearGradient(
+    val brush = Brush.horizontalGradient(
         colors = shimmerColors,
-        start = Offset(x = translateAnim - 200f, y = translateAnim - 200f),
-        end = Offset(x = translateAnim, y = translateAnim)
+        startX = translateAnim - 400f,
+        endX = translateAnim
     )
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -403,7 +395,7 @@ fun ShimmerChatList(itemCount: Int = 8) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp)
+                    .height(76.dp)
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -413,20 +405,20 @@ fun ShimmerChatList(itemCount: Int = 8) {
                         .clip(CircleShape)
                         .background(brush)
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.5f)
-                            .height(16.dp)
+                            .fillMaxWidth(0.6f)
+                            .height(14.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(brush)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(0.8f)
-                            .height(14.dp)
+                            .height(12.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(brush)
                     )
