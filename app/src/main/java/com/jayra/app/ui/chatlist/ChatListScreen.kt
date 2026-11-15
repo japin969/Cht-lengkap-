@@ -88,6 +88,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalFocusManager
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.launch
@@ -138,11 +139,14 @@ fun ChatListScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(Unit) { focusManager.clearFocus() }
+
+    val bgDark = isSystemInDarkTheme()
+    val bgTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+    val bgSpec = remember(bgTier, bgDark) { LiquidGlassSpecV2.forTier(bgTier, bgDark) }
     val bgGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFF1E3A5F),  // Deep Blue (login)
-            Color(0xFF4A2E6B)   // Deep Purple (login)
-        )
+        *bgSpec.backdrop.gradientStops.map { it.position to it.color }.toTypedArray()
     )
 
     val totalUnread = (uiState as? ChatListUiState.Success)?.chats?.sumOf { it.unreadCount } ?: 0
@@ -524,18 +528,20 @@ fun SwipeableChatRow(
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
-            val color = when (dismissState.dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> IOSBlue // Archive — iOS Blue
-                SwipeToDismissBoxValue.EndToStart -> IOSRed // Delete — iOS Red
-                else -> Color.Transparent
-            }
-            Box(modifier = Modifier.fillMaxSize().background(color), contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
-                Icon(
-                    imageVector = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Icons.Rounded.Archive else Icons.Rounded.Delete,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.padding(horizontal = 24.dp).size(28.dp)
-                )
+            if (dismissState.dismissDirection != SwipeToDismissBoxValue.Settled) {
+                val color = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> IOSBlue
+                    SwipeToDismissBoxValue.EndToStart -> IOSRed
+                    else -> Color.Transparent
+                }
+                Box(modifier = Modifier.fillMaxSize().background(color), contentAlignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
+                    Icon(
+                        imageVector = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) Icons.Rounded.Archive else Icons.Rounded.Delete,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(horizontal = 24.dp).size(28.dp)
+                    )
+                }
             }
         }
     ) {
