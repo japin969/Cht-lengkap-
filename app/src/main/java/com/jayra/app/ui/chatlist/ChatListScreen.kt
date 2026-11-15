@@ -186,7 +186,7 @@ fun ChatListScreen(
                     fontSize = if (isSelectionMode) 17.sp else 34.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
-                    color = Color.White
+                    color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel
                 )
                 if (isSelectionMode) {
                     AppText(
@@ -273,7 +273,7 @@ fun ChatListScreen(
                         value = searchQuery,
                         onValueChange = viewModel::onSearchQueryChange,
                         modifier = Modifier.weight(1f),
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, color = Color.White, fontFamily = com.jayra.app.ui.theme.SFProFontFamily),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel, fontFamily = com.jayra.app.ui.theme.SFProFontFamily),
                         singleLine = true,
                         cursorBrush = androidx.compose.ui.graphics.SolidColor(IOSBlue),
                         decorationBox = { innerTextField ->
@@ -659,7 +659,7 @@ fun ChatRowContent(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    AppText(chat.name, fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    AppText(chat.name, fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (chat.isPinned) {
                             Icon(Icons.Rounded.PushPin, null, tint = IOSGray2, modifier = Modifier.size(12.dp))

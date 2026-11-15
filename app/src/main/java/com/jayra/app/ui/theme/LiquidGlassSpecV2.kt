@@ -243,7 +243,7 @@ data class LiquidGlassSpecV2(
                 isDark = dark,
                 backdrop = backdrop,
                 surface = GlassSurfaceSpec(
-                    baseAlpha = 0.72f,
+                    baseAlpha = 0.65f,
                     sheenGradient = listOf(
                         GradientStop(WHITE.copy(alpha = 0.22f), 0f),
                         GradientStop(WHITE.copy(alpha = 0.06f), 0.55f),
@@ -256,7 +256,7 @@ data class LiquidGlassSpecV2(
                         GradientStop(WHITE.copy(alpha = 0.08f), 1f)
                     ),
                     glareRadiusRatio = 0.45f,
-                    shadowElevationDp = 2
+                    shadowElevationDp = 4
                 ),
                 primaryButton = ButtonSpec(
                     fillColor = BTN_BLUE,
