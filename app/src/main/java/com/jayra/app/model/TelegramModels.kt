@@ -805,7 +805,7 @@ data class UserAccount(
 data class NavItem(
     val route: String,
     val label: String,
-    @androidx.annotation.DrawableRes val iconRes: Int,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val badgeCount: Int = 0,
     val lottieAsset: String? = null
 )
