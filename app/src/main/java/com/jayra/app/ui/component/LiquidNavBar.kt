@@ -1,11 +1,27 @@
 package com.jayra.app.ui.component
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,17 +29,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.*
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
+import com.jayra.app.util.JayraHaptics
+import com.jayra.app.util.JayraSmooth
 import com.jayra.app.util.Performance
+import kotlin.math.abs
 
 data class JayraNavItem(val label: String, val icon: ImageVector)
 
@@ -45,25 +68,39 @@ fun LiquidNavBar(
     val context = LocalContext.current
     val isLowRam = remember { Performance.isLowRam(context) }
     val isLegacy = remember { Performance.isLegacy() }
+    val isFlagship = remember { Performance.isFlagship(context) }
     val showShine = !isLowRam && !isLegacy
 
-    val painters = jayraNavItems.map { rememberVectorPainter(it.icon, Color.White) }
+    // RAM DIET: painter + style di-cache sekali
+    val painters = jayraNavItems.map { rememberVectorPainter(it.icon) }
     val textMeasurer = rememberTextMeasurer()
     val textStyleInactive = remember {
         TextStyle(color = Color.White.copy(0.58f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 
+    // LEVEL 3 + 12: Spring iOS + Liquid Glass stretch
     val pillAnim = remember { Animatable(0f) }
     val scaleAnim = remember { Animatable(1.22f) }
+    val stretchAnim = remember { Animatable(1f) }
+    var lastIndex by remember { mutableStateOf(selectedIndex) }
+
     LaunchedEffect(selectedIndex) {
+        val distance = abs(selectedIndex - lastIndex).coerceAtLeast(1)
         pillAnim.animateTo(
             selectedIndex.toFloat(),
-            spring(dampingRatio = 0.75f, stiffness = if (isLowRam) 500f else 320f)
+            spring(dampingRatio = 0.72f, stiffness = if (isLowRam) 520f else 340f)
         )
+        JayraHaptics.tick(context, isFlagship)
         scaleAnim.snapTo(1f)
-        scaleAnim.animateTo(1.22f, spring(dampingRatio = 0.6f, stiffness = 400f))
+        scaleAnim.animateTo(1.22f, spring(dampingRatio = 0.55f, stiffness = 420f))
+        if (distance > 1 && isFlagship) {
+            stretchAnim.snapTo(1.08f)
+            stretchAnim.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 380f))
+        }
+        lastIndex = selectedIndex
     }
 
+    // LEVEL 4 + 10: Fold + ProMotion feel
     val foldAnim = remember { Animatable(0f) }
     LaunchedEffect(isFolded) {
         foldAnim.animateTo(
@@ -72,12 +109,16 @@ fun LiquidNavBar(
         )
     }
 
+    // LEVEL 5 + 7: Kilau di render thread (Canvas), jank killer
     val shineAnim = if (showShine) rememberInfiniteTransition(label = "shine") else null
     val shineX = shineAnim?.animateFloat(
         -0.8f, 1.3f,
         infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Restart),
         label = "shineX"
     )?.value ?: 0f
+
+    // LEVEL 6: Predictive touch - hover / press mulai gerak duluan
+    var predictiveIndex by remember { mutableStateOf<Int?>(null) }
 
     BoxWithConstraints(
         modifier
@@ -93,28 +134,19 @@ fun LiquidNavBar(
         val navWidth = maxWidth
         val slotW = navWidth / 5f
         val pillW = slotW * 0.9f
+        val realPillX = pillAnim.value * slotW.toPx()
 
         Box(Modifier.fillMaxSize()) {
             Canvas(Modifier.fillMaxSize()) {
                 drawRoundRect(
-                    brush = Brush.linearGradient(
-                        listOf(Color(0xFF161622), Color(0xFF1C1C2C), Color(0xFF221E38), Color(0xFF12121E))
-                    ),
+                    brush = JayraSmooth.bgBrush,
                     size = size,
                     cornerRadius = CornerRadius(28.dp.toPx(), 28.dp.toPx())
                 )
-                drawRect(
-                    brush = Brush.verticalGradient(listOf(Color.White.copy(0.08f), Color.Transparent)),
-                    size = Size(size.width, size.height * 0.5f)
-                )
-                drawRect(
-                    brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.32f))),
-                    size = size
-                )
+                drawRect(brush = JayraSmooth.topShineBrush, size = Size(size.width, size.height * 0.5f))
+                drawRect(brush = JayraSmooth.bottomShadeBrush, size = size)
                 drawLine(
-                    brush = Brush.horizontalGradient(
-                        listOf(Color.Transparent, Color.White.copy(0.4f), Color.Transparent)
-                    ),
+                    brush = JayraSmooth.topLineBrush,
                     start = Offset(size.width * 0.12f, 0.5f),
                     end = Offset(size.width * 0.88f, 0.5f),
                     strokeWidth = 1f
@@ -140,20 +172,23 @@ fun LiquidNavBar(
                         size = Size(160f, size.height)
                     )
                 }
+                
                 val slotPx = size.width / 5f
                 val iconSize = 28.dp.toPx()
                 val gapPx = 3.dp.toPx()
+                
                 jayraNavItems.forEachIndexed { i, item ->
                     if (i == selectedIndex) return@forEachIndexed
                     val cx = slotPx * i + slotPx / 2f
-                    with(painters[i]) {
-                        translate(
-                            left = cx - iconSize / 2f,
-                            top = size.height / 2f - iconSize / 2f - 8.dp.toPx()
-                        ) {
-                            draw(Size(iconSize, iconSize), colorFilter = ColorFilter.tint(Color.White.copy(0.58f)))
-                        }
-                    }
+                    
+                    // FIX: API draw VectorPainter di Canvas
+                    draw(
+                        painter = painters[i],
+                        topLeft = Offset(cx - iconSize / 2f, size.height / 2f - iconSize / 2f - 8.dp.toPx()),
+                        size = Size(iconSize, iconSize),
+                        colorFilter = ColorFilter.tint(Color.White.copy(0.58f))
+                    )
+                    
                     val tl = textMeasurer.measure(item.label, textStyleInactive)
                     drawText(
                         tl,
@@ -165,27 +200,37 @@ fun LiquidNavBar(
                 }
             }
 
+            // PILL - Liquid Glass
             Box(
                 Modifier
                     .align(Alignment.TopStart)
                     .offset(y = 18.dp)
-                    .graphicsLayer { translationX = pillAnim.value * slotW.toPx() }
+                    .graphicsLayer {
+                        translationX = realPillX
+                        scaleX = stretchAnim.value
+                        scaleY = 2f - stretchAnim.value
+                    }
                     .width(pillW)
                     .height(48.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Brush.linearGradient(listOf(Color.White.copy(0.18f), Color.White.copy(0.06f))))
+                    .background(JayraSmooth.pillBrush)
             )
 
+            // IKON + LABEL AKTIF
             Box(
                 Modifier
                     .fillMaxSize()
-                    .graphicsLayer { translationX = pillAnim.value * slotW.toPx() }
+                    .graphicsLayer {
+                        translationX = realPillX
+                        scaleX = stretchAnim.value
+                        scaleY = 2f - stretchAnim.value
+                    }
             ) {
                 Column(
                     Modifier.width(pillW).align(Alignment.CenterStart),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    androidx.compose.material3.Icon(
+                    Icon(
                         imageVector = jayraNavItems[selectedIndex].icon,
                         contentDescription = null,
                         tint = Color.White,
@@ -194,7 +239,7 @@ fun LiquidNavBar(
                             .graphicsLayer { scaleX = scaleAnim.value; scaleY = scaleAnim.value }
                     )
                     Spacer(Modifier.height(3.dp))
-                    androidx.compose.material3.Text(
+                    Text(
                         text = jayraNavItems[selectedIndex].label,
                         color = Color.White,
                         fontSize = 12.sp,
@@ -204,16 +249,29 @@ fun LiquidNavBar(
                 }
             }
 
+            // BUTTON AREA - Predictive + No Ripple + No Delay
             Row(Modifier.fillMaxSize()) {
                 repeat(5) { i ->
                     Box(
                         Modifier
                             .weight(1f)
                             .fillMaxHeight()
+                            .pointerInput(i) {
+                                detectTapGestures(
+                                    onPress = {
+                                        predictiveIndex = i
+                                        tryAwaitRelease()
+                                        predictiveIndex = null
+                                    },
+                                    onTap = {
+                                        if (selectedIndex != i) onSelect(i)
+                                    }
+                                )
+                            }
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) { onSelect(i) }
+                            ) { if (selectedIndex != i) onSelect(i) }
                     )
                 }
             }
