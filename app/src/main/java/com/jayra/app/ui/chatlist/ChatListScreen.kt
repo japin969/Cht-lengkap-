@@ -586,7 +586,7 @@ fun ChatRowContent(
                     modifier = Modifier.size(56.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
-                AnimatedVisibility(
+                androidx.compose.animation.AnimatedVisibility(
                     visible = chat.isOnline,
                     modifier = Modifier.align(Alignment.BottomEnd).offset(x = 2.dp, y = 2.dp),
                     enter = fadeIn(tween(200)),
