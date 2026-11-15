@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.google.firebase.firestore.SetOptions
+import android.util.Log
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -822,6 +823,45 @@ class ChatRepository(
                     .delete()
             }
         } catch (_: Exception) {}
+    }
+
+    /**
+     * Seed 14 dummy chats untuk QA fisik (debug only, in-memory, zero Firestore write).
+     * Dipanggil di MainActivity.onCreate jika BuildConfig.DEBUG.
+     *
+     * Note: isGroup=false untuk semua dummy (sesuai spec). Jika QA butuh test
+     * tab Grup (ChatFilter.GROUPS), set isGroup=true untuk dummy_3/dummy_8.
+     * Flagged ke Manager 2026-11-15.
+     */
+    fun seedDummyChatsIfEmpty() {
+        if (_localChats.value.isNotEmpty()) return
+        val now = System.currentTimeMillis()
+        val dummyChats = listOf(
+            Chat(id = "dummy_1", name = "Budi Santoso", lastMessage = "Oke siap, besok kita meeting jam 10 ya", timestamp = "14:32", timestampMillis = now - 60_000L, unreadCount = 3, isOnline = true),
+            Chat(id = "dummy_2", name = "Ani Wijaya", lastMessage = "Terima kasih ya", timestamp = "13:45", timestampMillis = now - 3_600_000L, isPinned = true),
+            Chat(id = "dummy_3", name = "Grup Kerja", lastMessage = "Rapat dimulai jam 2", timestamp = "12:20", timestampMillis = now - 7_200_000L, isMuted = true),
+            Chat(id = "dummy_4", name = "Citra Dewi", lastMessage = "besok ya", timestamp = "11:15", timestampMillis = now - 10_800_000L, hasDraft = true, draftText = "besok ya"),
+            Chat(id = "dummy_5", name = "Dimas Pratama", lastMessage = "sudah dikirim paketnya", timestamp = "10:30", timestampMillis = now - 14_400_000L, lastMessageIsOutgoing = true, lastMessageStatus = MessageStatus.SENT),
+            Chat(id = "dummy_6", name = "Eka Putri", lastMessage = "Noted, makasih", timestamp = "09:15", timestampMillis = now - 18_000_000L, lastMessageIsOutgoing = true, lastMessageStatus = MessageStatus.READ),
+            Chat(id = "dummy_7", name = "Fajar Nugroho", lastMessage = "Halo, apa kabar?", timestamp = "Kemarin", timestampMillis = now - 86_400_000L, isOnline = true),
+            Chat(id = "dummy_8", name = "Grup Keluarga", lastMessage = "Makan malam jadi kan?", timestamp = "Kemarin", timestampMillis = now - 90_000_000L, unreadCount = 2),
+            Chat(id = "dummy_9", name = "Gita Sari", lastMessage = "Sampai jumpa minggu depan", timestamp = "Senin", timestampMillis = now - 200_000_000L),
+            Chat(id = "dummy_10", name = "Hendra", lastMessage = "Foto liburan nih", timestamp = "Senin", timestampMillis = now - 250_000_000L),
+            Chat(id = "dummy_11", name = "Indah", lastMessage = "Dengerin voice note ini", timestamp = "Minggu", timestampMillis = now - 300_000_000L),
+            Chat(id = "dummy_12", name = "Joko Widodo", lastMessage = "Segera dihubungi", timestamp = "Minggu", timestampMillis = now - 350_000_000L, unreadCount = 1, isPinned = true, isMuted = true),
+            Chat(id = "dummy_13", name = "Rina Marlina", lastMessage = "Sudah aku transfer", timestamp = "Sabtu", timestampMillis = now - 400_000_000L),
+            Chat(id = "dummy_14", name = "Sari Dewi", lastMessage = "Oke done ya", timestamp = "Sabtu", timestampMillis = now - 450_000_000L)
+        )
+        _localChats.value = dummyChats
+        Log.d("ChatRepository", "Seeded ${dummyChats.size} dummy chats for QA")
+    }
+
+    /**
+     * Clear semua dummy chat (untuk reset).
+     */
+    fun clearDummyChats() {
+        _localChats.value = _localChats.value.filterNot { it.id.startsWith("dummy_") }
+        Log.d("ChatRepository", "Cleared dummy chats")
     }
 
     fun toggleFavorite(chatId: String) {
