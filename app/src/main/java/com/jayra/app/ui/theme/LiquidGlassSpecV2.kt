@@ -250,10 +250,8 @@ data class LiquidGlassSpecV2(
                         GradientStop(WHITE.copy(alpha = 0f), 1f)
                     ),
                     borderGradient = listOf(
-                        GradientStop(WHITE.copy(alpha = 0.55f), 0f),
-                        GradientStop(WHITE.copy(alpha = 0.22f), 0.25f),
-                        GradientStop(WHITE.copy(alpha = 0.10f), 0.75f),
-                        GradientStop(WHITE.copy(alpha = 0.08f), 1f)
+                        GradientStop(WHITE.copy(alpha = 0.5f), 0f),
+                        GradientStop(WHITE.copy(alpha = 0.1f), 1f)
                     ),
                     glareRadiusRatio = 0.45f,
                     shadowElevationDp = 4
