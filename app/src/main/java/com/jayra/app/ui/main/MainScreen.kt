@@ -6,6 +6,11 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.ui.theme.IOSSecondarySystemBackground
+import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -354,18 +359,23 @@ fun JayraBottomNavigationBar(
             .navigationBarsPadding()
             .testTag("jayra_bottom_navigation_bar")
     ) {
+        val navBgDark = isSystemInDarkTheme()
+        val navBgTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+        val navBgSpec = remember(navBgTier, navBgDark) { LiquidGlassSpecV2.forTier(navBgTier, navBgDark) }
+        val navBgSolid = if (navBgDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
         Column(modifier = Modifier.fillMaxWidth()) {
             HorizontalDivider(
                 thickness = 0.5.dp,
                 color = dividerColor
             )
             NavigationBar(
-                containerColor = barBgColor,
+                containerColor = Color.Transparent,
                 tonalElevation = 0.dp,
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
+                    .glassSurfaceV2(navBgSpec.surface, solidColor = navBgSolid, cornerRadius = 0.dp)
             ) {
                 items.forEach { item ->
                     val isSelected = currentRoute == item.route

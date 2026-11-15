@@ -834,7 +834,7 @@ class ChatRepository(
      * Flagged ke Manager 2026-11-15.
      */
     fun seedDummyChatsIfEmpty() {
-        if (_localChats.value.isNotEmpty()) return
+        if (_localChats.value.any { it.id.startsWith("dummy_") }) return
         val now = System.currentTimeMillis()
         val dummyChats = listOf(
             Chat(id = "dummy_1", name = "Budi Santoso", lastMessage = "Oke siap, besok kita meeting jam 10 ya", timestamp = "14:32", timestampMillis = now - 60_000L, unreadCount = 3, isOnline = true),
@@ -852,7 +852,7 @@ class ChatRepository(
             Chat(id = "dummy_13", name = "Rina Marlina", lastMessage = "Sudah aku transfer", timestamp = "Sabtu", timestampMillis = now - 400_000_000L),
             Chat(id = "dummy_14", name = "Sari Dewi", lastMessage = "Oke done ya", timestamp = "Sabtu", timestampMillis = now - 450_000_000L)
         )
-        _localChats.value = dummyChats
+        _localChats.value = _localChats.value + dummyChats
         Log.d("ChatRepository", "Seeded ${dummyChats.size} dummy chats for QA")
     }
 
