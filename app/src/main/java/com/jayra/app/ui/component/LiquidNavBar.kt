@@ -29,7 +29,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.painter.draw
 import androidx.compose.ui.graphics.drawscope.translate // TAMBAHAN 2
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -173,17 +175,28 @@ fun LiquidNavBar(
                 jayraNavItems.forEachIndexed { i, item ->
                     if (i == selectedIndex) return@forEachIndexed
                     val cx = slotPx * i + slotPx / 2f
+                    val painter = painters[i]
+                    val painterSize = painter.intrinsicSize
+                    val cy = size.height / 2f - 8.dp.toPx()
                     
-                    // FIX 7: API translate & draw painter di Canvas
-                    translate(
-                        left = cx - iconSize / 2f,
-                        top = size.height / 2f - iconSize / 2f - 8.dp.toPx()
-                    ) {
-                        painters[i].draw(
-                            drawScope = this,
-                            size = Size(iconSize, iconSize),
-                            colorFilter = ColorFilter.tint(Color.White.copy(0.58f))
-                        )
+                    if (painterSize.width > 0f && painterSize.height > 0f) {
+                        val scaleFactor = iconSize / painterSize.width
+                        scale(
+                            scaleX = scaleFactor,
+                            scaleY = scaleFactor,
+                            pivot = Offset(cx, cy)
+                        ) {
+                            translate(
+                                left = cx - painterSize.width / 2f,
+                                top = cy - painterSize.height / 2f
+                            ) {
+                                painter.draw(
+                                    drawScope = this,
+                                    alpha = 1f,
+                                    colorFilter = ColorFilter.tint(Color.White.copy(0.58f))
+                                )
+                            }
+                        }
                     }
                     
                     val tl = textMeasurer.measure(item.label, textStyleInactive)
