@@ -243,29 +243,32 @@ data class LiquidGlassSpecV2(
                 isDark = dark,
                 backdrop = backdrop,
                 surface = GlassSurfaceSpec(
-                    baseAlpha = 0.82f,
+                    baseAlpha = 0.72f,
                     sheenGradient = listOf(
-                        GradientStop(WHITE.copy(alpha = 0.14f), 0f),
-                        GradientStop(WHITE.copy(alpha = 0.02f), 0.55f),
+                        GradientStop(WHITE.copy(alpha = 0.22f), 0f),
+                        GradientStop(WHITE.copy(alpha = 0.06f), 0.55f),
                         GradientStop(WHITE.copy(alpha = 0f), 1f)
                     ),
                     borderGradient = listOf(
-                        GradientStop(WHITE.copy(alpha = 0.38f), 0f),
+                        GradientStop(WHITE.copy(alpha = 0.55f), 0f),
+                        GradientStop(WHITE.copy(alpha = 0.22f), 0.25f),
+                        GradientStop(WHITE.copy(alpha = 0.10f), 0.75f),
                         GradientStop(WHITE.copy(alpha = 0.08f), 1f)
                     ),
-                    glareRadiusRatio = null,
-                    shadowElevationDp = 0
+                    glareRadiusRatio = 0.45f,
+                    shadowElevationDp = 2
                 ),
                 primaryButton = ButtonSpec(
                     fillColor = BTN_BLUE,
-                    fillAlpha = 0.90f,
+                    fillAlpha = 0.82f,
                     sheenGradient = listOf(
-                        GradientStop(WHITE.copy(alpha = 0.14f), 0f),
-                        GradientStop(WHITE.copy(alpha = 0f), 1f)
+                        GradientStop(WHITE.copy(alpha = 0.20f), 0f),
+                        GradientStop(WHITE.copy(alpha = 0.04f), 1f)
                     ),
                     borderGradient = listOf(
-                        GradientStop(WHITE.copy(alpha = 0.28f), 0f),
-                        GradientStop(WHITE.copy(alpha = 0.08f), 1f)
+                        GradientStop(WHITE.copy(alpha = 0.42f), 0f),
+                        GradientStop(WHITE.copy(alpha = 0.16f), 0.5f),
+                        GradientStop(WHITE.copy(alpha = 0.06f), 1f)
                     ),
                     pressGlowEnabled = false
                 )
