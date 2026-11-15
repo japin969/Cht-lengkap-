@@ -368,7 +368,7 @@ fun ChatListScreen(
         }
 
         // ========== ACTION BAR (Selection Mode) ==========
-        AnimatedVisibility(
+        androidx.compose.animation.AnimatedVisibility(
             visible = isSelectionMode && selectedChats.isNotEmpty(),
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
             enter = slideInVertically(
