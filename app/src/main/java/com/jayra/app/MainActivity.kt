@@ -64,6 +64,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         AppModule.init(applicationContext)
+        if (BuildConfig.DEBUG) {
+            AppModule.chatRepository.seedDummyChatsIfEmpty()
+        }
         extractNotificationExtras(intent)
         observeAuthForTokenSync()
         requestNotificationPermissionAndSetupFCM()
