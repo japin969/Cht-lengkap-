@@ -192,7 +192,7 @@ fun ChatListScreen(
                     text = if (isSelectionMode) "${selectedChats.size} dipilih" else if (totalUnread > 0) "Chat ($totalUnread)" else "Chat",
                     fontSize = if (isSelectionMode) 17.sp else 34.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp,
+                    letterSpacing = (-0.04).sp,
                     color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel
                 )
                 if (isSelectionMode) {
@@ -262,14 +262,14 @@ fun ChatListScreen(
             val searchIsDark = isSystemInDarkTheme()
             val searchTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
             val searchSpec = remember(searchTier, searchIsDark) { LiquidGlassSpecV2.forTier(searchTier, searchIsDark) }
-            val searchBg = if (searchIsDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
+            val searchBg = if (searchIsDark) androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.9f) else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)
             val searchPlaceholderColor = if (searchIsDark) IOSSecondaryLabelDark else IOSSecondaryLabel
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(44.dp)
-                    .glassSurfaceV2(searchSpec.surface, solidColor = searchBg, cornerRadius = 22.dp)
+                    .height(40.dp)
+                    .glassSurfaceV2(searchSpec.surface, solidColor = searchBg, cornerRadius = 20.dp)
                     .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -313,7 +313,7 @@ fun ChatListScreen(
                 ChatFilter.entries.forEach { filter ->
                     val isSelected = selectedFilter == filter
                     val bg by animateColorAsState(
-                        targetValue = if (isSelected) IOSBlue.copy(alpha = 0.15f) else Color.Transparent,
+                        targetValue = if (isSelected) IOSBlue.copy(alpha = 0.1f) else Color.Transparent,
                         label = "chip_bg"
                     )
                     val textColor by animateColorAsState(
@@ -323,8 +323,8 @@ fun ChatListScreen(
                     Box(
                         modifier = Modifier
                             .height(32.dp)
-                            .glassSurfaceV2(chipSpec.surface, solidColor = chipSolid, cornerRadius = 18.dp)
                             .background(bg, RoundedCornerShape(18.dp))
+                            .border(1.dp, androidx.compose.ui.graphics.Color(0xFFC6C6C8), RoundedCornerShape(18.dp))
                             .clickable { viewModel.onFilterChange(filter) }
                             .padding(horizontal = 14.dp),
                         contentAlignment = Alignment.Center
@@ -666,7 +666,7 @@ fun ChatRowContent(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    AppText(chat.name, fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.2).sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    AppText(chat.name, fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.02).sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (chat.isPinned) {
                             Icon(Icons.Rounded.PushPin, null, tint = IOSGray2, modifier = Modifier.size(12.dp))
@@ -724,7 +724,7 @@ fun ChatRowContent(
                 }
             }
         }
-        Box(modifier = Modifier.fillMaxWidth().padding(start = 84.dp).height(0.5.dp).background(IOSGray2.copy(alpha = 0.4f)))
+        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(start = 84.dp), thickness = 0.5.dp, color = com.jayra.app.ui.theme.IOSSeparator.copy(alpha = 0.5f))
     }
 }
 

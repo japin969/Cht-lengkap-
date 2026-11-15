@@ -349,7 +349,7 @@ fun JayraBottomNavigationBar(
     modifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
-    val barBgColor = if (isDark) JayraCardDark else JayraCardLight
+    val barBgColor = if (isDark) androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.9f) else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f)
     val dividerColor = if (isDark) JayraSeparatorDark else JayraSeparatorLight
 
     Surface(
@@ -357,6 +357,7 @@ fun JayraBottomNavigationBar(
         tonalElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
+            .androidx.compose.ui.draw.shadow(elevation = 4.dp, spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.1f))
             .navigationBarsPadding()
             .testTag("jayra_bottom_navigation_bar")
     ) {
