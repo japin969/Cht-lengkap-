@@ -71,6 +71,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.jayra.app.model.SearchFilter
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.ui.theme.IOSBlue
+import com.jayra.app.ui.theme.IOSSecondarySystemBackground
+import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
+import com.jayra.app.ui.theme.IOSSecondaryLabel
+import com.jayra.app.ui.theme.IOSSecondaryLabelDark
 import com.jayra.app.model.SearchResult
 import com.jayra.app.model.SearchResultType
 import com.jayra.app.model.SearchUiState
@@ -225,17 +233,17 @@ fun SearchContent(
                 ) {
                     SearchFilter.entries.forEach { filter ->
                         val isSelected = selectedFilter == filter
-                        val chipBg = if (isSelected) {
-                            JayraBlue
+                        val spec = LiquidGlassSpecV2.forTier(GlassEffectPrefs.resolveTier(), isDark)
+                        val unselectedSolid = if (isDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
+                        val chipModifier = if (isSelected) {
+                            Modifier.background(IOSBlue.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
                         } else {
-                            if (isDark) Color(0xFF2C3847) else Color(0xFF42688C)
+                            Modifier.glassSurfaceV2(spec.surface, solidColor = unselectedSolid, cornerRadius = 16.dp)
                         }
-                        val chipTextColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f)
+                        val chipTextColor = if (isSelected) IOSBlue else (if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel)
 
                         Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(chipBg)
+                            modifier = chipModifier
                                 .clickable { onFilterChange(filter) }
                                 .padding(horizontal = 14.dp, vertical = 6.dp)
                                 .testTag("filter_chip_${filter.name.lowercase()}"),

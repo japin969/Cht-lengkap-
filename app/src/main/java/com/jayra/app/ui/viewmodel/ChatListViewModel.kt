@@ -60,7 +60,7 @@ class ChatListViewModel(
                     ChatListUiState.Success(
                         filtered.sortedWith(
                             compareByDescending<Chat> { it.isPinned }
-                                .thenByDescending { it.timestamp }
+                                .thenByDescending { it.timestampMillis }
                         )
                     )
                 }
@@ -158,6 +158,12 @@ class ChatListViewModel(
     fun archiveChat(chatId: String) {
         viewModelScope.launch {
             try { repository.archiveChat(chatId) } catch (_: Exception) {}
+        }
+    }
+
+    fun toggleFavorite(chatId: String) {
+        viewModelScope.launch {
+            try { repository.toggleFavorite(chatId) } catch (_: Exception) {}
         }
     }
 

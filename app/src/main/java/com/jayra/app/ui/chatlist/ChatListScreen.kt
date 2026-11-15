@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -72,6 +73,7 @@ import com.jayra.app.util.GlassEffectPrefs
 import com.jayra.app.util.GlassTier
 import com.jayra.app.ui.theme.IOSBlue
 import com.jayra.app.ui.theme.IOSGreen
+import com.jayra.app.ui.theme.IOSOrange
 import com.jayra.app.ui.theme.IOSRed
 import com.jayra.app.ui.theme.IOSGray2
 import com.jayra.app.ui.theme.IOSSecondaryLabel
@@ -142,6 +144,8 @@ fun ChatListScreen(
         )
     )
 
+    val totalUnread = (uiState as? ChatListUiState.Success)?.chats?.sumOf { it.unreadCount } ?: 0
+
     Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // ========== TOP BAR ==========
@@ -173,7 +177,7 @@ fun ChatListScreen(
                     )
                 }
                 AppText(
-                    text = if (isSelectionMode) "${selectedChats.size} dipilih" else "Chat",
+                    text = if (isSelectionMode) "${selectedChats.size} dipilih" else if (totalUnread > 0) "Chat ($totalUnread)" else "Chat",
                     fontSize = if (isSelectionMode) 17.sp else 34.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
@@ -320,7 +324,8 @@ fun ChatListScreen(
                                         }
                                     },
                                     onPin = { viewModel.togglePin(chat.id) },
-                                    onMute = { viewModel.toggleMute(chat.id) }
+                                    onMute = { viewModel.toggleMute(chat.id) },
+                                    onToggleFavorite = { viewModel.toggleFavorite(chat.id) }
                                 )
                             }
                         }
@@ -443,18 +448,22 @@ fun SwipeableChatRow(
     onDelete: () -> Unit,
     onArchive: () -> Unit,
     onPin: () -> Unit,
-    onMute: () -> Unit
+    onMute: () -> Unit,
+    onToggleFavorite: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val view = LocalView.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.StartToEnd -> {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     onArchive()
                     false
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
+                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                     showDeleteDialog = true
                     false
                 }
@@ -505,6 +514,11 @@ fun SwipeableChatRow(
             Column(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
                 AppText(chat.name, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
                 Divider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
+                ActionSheetItem(
+                    Icons.Rounded.Star,
+                    if (chat.isFavorite) "Hapus dari Favorit" else "Favorit",
+                    iconTint = IOSOrange
+                ) { onToggleFavorite(); showMenu = false }
                 ActionSheetItem(Icons.Rounded.MarkChatRead, "Tandai Dibaca") { showMenu = false }
                 ActionSheetItem(Icons.Rounded.PushPin, if (chat.isPinned) "Lepas Pin" else "Sematkan") { onPin(); showMenu = false }
                 ActionSheetItem(Icons.Rounded.NotificationsOff, if (chat.isMuted) "Bunyikan" else "Bisukan") { onMute(); showMenu = false }
@@ -572,10 +586,14 @@ fun ChatRowContent(
                     modifier = Modifier.size(56.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
-                if (chat.isOnline) {
+                AnimatedVisibility(
+                    visible = chat.isOnline,
+                    modifier = Modifier.align(Alignment.BottomEnd).offset(x = 2.dp, y = 2.dp),
+                    enter = fadeIn(tween(200)),
+                    exit = fadeOut(tween(150))
+                ) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
                             .size(14.dp)
                             .background(Color.White, CircleShape)
                             .padding(2.dp)
@@ -603,6 +621,9 @@ fun ChatRowContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (chat.hasDraft) {
                         AppText("Draf: ", fontSize = 15.sp, color = IOSRed, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (chat.lastMessageIsOutgoing && !chat.hasDraft) {
+                        AppText("Anda: ", fontSize = 15.sp, color = IOSSecondaryLabel)
                     }
                     AppText(
                         text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
@@ -646,12 +667,18 @@ fun ChatRowContent(
 }
 
 @Composable
-fun ActionSheetItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, isDestructive: Boolean = false, onClick: () -> Unit) {
+fun ActionSheetItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isDestructive: Boolean = false,
+    iconTint: Color = if (isDestructive) IOSRed else IOSBlue,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = if (isDestructive) Color.Red else Color(0xFF007AFF), modifier = Modifier.size(22.dp))
+        Icon(icon, null, tint = iconTint, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(16.dp))
         AppText(label, fontSize = 17.sp, color = if (isDestructive) Color.Red else Color.Black)
     }
