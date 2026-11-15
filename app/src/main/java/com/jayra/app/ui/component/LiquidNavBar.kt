@@ -9,17 +9,25 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background // TAMBAHAN 1
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,20 +36,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.painter.draw
-import androidx.compose.ui.graphics.drawscope.translate // TAMBAHAN 2
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity // TAMBAHAN 3
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText // TAMBAHAN 4
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jayra.app.util.JayraHaptics
@@ -67,21 +66,14 @@ fun LiquidNavBar(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current // FIX 5: untuk toPx di BoxWithConstraints
+    val density = LocalDensity.current
     val isLowRam = remember { Performance.isLowRam(context) }
     val isLegacy = remember { Performance.isLegacy() }
     val isFlagship = remember { Performance.isFlagship(context) }
     val showShine = !isLowRam && !isLegacy
 
-    // FIX 6: API rememberVectorPainter versi ini tidak terima tint di parameter ke-2
-    val painters = jayraNavItems.map { rememberVectorPainter(it.icon) }
-    val textMeasurer = rememberTextMeasurer()
-    val textStyleInactive = remember {
-        TextStyle(color = Color.White.copy(0.58f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    }
-
     val pillAnim = remember { Animatable(0f) }
-    val scaleAnim = remember { Animatable(1.22f) }
+    val scaleAnim = remember { Animatable(1.18f) }
     val stretchAnim = remember { Animatable(1f) }
     var lastIndex by remember { mutableStateOf(selectedIndex) }
 
@@ -93,7 +85,7 @@ fun LiquidNavBar(
         )
         JayraHaptics.tick(context, isFlagship)
         scaleAnim.snapTo(1f)
-        scaleAnim.animateTo(1.22f, spring(dampingRatio = 0.55f, stiffness = 420f))
+        scaleAnim.animateTo(1.18f, spring(dampingRatio = 0.55f, stiffness = 420f))
         if (distance > 1 && isFlagship) {
             stretchAnim.snapTo(1.08f)
             stretchAnim.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 380f))
@@ -116,8 +108,6 @@ fun LiquidNavBar(
         label = "shineX"
     )?.value ?: 0f
 
-    var predictiveIndex by remember { mutableStateOf<Int?>(null) }
-
     BoxWithConstraints(
         modifier
             .fillMaxWidth()
@@ -131,9 +121,11 @@ fun LiquidNavBar(
     ) {
         val slotW = maxWidth / 5f
         val pillW = slotW * 0.9f
-        val realPillX = with(density) { pillAnim.value * slotW.toPx() } // FIX 5
+        val slotWPx = with(density) { slotW.toPx() }
+        val realPillX = pillAnim.value * slotWPx
 
         Box(Modifier.fillMaxSize()) {
+            // ============ CANVAS BACKGROUND (nol icon, nol text) ============
             Canvas(Modifier.fillMaxSize()) {
                 drawRoundRect(
                     brush = JayraSmooth.bgBrush,
@@ -169,48 +161,47 @@ fun LiquidNavBar(
                         size = Size(160f, size.height)
                     )
                 }
-                val slotPx = size.width / 5f
-                val iconSize = 28.dp.toPx()
-                val gapPx = 3.dp.toPx()
+            }
+
+            // ============ INACTIVE ITEMS (composable, nol Canvas draw) ============
+            Row(
+                Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 jayraNavItems.forEachIndexed { i, item ->
-                    if (i == selectedIndex) return@forEachIndexed
-                    val cx = slotPx * i + slotPx / 2f
-                    val painter = painters[i]
-                    val painterSize = painter.intrinsicSize
-                    val cy = size.height / 2f - 8.dp.toPx()
-                    
-                    if (painterSize.width > 0f && painterSize.height > 0f) {
-                        val scaleFactor = iconSize / painterSize.width
-                        scale(
-                            scaleX = scaleFactor,
-                            scaleY = scaleFactor,
-                            pivot = Offset(cx, cy)
-                        ) {
-                            translate(
-                                left = cx - painterSize.width / 2f,
-                                top = cy - painterSize.height / 2f
-                            ) {
-                                painter.draw(
-                                    drawScope = this,
-                                    alpha = 1f,
-                                    colorFilter = ColorFilter.tint(Color.White.copy(0.58f))
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { if (selectedIndex != i) onSelect(i) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (i != selectedIndex) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = item.label,
+                                    tint = Color.White.copy(0.58f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(Modifier.height(3.dp))
+                                Text(
+                                    text = item.label,
+                                    color = Color.White.copy(0.58f),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
                                 )
                             }
                         }
                     }
-                    
-                    val tl = textMeasurer.measure(item.label, textStyleInactive)
-                    drawText(
-                        textLayoutResult = tl,
-                        topLeft = Offset(
-                            cx - tl.size.width / 2f,
-                            size.height / 2f + iconSize / 2f + gapPx - 8.dp.toPx()
-                        )
-                    )
                 }
             }
 
-            // PILL - Liquid Glass
+            // ============ PILL (Liquid Glass) ============
             Box(
                 Modifier
                     .align(Alignment.TopStart)
@@ -226,7 +217,7 @@ fun LiquidNavBar(
                     .background(JayraSmooth.pillBrush)
             )
 
-            // IKON + LABEL AKTIF
+            // ============ ACTIVE ICON (translationX + scale + rotation) ============
             Box(
                 Modifier
                     .fillMaxSize()
@@ -242,11 +233,19 @@ fun LiquidNavBar(
                 ) {
                     Icon(
                         imageVector = jayraNavItems[selectedIndex].icon,
-                        contentDescription = null,
+                        contentDescription = jayraNavItems[selectedIndex].label,
                         tint = Color.White,
                         modifier = Modifier
-                            .size(28.dp)
-                            .graphicsLayer { scaleX = scaleAnim.value; scaleY = scaleAnim.value }
+                            .size(24.dp)
+                            .graphicsLayer {
+                                scaleX = scaleAnim.value
+                                scaleY = scaleAnim.value
+                                rotationZ = when (jayraNavItems[selectedIndex].label) {
+                                    "Settings" -> 90f
+                                    "Music" -> -6f
+                                    else -> 0f
+                                }
+                            }
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
@@ -255,33 +254,6 @@ fun LiquidNavBar(
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1
-                    )
-                }
-            }
-
-            // BUTTON AREA - Predictive + No Ripple + No Delay
-            Row(Modifier.fillMaxSize()) {
-                repeat(5) { i ->
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .pointerInput(i) {
-                                detectTapGestures(
-                                    onPress = {
-                                        predictiveIndex = i
-                                        tryAwaitRelease()
-                                        predictiveIndex = null
-                                    },
-                                    onTap = {
-                                        if (selectedIndex != i) onSelect(i)
-                                    }
-                                )
-                            }
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { if (selectedIndex != i) onSelect(i) }
                     )
                 }
             }
