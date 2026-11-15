@@ -25,16 +25,7 @@ import java.util.UUID
 
 class ChatRepository(
     private val firestore: FirebaseFirestore? = com.jayra.app.di.AppModule.firestore,
-    private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() 
-    suspend fun toggleFavorite(chatId: String) {
-        _localChats.update { list ->
-            list.map { c ->
-                if (c.id == chatId) c.copy(isFavorite = !c.isFavorite) else c
-            }
-        }
-    }
-
-} catch (_: Exception) { null }
+    private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
 ) {
     val currentUserId: String
         get() = auth?.currentUser?.uid ?: "user_telegram_me"
@@ -831,6 +822,14 @@ class ChatRepository(
                     .delete()
             }
         } catch (_: Exception) {}
+    }
+
+    fun toggleFavorite(chatId: String) {
+        _localChats.update { list ->
+            list.map { c ->
+                if (c.id == chatId) c.copy(isFavorite = !c.isFavorite) else c
+            }
+        }
     }
 
     fun archiveChat(chatId: String) {
