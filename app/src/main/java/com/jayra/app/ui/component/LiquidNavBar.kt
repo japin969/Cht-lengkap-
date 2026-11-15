@@ -3,23 +3,20 @@ package com.jayra.app.ui.component
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.background // TAMBAHAN 1
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Call
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.MusicNote
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -32,13 +29,15 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.translate // TAMBAHAN 2
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity // TAMBAHAN 3
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText // TAMBAHAN 4
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -66,19 +65,19 @@ fun LiquidNavBar(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current // FIX 5: untuk toPx di BoxWithConstraints
     val isLowRam = remember { Performance.isLowRam(context) }
     val isLegacy = remember { Performance.isLegacy() }
     val isFlagship = remember { Performance.isFlagship(context) }
     val showShine = !isLowRam && !isLegacy
 
-    // RAM DIET: painter + style di-cache sekali
+    // FIX 6: API rememberVectorPainter versi ini tidak terima tint di parameter ke-2
     val painters = jayraNavItems.map { rememberVectorPainter(it.icon) }
     val textMeasurer = rememberTextMeasurer()
     val textStyleInactive = remember {
         TextStyle(color = Color.White.copy(0.58f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 
-    // LEVEL 3 + 12: Spring iOS + Liquid Glass stretch
     val pillAnim = remember { Animatable(0f) }
     val scaleAnim = remember { Animatable(1.22f) }
     val stretchAnim = remember { Animatable(1f) }
@@ -100,7 +99,6 @@ fun LiquidNavBar(
         lastIndex = selectedIndex
     }
 
-    // LEVEL 4 + 10: Fold + ProMotion feel
     val foldAnim = remember { Animatable(0f) }
     LaunchedEffect(isFolded) {
         foldAnim.animateTo(
@@ -109,7 +107,6 @@ fun LiquidNavBar(
         )
     }
 
-    // LEVEL 5 + 7: Kilau di render thread (Canvas), jank killer
     val shineAnim = if (showShine) rememberInfiniteTransition(label = "shine") else null
     val shineX = shineAnim?.animateFloat(
         -0.8f, 1.3f,
@@ -117,7 +114,6 @@ fun LiquidNavBar(
         label = "shineX"
     )?.value ?: 0f
 
-    // LEVEL 6: Predictive touch - hover / press mulai gerak duluan
     var predictiveIndex by remember { mutableStateOf<Int?>(null) }
 
     BoxWithConstraints(
@@ -131,10 +127,9 @@ fun LiquidNavBar(
                 scaleY = 1f - f * 0.03f
             }
     ) {
-        val navWidth = maxWidth
-        val slotW = navWidth / 5f
+        val slotW = maxWidth / 5f
         val pillW = slotW * 0.9f
-        val realPillX = pillAnim.value * slotW.toPx()
+        val realPillX = with(density) { pillAnim.value * slotW.toPx() } // FIX 5
 
         Box(Modifier.fillMaxSize()) {
             Canvas(Modifier.fillMaxSize()) {
@@ -172,26 +167,28 @@ fun LiquidNavBar(
                         size = Size(160f, size.height)
                     )
                 }
-                
                 val slotPx = size.width / 5f
                 val iconSize = 28.dp.toPx()
                 val gapPx = 3.dp.toPx()
-                
                 jayraNavItems.forEachIndexed { i, item ->
                     if (i == selectedIndex) return@forEachIndexed
                     val cx = slotPx * i + slotPx / 2f
                     
-                    // FIX: API draw VectorPainter di Canvas
-                    draw(
-                        painter = painters[i],
-                        topLeft = Offset(cx - iconSize / 2f, size.height / 2f - iconSize / 2f - 8.dp.toPx()),
-                        size = Size(iconSize, iconSize),
-                        colorFilter = ColorFilter.tint(Color.White.copy(0.58f))
-                    )
+                    // FIX 7: API translate & draw painter di Canvas
+                    translate(
+                        left = cx - iconSize / 2f,
+                        top = size.height / 2f - iconSize / 2f - 8.dp.toPx()
+                    ) {
+                        painters[i].draw(
+                            drawScope = this,
+                            size = Size(iconSize, iconSize),
+                            colorFilter = ColorFilter.tint(Color.White.copy(0.58f))
+                        )
+                    }
                     
                     val tl = textMeasurer.measure(item.label, textStyleInactive)
                     drawText(
-                        tl,
+                        textLayoutResult = tl,
                         topLeft = Offset(
                             cx - tl.size.width / 2f,
                             size.height / 2f + iconSize / 2f + gapPx - 8.dp.toPx()

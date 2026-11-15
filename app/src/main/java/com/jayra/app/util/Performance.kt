@@ -12,4 +12,6 @@ object Performance {
         return info.totalMem < 4L * 1024 * 1024 * 1024
     }
     fun isLegacy(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.R
+    fun isFlagship(context: Context): Boolean =
+        !isLowRam(context) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 }
