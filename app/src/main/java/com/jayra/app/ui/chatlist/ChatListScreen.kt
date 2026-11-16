@@ -410,7 +410,8 @@ fun ChatListScreen(
                                     },
                                     onPin = { viewModel.togglePin(chat.id) },
                                     onMute = { viewModel.toggleMute(chat.id) },
-                                    onToggleFavorite = { viewModel.toggleFavorite(chat.id) }
+                                    onToggleFavorite = { viewModel.toggleFavorite(chat.id) },
+                                    onMarkRead = { viewModel.onMarkAsRead(chat.id) }
                                 )
                             }
                         }
@@ -508,7 +509,8 @@ fun SwipeableChatRow(
     onArchive: () -> Unit,
     onPin: () -> Unit,
     onMute: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onMarkRead: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val view = LocalView.current
@@ -580,7 +582,7 @@ fun SwipeableChatRow(
                     if (chat.isFavorite) "Hapus dari Favorit" else "Favorit",
                     iconTint = IOSOrange
                 ) { onToggleFavorite(); showMenu = false }
-                ActionSheetItem(Icons.Rounded.MarkChatRead, "Tandai Dibaca") { showMenu = false }
+                ActionSheetItem(Icons.Rounded.MarkChatRead, "Tandai Dibaca") { onMarkRead(); showMenu = false }
                 ActionSheetItem(Icons.Rounded.PushPin, if (chat.isPinned) "Lepas Pin" else "Sematkan") { onPin(); showMenu = false }
                 ActionSheetItem(Icons.Rounded.NotificationsOff, if (chat.isMuted) "Bunyikan" else "Bisukan") { onMute(); showMenu = false }
                 ActionSheetItem(Icons.Rounded.Archive, "Arsipkan") { onArchive(); showMenu = false }

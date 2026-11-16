@@ -165,25 +165,38 @@ class ChatRepository(
 
 
     fun getChats(): Flow<List<Chat>> = callbackFlow {
+        // Emit local state always so pin/mute/favorite/read/archive/delete reflect immediately.
+        val job = launch { _localChats.collect { trySend(it) } }
         if (firestore != null) {
             val listener = firestore.collection("chats")
                 .whereArrayContains("participants", currentUserId)
                 .addSnapshotListener { snapshot, error ->
-                    if (error != null || snapshot == null || snapshot.isEmpty) {
-                        trySend(_localChats.value)
-                        return@addSnapshotListener
-                    }
+                    if (error != null || snapshot == null) return@addSnapshotListener
                     val remoteChats = snapshot.documents.mapNotNull { doc ->
                         doc.toObject(Chat::class.java)?.copy(id = doc.id)
                     }
                     val filtered = remoteChats.filter { it.id !in _deletedIds }
-                    if (filtered.isNotEmpty()) trySend(filtered) else trySend(_localChats.value)
+                    if (filtered.isEmpty()) return@addSnapshotListener
+                    _localChats.update { local ->
+                        val localById = local.associateBy { it.id }
+                        val remoteIds = filtered.map { it.id }.toSet()
+                        val merged = filtered.map { r ->
+                            val l = localById[r.id] ?: return@map r
+                            r.copy(
+                                isPinned = l.isPinned,
+                                isMuted = l.isMuted,
+                                isFavorite = l.isFavorite,
+                                isArchived = l.isArchived,
+                                unreadCount = l.unreadCount,
+                                isRead = l.isRead
+                            )
+                        }
+                        val localOnly = local.filter { it.id !in remoteIds && !it.id.startsWith("dummy_") }
+                        merged + localOnly
+                    }
                 }
-            awaitClose { listener.remove() }
+            awaitClose { listener.remove(); job.cancel() }
         } else {
-            val job = launch {
-                _localChats.collect { list -> trySend(list) }
-            }
             awaitClose { job.cancel() }
         }
     }
@@ -870,6 +883,8 @@ class ChatRepository(
                 if (c.id == chatId) c.copy(isFavorite = !c.isFavorite) else c
             }
         }
+        val v = _localChats.value.firstOrNull { it.id == chatId }?.isFavorite ?: false
+        try { firestore?.collection("chats")?.document(chatId)?.update("isFavorite", v) } catch (_: Exception) {}
     }
 
     fun archiveChat(chatId: String) {
@@ -902,18 +917,23 @@ class ChatRepository(
         _localChats.update { list ->
             list.map { if (it.id == chatId) it.copy(isPinned = !it.isPinned) else it }
         }
+        val v = _localChats.value.firstOrNull { it.id == chatId }?.isPinned ?: false
+        try { firestore?.collection("chats")?.document(chatId)?.update("isPinned", v) } catch (_: Exception) {}
     }
 
     fun toggleMute(chatId: String) {
         _localChats.update { list ->
             list.map { if (it.id == chatId) it.copy(isMuted = !it.isMuted) else it }
         }
+        val v = _localChats.value.firstOrNull { it.id == chatId }?.isMuted ?: false
+        try { firestore?.collection("chats")?.document(chatId)?.update("isMuted", v) } catch (_: Exception) {}
     }
 
     fun markAsRead(chatId: String) {
         _localChats.update { list ->
             list.map { if (it.id == chatId) it.copy(unreadCount = 0, isRead = true) else it }
         }
+        try { firestore?.collection("chats")?.document(chatId)?.update(mapOf("unreadCount" to 0, "isRead" to true)) } catch (_: Exception) {}
     }
 
     fun createGroupChat(
