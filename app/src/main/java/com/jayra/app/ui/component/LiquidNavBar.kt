@@ -150,6 +150,7 @@ fun LiquidNavBar(
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
+                        fontFamily = com.jayra.app.ui.theme.SFProFontFamily,
                         lineHeight = 11.sp
                     )
                 }

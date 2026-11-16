@@ -51,16 +51,16 @@ fun InfinityButton(modifier: Modifier = Modifier) {
         label = "flow"
     )
     val offset = if (isVisible) rawOffset else 0f
-    val pulse by inf.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.08f,
+    val spin by inf.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
         ),
-        label = "pulse"
+        label = "spin"
     )
-    val scale = if (isVisible) pulse else 1f
+    val rotation = if (isVisible) spin else 0f
     Box(
         modifier.size(64.dp).clickable(
             interactionSource = remember { MutableInteractionSource() },
@@ -68,7 +68,7 @@ fun InfinityButton(modifier: Modifier = Modifier) {
         ) {},
         contentAlignment = Alignment.Center
     ) {
-        Canvas(Modifier.size(64.dp).graphicsLayer { scaleX = scale; scaleY = scale }) {
+        Canvas(Modifier.size(64.dp).graphicsLayer { rotationZ = rotation }) {
             val p = Path().apply {
                 moveTo(size.width * .208f, size.height * .5f)
                 cubicTo(size.width * .208f, size.height * .312f, size.width * .395f, size.height * .291f, size.width * .5f, size.height * .5f)
@@ -77,8 +77,8 @@ fun InfinityButton(modifier: Modifier = Modifier) {
                 cubicTo(size.width * .395f, size.height * .708f, size.width * .208f, size.height * .687f, size.width * .208f, size.height * .5f)
                 close()
             }
-            drawPath(p, Color.Black.copy(alpha = 0.25f), style = Stroke(6f, cap = StrokeCap.Round))
-            drawPath(p, Color.Black, style = Stroke(6.5f, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 22f), offset)))
+            drawPath(p, Color.Black.copy(alpha = 0.25f), style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round))
+            drawPath(p, Color.Black, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 22f), offset)))
         }
     }
 }
