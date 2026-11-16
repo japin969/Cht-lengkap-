@@ -573,20 +573,26 @@ fun SwipeableChatRow(
         )
     }
     if (showMenu) {
-        ModalBottomSheet(onDismissRequest = { showMenu = false }, containerColor = Color.White, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
-            Column(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
-                AppText(chat.name, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
-                Divider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
+        ModalBottomSheet(onDismissRequest = { showMenu = false }, containerColor = if (isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark else com.jayra.app.ui.theme.IOSSystemGroupedBackground, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                AppText(chat.name, fontSize = 13.sp, color = if (isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSSecondaryLabelDark else IOSSecondaryLabel, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark else com.jayra.app.ui.theme.IOSSecondarySystemBackground)) {
                 ActionSheetItem(
                     Icons.Rounded.Star,
                     if (chat.isFavorite) "Hapus dari Favorit" else "Favorit",
                     iconTint = IOSOrange
                 ) { onToggleFavorite(); showMenu = false }
-                ActionSheetItem(Icons.Rounded.MarkChatRead, "Tandai Dibaca") { onMarkRead(); showMenu = false }
-                ActionSheetItem(Icons.Rounded.PushPin, if (chat.isPinned) "Lepas Pin" else "Sematkan") { onPin(); showMenu = false }
-                ActionSheetItem(Icons.Rounded.NotificationsOff, if (chat.isMuted) "Bunyikan" else "Bisukan") { onMute(); showMenu = false }
-                ActionSheetItem(Icons.Rounded.Archive, "Arsipkan") { onArchive(); showMenu = false }
-                ActionSheetItem(Icons.Rounded.Delete, "Hapus", isDestructive = true) { onDelete(); showMenu = false }
+                ActionSheetItem(Icons.Rounded.MarkChatRead, "Tandai Dibaca", showDivider = true) { onMarkRead(); showMenu = false }
+                ActionSheetItem(Icons.Rounded.PushPin, if (chat.isPinned) "Lepas Pin" else "Sematkan", showDivider = true) { onPin(); showMenu = false }
+                ActionSheetItem(Icons.Rounded.NotificationsOff, if (chat.isMuted) "Bunyikan" else "Bisukan", showDivider = true) { onMute(); showMenu = false }
+                ActionSheetItem(Icons.Rounded.Archive, "Arsipkan", showDivider = true) { onArchive(); showMenu = false }
+                ActionSheetItem(Icons.Rounded.Delete, "Hapus", isDestructive = true, showDivider = true) { onDelete(); showMenu = false }
+                }
+                Spacer(Modifier.height(8.dp))
+                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark else com.jayra.app.ui.theme.IOSSecondarySystemBackground).clickable { showMenu = false }.padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+                    AppText("Batal", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = IOSBlue)
+                }
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
@@ -745,15 +751,22 @@ fun ActionSheetItem(
     label: String,
     isDestructive: Boolean = false,
     iconTint: Color = if (isDestructive) IOSRed else IOSBlue,
+    showDivider: Boolean = false,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, null, tint = iconTint, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(16.dp))
-        AppText(label, fontSize = 17.sp, color = if (isDestructive) Color.Red else Color.Black)
+    val dark = isSystemInDarkTheme()
+    Column {
+        if (showDivider) {
+            Box(Modifier.fillMaxWidth().padding(start = 62.dp).height(0.5.dp).background(com.jayra.app.ui.theme.IOSSeparator.copy(alpha = 0.36f)))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, tint = iconTint, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(16.dp))
+            AppText(label, fontSize = 17.sp, color = if (isDestructive) IOSRed else if (dark) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel)
+        }
     }
 }
 
