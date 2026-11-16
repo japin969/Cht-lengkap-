@@ -1,4 +1,6 @@
 package com.jayra.app.ui.chatlist
+import androidx.compose.ui.draw.drawBehind
+import com.jayra.app.ui.theme.IOSSeparator
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -61,8 +63,22 @@ fun ArchivedChatsScreen(
     val screenBg = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
     val secondaryColor = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
     val labelColor = if (isDark) IOSLabelDark else IOSLabel
+    val bgGradient = Brush.verticalGradient(*spec.backdrop.gradientStops.map { it.position to it.color }.toTypedArray())
+    val bgOrbs = remember(spec) { spec.backdrop.radialOrbs }
 
-    Column(modifier = Modifier.fillMaxSize().background(screenBg)) {
+    Column(modifier = Modifier.fillMaxSize().background(bgGradient).drawBehind {
+        bgOrbs.forEach { orb ->
+            val c = androidx.compose.ui.geometry.Offset(size.width * orb.centerXRatio, size.height * orb.centerYRatio)
+            val r = size.minDimension * orb.radiusRatio
+            drawCircle(
+                brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                    colors = listOf(orb.color.copy(alpha = 0.25f), androidx.compose.ui.graphics.Color.Transparent),
+                    center = c, radius = r
+                ),
+                radius = r, center = c
+            )
+        }
+    }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -109,15 +125,15 @@ fun ArchivedChatsScreen(
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = "Tidak ada chat diarsipkan",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = labelColor,
                     fontFamily = SFProFontFamily
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "Chat yang Anda arsipkan akan muncul di sini",
-                    fontSize = 13.sp,
+                    fontSize = 15.sp,
                     color = secondaryColor,
                     fontFamily = SFProFontFamily
                 )
@@ -129,21 +145,21 @@ fun ArchivedChatsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onChatClick(chat.id) }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
                             model = chat.avatarUrl,
                             contentDescription = chat.name,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(48.dp).clip(CircleShape)
+                            modifier = Modifier.size(56.dp).clip(CircleShape)
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 text = chat.name,
                                 fontSize = 17.sp,
-                                fontWeight = FontWeight.Medium,
+                                fontWeight = FontWeight.SemiBold,
                                 color = labelColor,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -177,9 +193,9 @@ fun ArchivedChatsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 76.dp)
+                            .padding(start = 78.dp)
                             .height(0.5.dp)
-                            .background(secondaryColor.copy(alpha = 0.4f))
+                            .background(IOSSeparator.copy(alpha = 0.36f))
                     )
                 }
             }
