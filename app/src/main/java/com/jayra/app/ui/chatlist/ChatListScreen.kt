@@ -90,6 +90,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.launch
@@ -141,12 +142,15 @@ fun ChatListScreen(
     }
 
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) {
-        // Wait for first frame so Android system auto-focus completes,
-        // then force-clear. Combined with manifest windowSoftInputMode=
-        // stateHidden|adjustResize this prevents auto keyboard on launch.
-        withFrameNanos { }
+        // Android IME auto-show fires ~100ms after compose (not 16ms like
+        // withFrameNanos). Delay 200ms to win the race, then force-clear.
+        // Combined with manifest stateAlwaysHidden + MainActivity
+        // setSoftInputMode, keyboard stays hidden on launch.
+        delay(200)
         focusManager.clearFocus(force = true)
+        keyboardController?.hide()
     }
 
     val bgDark = isSystemInDarkTheme()

@@ -63,6 +63,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+
         AppModule.init(applicationContext)
         if (BuildConfig.DEBUG) {
             AppModule.chatRepository.seedDummyChatsIfEmpty()
