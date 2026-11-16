@@ -13,6 +13,7 @@ import com.jayra.app.ui.theme.IOSSecondarySystemBackground
 import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -310,7 +311,7 @@ fun MainScreen(
         containerColor = screenBg,
         bottomBar = {
             if (showBottomBar) {
-                com.jayra.app.ui.component.LiquidNavBar(
+                com.jayra.app.ui.component.LiquidNavBarRow(
                     selectedIndex = when (currentRoute) {
                         "chat_list" -> 0
                         "calls" -> 1
@@ -335,8 +336,7 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    },
-                    isFolded = false // Placeholder, nanti bisa dihubungkan ke scroll state
+                    }
                 )
             }
         }
@@ -1250,5 +1250,28 @@ private fun MainScreenDarkPreview() {
                 unreadCount = 12
             )
         }
+    }
+}
+
+@Composable
+fun LiquidNavBarRow(
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 12.dp, end = 12.dp, bottom = 18.dp)
+            .navigationBarsPadding(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        com.jayra.app.ui.component.LiquidNavBar(
+            modifier = Modifier.weight(1f),
+            selectedIndex = selectedIndex,
+            onSelect = onSelect,
+            isFolded = false
+        )
+        com.jayra.app.ui.component.InfinityButton()
     }
 }
