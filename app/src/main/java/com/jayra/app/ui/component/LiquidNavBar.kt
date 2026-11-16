@@ -111,7 +111,8 @@ fun LiquidNavBar(
     BoxWithConstraints(
         modifier
             .fillMaxWidth()
-            .height(84.dp)
+            .navigationBarsPadding()
+            .height(72.dp)
             .padding(horizontal = 14.dp)
             .graphicsLayer {
                 val f = foldAnim.value
@@ -205,14 +206,14 @@ fun LiquidNavBar(
             Box(
                 Modifier
                     .align(Alignment.TopStart)
-                    .offset(y = 18.dp)
+                    .offset(y = 16.dp)
                     .graphicsLayer {
                         translationX = realPillX
                         scaleX = stretchAnim.value
                         scaleY = 2f - stretchAnim.value
                     }
                     .width(pillW)
-                    .height(48.dp)
+                    .height(42.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(JayraSmooth.pillBrush)
             )

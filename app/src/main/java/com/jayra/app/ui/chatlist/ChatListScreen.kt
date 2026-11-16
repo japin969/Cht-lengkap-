@@ -345,7 +345,7 @@ fun ChatListScreen(
                     is ChatListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF007AFF)) }
                     is ChatListUiState.Empty -> EmptyState(onStartChat = onContactsClick)
                     is ChatListUiState.Success -> {
-                        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 140.dp)) {
+                        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 180.dp)) {
                             items(state.chats, key = { it.id }, contentType = { "chat_item" }) { chat ->
                                 SwipeableChatRow(
                                     chat = chat,
