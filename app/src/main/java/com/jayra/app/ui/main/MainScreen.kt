@@ -1275,6 +1275,5 @@ fun LiquidNavBarRow(
             onSelect = onSelect,
             isFolded = false
         )
-        com.jayra.app.ui.component.InfinityButton()
     }
 }
