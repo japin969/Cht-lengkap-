@@ -309,39 +309,10 @@ fun MainScreen(
     Scaffold(
         contentWindowInsets = if (showBottomBar) WindowInsets.safeDrawing else WindowInsets(0, 0, 0, 0),
         containerColor = screenBg,
-        bottomBar = {
-            if (showBottomBar) {
-                LiquidNavBarRow(
-                    selectedIndex = when (currentRoute) {
-                        "chat_list" -> 0
-                        "calls" -> 1
-                        "music_home" -> 2
-                        "vidhub" -> 3
-                        "settings" -> 4
-                        else -> 0
-                    },
-                    onSelect = { index ->
-                        val route = when (index) {
-                            0 -> "chat_list"
-                            1 -> "calls"
-                            2 -> "music_home"
-                            3 -> "vidhub"
-                            4 -> "settings"
-                            else -> "chat_list"
-                        }
-                        navController.navigate(route) {
-                            popUpTo(MainViewModel.ROUTE_CHAT_LIST) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
-        }
+        bottomBar = { }
     ) { innerPadding ->
-        MainNavigationGraph(
+        Box(Modifier.fillMaxSize()) {
+            MainNavigationGraph(
             navController = navController,
             currentUser = currentUser,
             sharedMusicViewModel = sharedMusicViewModel,
@@ -353,7 +324,39 @@ fun MainScreen(
             } else {
                 Modifier.fillMaxSize()
             }
-        )
+            )
+            if (showBottomBar) {
+                Box(Modifier.align(Alignment.BottomCenter)) {
+                    LiquidNavBarRow(
+                        selectedIndex = when (currentRoute) {
+                            "chat_list" -> 0
+                            "calls" -> 1
+                            "music_home" -> 2
+                            "vidhub" -> 3
+                            "settings" -> 4
+                            else -> 0
+                        },
+                        onSelect = { index ->
+                            val route = when (index) {
+                                0 -> "chat_list"
+                                1 -> "calls"
+                                2 -> "music_home"
+                                3 -> "vidhub"
+                                4 -> "settings"
+                                else -> "chat_list"
+                            }
+                            navController.navigate(route) {
+                                popUpTo(MainViewModel.ROUTE_CHAT_LIST) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 

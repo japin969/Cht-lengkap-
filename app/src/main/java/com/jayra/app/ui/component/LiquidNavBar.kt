@@ -59,7 +59,14 @@ fun LiquidNavBar(
 ) {
     val ctx = LocalContext.current
     val videoView = remember {
-        VideoView(ctx).apply {
+        object : VideoView(ctx) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                setMeasuredDimension(
+                    MeasureSpec.getSize(widthMeasureSpec),
+                    MeasureSpec.getSize(heightMeasureSpec)
+                )
+            }
+        }.apply {
             setVideoURI(Uri.parse("android.resource://${ctx.packageName}/${R.raw.nav_bg}"))
             setOnPreparedListener { mp ->
                 mp.isLooping = true
