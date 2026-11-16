@@ -1,4 +1,5 @@
 package com.jayra.app.ui.chatlist
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -174,9 +175,23 @@ fun ChatListScreen(
         *bgSpec.backdrop.gradientStops.map { it.position to it.color }.toTypedArray()
     )
 
+    val bgOrbs = remember(bgSpec) { bgSpec.backdrop.radialOrbs }
+
     val totalUnread = (uiState as? ChatListUiState.Success)?.chats?.sumOf { it.unreadCount } ?: 0
 
-    Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+    Box(modifier = Modifier.fillMaxSize().background(bgGradient).drawBehind {
+        bgOrbs.forEach { orb ->
+            val c = androidx.compose.ui.geometry.Offset(size.width * orb.centerXRatio, size.height * orb.centerYRatio)
+            val r = size.minDimension * orb.radiusRatio
+            drawCircle(
+                brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                    colors = listOf(orb.color.copy(alpha = 0.25f), androidx.compose.ui.graphics.Color.Transparent),
+                    center = c, radius = r
+                ),
+                radius = r, center = c
+            )
+        }
+    }) {
         Column(modifier = Modifier.fillMaxSize()) {
             // ========== TOP BAR ==========
             Column(
@@ -206,13 +221,6 @@ fun ChatListScreen(
                         modifier = Modifier.clickable { isSelectionMode = true }
                     )
                 }
-                AppText(
-                    text = if (isSelectionMode) "${selectedChats.size} dipilih" else if (totalUnread > 0) "Chat ($totalUnread)" else "Chat",
-                    fontSize = if (isSelectionMode) 17.sp else 34.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.04).sp,
-                    color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel
-                )
                 if (isSelectionMode) {
                     AppText(
                         text = "Pilih Semua",
@@ -281,6 +289,15 @@ fun ChatListScreen(
             }
 
             }
+            // ========== LARGE TITLE (iOS left-aligned) ==========
+            AppText(
+                text = if (isSelectionMode) "${selectedChats.size} dipilih" else if (totalUnread > 0) "Chat ($totalUnread)" else "Chat",
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.04).sp,
+                color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+            )
             // ========== SEARCH BAR (A3 Glass) ==========
             val searchIsDark = isSystemInDarkTheme()
             val searchTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
@@ -348,8 +365,7 @@ fun ChatListScreen(
                     Box(
                         modifier = Modifier
                             .height(32.dp)
-                            .background(bg, RoundedCornerShape(18.dp))
-                            .border(1.dp, androidx.compose.ui.graphics.Color(0xFFC6C6C8), RoundedCornerShape(18.dp))
+                            .background(if (isSelected) bg else androidx.compose.ui.graphics.Color(0x14767680), RoundedCornerShape(18.dp))
                             .clickable { viewModel.onFilterChange(filter) }
                             .padding(horizontal = 14.dp),
                         contentAlignment = Alignment.Center
@@ -632,7 +648,7 @@ fun ChatRowContent(
                 AsyncImage(
                     model = chat.avatarUrl.ifBlank { "https://ui-avatars.com/api/?name=${chat.name}&background=0A84FF&color=fff&size=112" },
                     contentDescription = chat.name,
-                    modifier = Modifier.size(56.dp).clip(com.jayra.app.ui.theme.squircle(25)),
+                    modifier = Modifier.size(56.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
                 androidx.compose.animation.AnimatedVisibility(
@@ -687,7 +703,7 @@ fun ChatRowContent(
                     }
                     if (chat.unreadCount > 0) {
                         Spacer(Modifier.width(8.dp))
-                        Box(modifier = Modifier.size(20.dp).background(IOSGreen, CircleShape), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(20.dp).background(IOSBlue, CircleShape), contentAlignment = Alignment.Center) {
                             AppText(
                                 text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
                                 color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
