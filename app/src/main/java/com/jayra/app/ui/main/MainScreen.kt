@@ -311,7 +311,7 @@ fun MainScreen(
         containerColor = screenBg,
         bottomBar = {
             if (showBottomBar) {
-                com.jayra.app.ui.component.LiquidNavBarRow(
+                LiquidNavBarRow(
                     selectedIndex = when (currentRoute) {
                         "chat_list" -> 0
                         "calls" -> 1
