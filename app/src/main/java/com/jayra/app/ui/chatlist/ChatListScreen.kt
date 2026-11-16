@@ -1,4 +1,9 @@
 package com.jayra.app.ui.chatlist
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -143,6 +148,11 @@ fun ChatListScreen(
 
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val searchFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    var searchActive by remember { mutableStateOf(false) }
+    LaunchedEffect(searchActive) {
+        if (searchActive) runCatching { searchFocus.requestFocus() }
+    }
     LaunchedEffect(Unit) {
         // Android IME auto-show fires ~100ms after compose (not 16ms like
         // withFrameNanos). Delay 200ms to win the race, then force-clear.
@@ -283,7 +293,8 @@ fun ChatListScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .height(40.dp)
                     .glassSurfaceV2(searchSpec.surface, solidColor = searchBg, cornerRadius = 20.dp)
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 12.dp)
+                    .clickable { searchActive = true },
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -292,7 +303,8 @@ fun ChatListScreen(
                     BasicTextField(
                         value = searchQuery,
                         onValueChange = viewModel::onSearchQueryChange,
-                        modifier = Modifier.weight(1f),
+                        enabled = searchActive,
+                        modifier = Modifier.weight(1f).focusRequester(searchFocus),
                         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 17.sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel, fontFamily = com.jayra.app.ui.theme.SFProFontFamily),
                         singleLine = true,
                         cursorBrush = androidx.compose.ui.graphics.SolidColor(IOSBlue),
