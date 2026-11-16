@@ -148,9 +148,13 @@ fun ChatListScreen(
         // withFrameNanos). Delay 200ms to win the race, then force-clear.
         // Combined with manifest stateAlwaysHidden + MainActivity
         // setSoftInputMode, keyboard stays hidden on launch.
-        delay(200)
-        focusManager.clearFocus(force = true)
-        keyboardController?.hide()
+        // Slow devices fire IME auto-show later than 200ms; clear repeatedly
+        // across the launch window so the race is won even at low FPS.
+        for (d in listOf(120L, 180L, 300L, 600L)) {
+            delay(d)
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+        }
     }
 
     val bgDark = isSystemInDarkTheme()
