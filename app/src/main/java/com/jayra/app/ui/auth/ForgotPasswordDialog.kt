@@ -2,14 +2,14 @@ package com.jayra.app.ui.auth
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,7 +52,7 @@ fun ForgotPasswordDialog(
     var email by rememberSaveable { mutableStateOf(initialEmail) }
     var successMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val bg = if (dark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemBackground
+    val focusManager = LocalFocusManager.current
     val titleColor = if (dark) IOSLabelDark else IOSLabel
     val subtitleColor = if (dark) IOSSecondaryLabelDark else IOSSecondaryLabel
 
@@ -72,15 +72,13 @@ fun ForgotPasswordDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = bg,
-            modifier = Modifier.fillMaxWidth()
+        IOSGlassCard(
+            modifier = Modifier.iosGlassEntrance(delayMillis = 0),
+            cornerRadius = 26.dp,
+            contentPadding = PaddingValues(24.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (successMessage != null) {
@@ -123,9 +121,18 @@ fun ForgotPasswordDialog(
                             value = email,
                             onValueChange = { email = it },
                             placeholder = "nama@email.com",
+                            isError = uiState is AuthUiState.Error,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
                                 imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    if (email.isNotBlank()) {
+                                        focusManager.clearFocus()
+                                        viewModel.onForgotPasswordClick(email)
+                                    }
+                                }
                             )
                         )
                     }
@@ -141,15 +148,18 @@ fun ForgotPasswordDialog(
                         text = "Kirim Tautan",
                         isLoading = uiState is AuthUiState.Loading,
                         enabled = email.isNotBlank(),
-                        onClick = { viewModel.onForgotPasswordClick(email) }
+                        onClick = {
+                            focusManager.clearFocus()
+                            viewModel.onForgotPasswordClick(email)
+                        }
                     )
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     IOSTextButton(
                         text = "Batal",
                         onClick = onDismiss,
-                        modifier = Modifier.padding(8.dp)
+                        modifier = Modifier.padding(6.dp)
                     )
                 }
             }

@@ -37,9 +37,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jayra.app.di.AppModule
 import com.jayra.app.model.SplashUiState
 import com.jayra.app.ui.theme.JayraBlue
 import com.jayra.app.ui.theme.JayraDarkTopBar
@@ -84,6 +86,7 @@ fun SplashScreen(
     viewModel: SplashViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var isVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.splashDelayMillis) {
@@ -94,6 +97,7 @@ fun SplashScreen(
         // Cek autentikasi setelah delay
         val isLoggedIn = viewModel.isUserAuthenticated()
         if (isLoggedIn) {
+            AppModule.userRepository.hydrateSessionFromPrefs(context)
             onNavigateToChatList()
         } else {
             onNavigateToLogin()

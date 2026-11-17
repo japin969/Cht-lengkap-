@@ -1,10 +1,17 @@
 package com.jayra.app.data
 
+import android.content.Context
+import com.jayra.app.JayraApp
 import com.jayra.app.model.NotificationSettings
 import com.jayra.app.model.PrivacySettings
 import com.jayra.app.model.User
+import com.jayra.app.security.EncryptionHelper
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import java.security.MessageDigest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,13 +29,7 @@ class UserRepository(
 
     private val _currentUser = MutableStateFlow(
         User(
-            id = "user_telegram_me",
-            name = "Alex Pratama",
-            phoneNumber = "+62 812-3456-7890",
-            bio = "Mobile Engineer & Jetpack Compose Enthusiast 🚀",
-            username = "alexpratama",
-            telegramId = "782910342",
-            avatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+            id = "",
             disappearingDuration = "Mati",
             isAppLockEnabled = true,
             language = "Indonesia"
@@ -62,32 +63,171 @@ class UserRepository(
 
     private val _appTheme = MutableStateFlow("System")
 
+    fun syncAuthenticatedUser(
+        uid: String,
+        email: String = "",
+        username: String = "",
+        name: String = "",
+        phoneNumber: String = "",
+        jayraId: String = ""
+    ) {
+        if (uid.isBlank()) return
+        _currentUser.update { current ->
+            val sameUser = current.id == uid
+            val cleanUsername = username.trim().removePrefix("@").lowercase()
+                .ifBlank { if (sameUser) current.username else "" }
+                .ifBlank { if (email.isNotBlank()) deriveUsernameFromEmail(email) else "" }
+            val cleanName = name.trim()
+                .ifBlank { if (sameUser) current.name else "" }
+                .ifBlank { cleanUsername }
+            val cleanPhone = phoneNumber.trim()
+                .ifBlank { if (sameUser) current.phoneNumber else "" }
+            val cleanJayraId = jayraId.trim()
+                .ifBlank { if (sameUser) current.telegramId else "" }
+                .ifBlank { deriveJayraId(uid) }
+            current.copy(
+                id = uid,
+                username = cleanUsername,
+                name = cleanName,
+                phoneNumber = cleanPhone,
+                telegramId = cleanJayraId,
+                bio = if (sameUser) current.bio else "",
+                avatarUrl = if (sameUser) current.avatarUrl else ""
+            )
+        }
+    }
+
+    suspend fun hydrateSessionFromPrefs(context: Context) = withContext(Dispatchers.IO) {
+        val appCtx = context.applicationContext
+        val firebaseUser = auth?.currentUser
+        val uid = firebaseUser?.uid
+            ?: EncryptionHelper.getEncryptedPref(appCtx, KEY_SESSION_UID)
+            ?: return@withContext
+        if (uid.isBlank() || uid == "user_telegram_me") return@withContext
+        val storedEmail = EncryptionHelper.getEncryptedPref(appCtx, KEY_SESSION_EMAIL).orEmpty()
+        val email = firebaseUser?.email?.takeIf { it.isNotBlank() } ?: storedEmail
+        val username = EncryptionHelper.getEncryptedPref(appCtx, KEY_SESSION_USERNAME).orEmpty()
+        val name = EncryptionHelper.getEncryptedPref(appCtx, KEY_SESSION_NAME)
+            ?: firebaseUser?.displayName.orEmpty()
+        val phone = EncryptionHelper.getEncryptedPref(appCtx, KEY_SESSION_PHONE).orEmpty()
+        val jayraId = EncryptionHelper.getEncryptedPref(appCtx, KEY_SESSION_JAYRA_ID).orEmpty()
+        syncAuthenticatedUser(
+            uid = uid,
+            email = email,
+            username = username,
+            name = name,
+            phoneNumber = phone,
+            jayraId = jayraId
+        )
+    }
+
+    fun clearAuthenticatedSession() {
+        _currentUser.value = User(
+            disappearingDuration = "Mati",
+            isAppLockEnabled = true,
+            language = "Indonesia"
+        )
+    }
+
     fun getUserProfile(): Flow<User> = callbackFlow {
-        if (firestore != null) {
-            val listener = firestore.collection("users").document(currentUserId)
+        val firebaseUser = auth?.currentUser
+        val targetUid = firebaseUser?.uid ?: currentUserId
+
+        if (firebaseUser != null && _currentUser.value.id != firebaseUser.uid) {
+            val fallbackEmail = firebaseUser.email.orEmpty()
+            val fallbackUsername = if (fallbackEmail.isNotBlank()) deriveUsernameFromEmail(fallbackEmail) else ""
+            val fallbackName = firebaseUser.displayName?.takeIf { it.isNotBlank() } ?: fallbackUsername
+            _currentUser.update {
+                it.copy(
+                    id = firebaseUser.uid,
+                    username = fallbackUsername,
+                    name = fallbackName,
+                    telegramId = deriveJayraId(firebaseUser.uid)
+                )
+            }
+        }
+
+        val localJob = launch {
+            _currentUser.collect { user ->
+                trySend(user)
+            }
+        }
+
+        val listener = if (firestore != null && targetUid != "user_telegram_me") {
+            firestore.collection("users").document(targetUid)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null || !snapshot.exists()) {
-                        trySend(_currentUser.value)
                         return@addSnapshotListener
                     }
-                    val remote = snapshot.toObject(User::class.java)?.copy(
-                        id = snapshot.id,
-                        isAppLockEnabled = _currentUser.value.isAppLockEnabled
-                    )
-                    if (remote != null) {
-                        trySend(remote)
-                    } else {
-                        trySend(_currentUser.value)
+                    val remote = snapshot.toObject(User::class.java) ?: return@addSnapshotListener
+                    _currentUser.update { cached ->
+                        val sameUser = cached.id == snapshot.id
+                        val resolvedUsername = remote.username.trim().removePrefix("@").lowercase()
+                            .ifBlank { if (sameUser) cached.username else "" }
+                            .ifBlank {
+                                val email = firebaseUser?.email.orEmpty()
+                                if (email.isNotBlank()) deriveUsernameFromEmail(email) else ""
+                            }
+                        val resolvedName = remote.name.trim()
+                            .ifBlank { if (sameUser) cached.name else "" }
+                            .ifBlank { firebaseUser?.displayName?.takeIf { it.isNotBlank() }.orEmpty() }
+                            .ifBlank { resolvedUsername }
+                        val resolvedPhone = remote.phoneNumber.trim()
+                            .ifBlank { if (sameUser) cached.phoneNumber else "" }
+                        val resolvedJayraId = remote.telegramId.trim()
+                            .ifBlank { if (sameUser) cached.telegramId else "" }
+                            .ifBlank { deriveJayraId(snapshot.id) }
+
+                        remote.copy(
+                            id = snapshot.id,
+                            username = resolvedUsername,
+                            name = resolvedName,
+                            phoneNumber = resolvedPhone,
+                            telegramId = resolvedJayraId,
+                            isAppLockEnabled = cached.isAppLockEnabled,
+                            language = remote.language.ifBlank { cached.language }
+                        )
                     }
                 }
-            awaitClose { listener.remove() }
         } else {
-            val job = launch {
-                _currentUser.collect { user ->
-                    trySend(user)
-                }
+            null
+        }
+
+        awaitClose {
+            localJob.cancel()
+            listener?.remove()
+        }
+    }
+
+    companion object {
+        private const val KEY_SESSION_UID = "auth_session_uid"
+        private const val KEY_SESSION_USERNAME = "auth_session_username"
+        private const val KEY_SESSION_NAME = "auth_session_name"
+        private const val KEY_SESSION_PHONE = "auth_session_phone"
+        private const val KEY_SESSION_JAYRA_ID = "auth_session_jayra_id"
+        private const val KEY_SESSION_EMAIL = "auth_session_email"
+
+        fun deriveJayraId(uid: String): String {
+            if (uid.isBlank() || uid == "user_telegram_me") return ""
+            return try {
+                val digest = MessageDigest.getInstance("SHA-256").digest(uid.toByteArray(Charsets.UTF_8))
+                val raw = ((digest[0].toLong() and 0xFFL) shl 24) or
+                    ((digest[1].toLong() and 0xFFL) shl 16) or
+                    ((digest[2].toLong() and 0xFFL) shl 8) or
+                    (digest[3].toLong() and 0xFFL)
+                val nineDigits = (raw % 900_000_000L) + 100_000_000L
+                nineDigits.toString()
+            } catch (_: Exception) {
+                val positive = (uid.hashCode().toLong() and 0x7FFFFFFFL) % 900_000_000L + 100_000_000L
+                positive.toString()
             }
-            awaitClose { job.cancel() }
+        }
+
+        fun deriveUsernameFromEmail(email: String): String {
+            val prefix = email.substringBefore("@").lowercase()
+                .replace(Regex("[^a-z0-9_.]"), "")
+                .take(32)
+            return if (prefix.length >= 3) prefix else "jayra_${prefix.ifBlank { "user" }}".take(32)
         }
     }
 
@@ -98,18 +238,34 @@ class UserRepository(
     fun getAppTheme(): Flow<String> = _appTheme.asStateFlow()
 
     suspend fun updateProfile(name: String, bio: String, username: String) {
+        val cleanUsername = username.trim().removePrefix("@").lowercase().take(64)
+        val cleanName = name.trim().ifBlank { cleanUsername }.take(100)
+        val cleanBio = bio.trim().take(300)
         _currentUser.update {
-            it.copy(name = name, bio = bio, username = username)
+            it.copy(name = cleanName, bio = cleanBio, username = cleanUsername)
         }
-        try {
-            firestore?.collection("users")?.document(currentUserId)?.update(
-                mapOf(
-                    "name" to name,
-                    "bio" to bio,
-                    "username" to username
+        JayraApp.appContextOrNull()?.let { ctx ->
+            withContext(Dispatchers.IO) {
+                if (cleanUsername.isNotEmpty()) {
+                    EncryptionHelper.saveEncryptedPref(ctx, KEY_SESSION_USERNAME, cleanUsername)
+                }
+                if (cleanName.isNotEmpty()) {
+                    EncryptionHelper.saveEncryptedPref(ctx, KEY_SESSION_NAME, cleanName)
+                }
+            }
+        }
+        if (currentUserId != "user_telegram_me") {
+            try {
+                firestore?.collection("users")?.document(currentUserId)?.update(
+                    mapOf(
+                        "name" to cleanName,
+                        "bio" to cleanBio,
+                        "username" to cleanUsername,
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    )
                 )
-            )
-        } catch (_: Exception) {}
+            } catch (_: Exception) {}
+        }
     }
 
     suspend fun updateAvatar(photoUrl: String) {
