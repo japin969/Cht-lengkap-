@@ -960,15 +960,19 @@ class ChatRepository(
             hasTopics = hasTopics,
             participants = normalizedParticipants
         )
-        firestore?.let { database ->
-            database.collection("chats")
-                .document(chatId)
-                .set(newChat)
-                .await()
-        }
         _localChats.update { current ->
             listOf(newChat) + current.filter { it.id != chatId }
         }
+        firestore?.collection("chats")
+            ?.document(chatId)
+            ?.set(newChat)
+            ?.addOnFailureListener { error ->
+                android.util.Log.e(
+                    "ChatRepository",
+                    "Gagal menyinkronkan chat grup $chatId ke Firestore",
+                    error
+                )
+            }
     }
 
     suspend fun ensureSavedMessagesChat(): String {

@@ -265,13 +265,17 @@ class GroupRepository(
             mediaVisibility = mediaVisibility,
             permissions = permissions
         )
-        firestore?.let { database ->
-            database.collection("groups")
-                .document(newGroupId)
-                .set(newGroup)
-                .await()
-        }
         _localGroups.update { it + (newGroupId to newGroup) }
+        firestore?.collection("groups")
+            ?.document(newGroupId)
+            ?.set(newGroup)
+            ?.addOnFailureListener { error ->
+                android.util.Log.e(
+                    "GroupRepository",
+                    "Gagal menyinkronkan grup $newGroupId ke Firestore",
+                    error
+                )
+            }
         return newGroupId
     }
 

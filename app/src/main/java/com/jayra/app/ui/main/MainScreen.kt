@@ -529,10 +529,42 @@ private fun MainNavigationGraph(
         modifier = modifier.background(
             if (isSystemInDarkTheme()) JayraDarkChatBg else JayraLightChatBg
         ),
-        enterTransition = { fadeIn(animationSpec = tween(durationMillis = 140)) },
-        exitTransition = { fadeOut(animationSpec = tween(durationMillis = 100)) },
-        popEnterTransition = { fadeIn(animationSpec = tween(durationMillis = 140)) },
-        popExitTransition = { fadeOut(animationSpec = tween(durationMillis = 100)) }
+        enterTransition = {
+            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
+                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
+            ) {
+                androidx.compose.animation.EnterTransition.None
+            } else {
+                fadeIn(animationSpec = tween(durationMillis = 140))
+            }
+        },
+        exitTransition = {
+            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
+                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
+            ) {
+                androidx.compose.animation.ExitTransition.None
+            } else {
+                fadeOut(animationSpec = tween(durationMillis = 100))
+            }
+        },
+        popEnterTransition = {
+            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
+                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
+            ) {
+                androidx.compose.animation.EnterTransition.None
+            } else {
+                fadeIn(animationSpec = tween(durationMillis = 140))
+            }
+        },
+        popExitTransition = {
+            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
+                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
+            ) {
+                androidx.compose.animation.ExitTransition.None
+            } else {
+                fadeOut(animationSpec = tween(durationMillis = 100))
+            }
+        }
     ) {
         composable(MainViewModel.ROUTE_SPLASH) {
             SplashScreen(
