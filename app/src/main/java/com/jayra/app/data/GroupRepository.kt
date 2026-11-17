@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import kotlinx.coroutines.launch
 
 class GroupRepository(
@@ -218,6 +220,7 @@ class GroupRepository(
     suspend fun createGroup(
         name: String,
         memberIds: List<String>,
+        creatorId: String = "user_telegram_me",
         avatarUrl: String = "",
         description: String = "",
         permissions: Map<String, String> = mapOf(
@@ -232,8 +235,10 @@ class GroupRepository(
         inviteViaLinkEnabled: Boolean = true,
         mediaVisibility: Boolean = true
     ): String {
-        val newGroupId = "group_${System.currentTimeMillis()}"
-        val allMembers = (listOf("user_telegram_me") + memberIds).distinct()
+        val newGroupId = "group_${UUID.randomUUID()}"
+        val allMembers = (listOf(creatorId) + memberIds)
+            .filterNot { it == "user_telegram_me" && creatorId != "user_telegram_me" }
+            .distinct()
         val newGroup = Group(
             id = newGroupId,
             name = name,
@@ -247,10 +252,10 @@ class GroupRepository(
             disappearingDuration = disappearingDuration,
             isLocked = false,
             isAdmin = true,
-            creatorId = "user_telegram_me",
+            creatorId = creatorId,
             members = allMembers,
             memberIds = allMembers,
-            adminIds = listOf("user_telegram_me"),
+            adminIds = listOf(creatorId),
             memberAvatars = listOf(
                 "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120"
             ),
@@ -260,10 +265,13 @@ class GroupRepository(
             mediaVisibility = mediaVisibility,
             permissions = permissions
         )
+        firestore?.let { database ->
+            database.collection("groups")
+                .document(newGroupId)
+                .set(newGroup)
+                .await()
+        }
         _localGroups.update { it + (newGroupId to newGroup) }
-        try {
-            firestore?.collection("groups")?.document(newGroupId)?.set(newGroup)
-        } catch (_: Exception) {}
         return newGroupId
     }
 

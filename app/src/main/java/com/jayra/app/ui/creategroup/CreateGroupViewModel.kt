@@ -111,8 +111,13 @@ class CreateGroupViewModel(
     }
 
     fun createGroup(onSuccess: (String) -> Unit) {
+        if (_uiState.value is CreateGroupUiState.Loading) return
+
         val name = _groupName.value.trim()
-        val members = _selectedMemberIds.value.toList()
+        val creatorId = chatRepository.currentUserId
+        val members = _selectedMemberIds.value
+            .filterNot { it == creatorId || it == "user_telegram_me" }
+            .toList()
 
         if (name.isBlank()) {
             _uiState.value = CreateGroupUiState.Error("Nama grup tidak boleh kosong")
@@ -133,6 +138,7 @@ class CreateGroupViewModel(
                 val newGroupId = groupRepository.createGroup(
                     name = name,
                     memberIds = members,
+                    creatorId = creatorId,
                     avatarUrl = avatar,
                     description = _groupDescription.value.trim(),
                     permissions = _groupPermissions.value,
@@ -145,12 +151,14 @@ class CreateGroupViewModel(
                     chatId = newGroupId,
                     name = name,
                     avatarUrl = avatar,
-                    participants = listOf("user_telegram_me") + members
+                    participants = listOf(creatorId) + members
                 )
                 _uiState.value = CreateGroupUiState.Success(newGroupId)
                 onSuccess(newGroupId)
             } catch (e: Exception) {
-                _uiState.value = CreateGroupUiState.Error(e.message ?: "Gagal membuat grup")
+                _uiState.value = CreateGroupUiState.Error(
+                    e.message ?: "Gagal membuat grup"
+                )
             }
         }
     }

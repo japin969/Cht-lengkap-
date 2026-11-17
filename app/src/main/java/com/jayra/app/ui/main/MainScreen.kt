@@ -4,6 +4,8 @@ package com.jayra.app.ui.main
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.jayra.app.util.glassSurfaceV2
@@ -524,7 +526,13 @@ private fun MainNavigationGraph(
     NavHost(
         navController = navController,
         startDestination = MainViewModel.ROUTE_SPLASH,
-        modifier = modifier
+        modifier = modifier.background(
+            if (isSystemInDarkTheme()) JayraDarkChatBg else JayraLightChatBg
+        ),
+        enterTransition = { fadeIn(animationSpec = tween(durationMillis = 140)) },
+        exitTransition = { fadeOut(animationSpec = tween(durationMillis = 100)) },
+        popEnterTransition = { fadeIn(animationSpec = tween(durationMillis = 140)) },
+        popExitTransition = { fadeOut(animationSpec = tween(durationMillis = 100)) }
     ) {
         composable(MainViewModel.ROUTE_SPLASH) {
             SplashScreen(
