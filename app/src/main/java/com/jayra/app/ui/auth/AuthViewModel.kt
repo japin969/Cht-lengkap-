@@ -17,10 +17,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.jayra.app.R
 import com.jayra.app.data.AuthRepository
+import com.jayra.app.data.UserRepository
 import com.jayra.app.di.AppModule
 import com.jayra.app.model.AuthUiState
 import com.jayra.app.model.Country
+import com.jayra.app.model.UserAccount
 import com.jayra.app.security.EncryptionHelper
+import java.util.Locale
 import com.jayra.app.util.findActivity
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -56,6 +59,9 @@ class AuthViewModel(
     private val _email = MutableStateFlow("")
     val email: StateFlow<String> = _email.asStateFlow()
 
+    private val _username = MutableStateFlow("")
+    val username: StateFlow<String> = _username.asStateFlow()
+
     private val _password = MutableStateFlow("")
     val password: StateFlow<String> = _password.asStateFlow()
 
@@ -89,9 +95,22 @@ class AuthViewModel(
     val loginHeaderSubtitle: StateFlow<String> = _loginHeaderSubtitle.asStateFlow()
 
     private val _registerHeaderSubtitle = MutableStateFlow(
-        "Daftarkan email dan pilih negara untuk mendapatkan nomor Jayra otomatis."
+        "Buat username unik dan daftarkan email Anda. Nomor Jayra dibuat otomatis."
     )
     val registerHeaderSubtitle: StateFlow<String> = _registerHeaderSubtitle.asStateFlow()
+
+    fun onUsernameChange(newUsername: String) {
+        val sanitized = newUsername
+            .replace(" ", "")
+            .replace("\n", "")
+            .removePrefix("@")
+            .lowercase()
+            .take(32)
+        _username.value = sanitized
+        if (_uiState.value is AuthUiState.Error) {
+            _uiState.value = AuthUiState.Idle
+        }
+    }
 
     fun onEmailChange(newEmail: String) {
         _email.value = newEmail
@@ -112,6 +131,28 @@ class AuthViewModel(
         _generatedPhoneNumber.value = generatePhoneNumberForCountry(country)
         if (_uiState.value is AuthUiState.Error) {
             _uiState.value = AuthUiState.Idle
+        }
+    }
+
+    private fun resolveBackgroundCountryAndPhone(): Pair<Country, String> {
+        val localeCode = Locale.getDefault().country.uppercase()
+        val defaultCountry = _availableCountries.value.firstOrNull { it.code == localeCode }
+            ?: _availableCountries.value.first()
+        val country = _selectedCountry.value ?: defaultCountry.also { _selectedCountry.value = it }
+        val phone = _generatedPhoneNumber.value.ifBlank {
+            generatePhoneNumberForCountry(country).also { _generatedPhoneNumber.value = it }
+        }
+        return country to phone
+    }
+
+    private fun validateUsername(raw: String): String? {
+        val clean = raw.trim().removePrefix("@").lowercase()
+        return when {
+            clean.isBlank() -> "Username wajib diisi"
+            clean.length < 3 -> "Username minimal 3 karakter"
+            clean.length > 32 -> "Username maksimal 32 karakter"
+            !USERNAME_REGEX.matches(clean) -> "Username hanya boleh huruf kecil, angka, titik, atau underscore"
+            else -> null
         }
     }
 
@@ -144,8 +185,14 @@ class AuthViewModel(
     fun onRegisterClick(
         context: Context,
         emailInput: String = _email.value,
-        passwordInput: String = _password.value
+        passwordInput: String = _password.value,
+        usernameInput: String = _username.value
     ) {
+        val cleanUsername = usernameInput.trim().removePrefix("@").lowercase()
+        validateUsername(cleanUsername)?.let { errMsg ->
+            _uiState.value = AuthUiState.Error(errMsg)
+            return
+        }
         val cleanEmail = emailInput.trim().lowercase()
         if (!Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
             _uiState.value = AuthUiState.Error("Format email tidak valid")
@@ -155,18 +202,13 @@ class AuthViewModel(
             _uiState.value = AuthUiState.Error("Kata sandi minimal 6 karakter")
             return
         }
-        val country = _selectedCountry.value
-        val phone = _generatedPhoneNumber.value
-        if (country == null || phone.isBlank()) {
-            _uiState.value = AuthUiState.Error("Silakan pilih negara terlebih dahulu")
-            return
-        }
+        val (country, phone) = resolveBackgroundCountryAndPhone()
 
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
             try {
                 authRepository.signUp(cleanEmail, passwordInput).fold(
-                    onSuccess = {
+                    onSuccess = { uid ->
                         try {
                             // Register wajib fail-fast, capped 10s.
                             val saveResult = withTimeoutOrNull(10_000) {
@@ -177,7 +219,9 @@ class AuthViewModel(
                                 authRepository.saveRegisteredUser(
                                     email = cleanEmail,
                                     phoneNumber = phone,
-                                    countryName = country.name
+                                    countryName = country.name,
+                                    username = cleanUsername,
+                                    name = cleanUsername
                                 )
                             }
                             if (saveResult == null) {
@@ -185,11 +229,25 @@ class AuthViewModel(
                                     "Pendaftaran timeout 10s. Cek koneksi lalu coba lagi."
                                 )
                             } else saveResult.fold(
-                                onSuccess = {
+                                onSuccess = { savedUid ->
+                                    val activeUid = auth.currentUser?.uid ?: savedUid
+                                    val jayraId = UserRepository.deriveJayraId(activeUid)
                                     persistEncryptedSession(
-                                        context,
+                                        context = context,
+                                        email = cleanEmail,
+                                        username = cleanUsername,
+                                        name = cleanUsername,
                                         phoneNumber = phone,
-                                        countryName = country.name
+                                        countryName = country.name,
+                                        jayraId = jayraId
+                                    )
+                                    AppModule.userRepository.syncAuthenticatedUser(
+                                        uid = activeUid,
+                                        email = cleanEmail,
+                                        username = cleanUsername,
+                                        name = cleanUsername,
+                                        phoneNumber = phone,
+                                        jayraId = jayraId
                                     )
                                     _uiState.value = AuthUiState.Success
                                 },
@@ -232,34 +290,59 @@ class AuthViewModel(
         viewModelScope.launch {
             try {
                 authRepository.signIn(cleanEmail, passwordInput).fold(
-                onSuccess = {
-                    try {
-                        // Best-effort Firestore+token, capped 8s (non-critical utk navigasi).
-                        // Timeout -> graceful degradation, tetap emit Success.
-                        withTimeoutOrNull(8_000) {
-                            try {
-                                auth.currentUser?.getIdToken(true)?.await()
-                            } catch (e: CancellationException) { throw e }
-                              catch (_: Exception) { }
-                            try {
+                    onSuccess = { uid ->
+                        try {
+                            // Best-effort Firestore+token, capped 8s (non-critical utk navigasi).
+                            // Timeout -> graceful degradation, tetap emit Success.
+                            val account = withTimeoutOrNull(8_000) {
+                                try {
+                                    auth.currentUser?.getIdToken(true)?.await()
+                                } catch (e: CancellationException) { throw e }
+                                  catch (_: Exception) { }
                                 ensureFirestoreAccountExists(fallbackEmail = cleanEmail)
-                            } catch (e: CancellationException) { throw e }
-                              catch (_: Exception) { }
+                            }
+                            val activeUid = auth.currentUser?.uid ?: uid
+                            val resolvedEmail = account?.email?.takeIf { it.isNotBlank() }
+                                ?: auth.currentUser?.email ?: cleanEmail
+                            val resolvedUsername = account?.username?.takeIf { it.isNotBlank() }
+                                ?: UserRepository.deriveUsernameFromEmail(resolvedEmail)
+                            val resolvedName = account?.name?.takeIf { it.isNotBlank() }
+                                ?: auth.currentUser?.displayName?.takeIf { it.isNotBlank() }
+                                ?: resolvedUsername
+                            val resolvedPhone = account?.phoneNumber.orEmpty()
+                            val resolvedCountry = account?.country.orEmpty()
+                            val jayraId = UserRepository.deriveJayraId(activeUid)
+
+                            persistEncryptedSession(
+                                context = context,
+                                email = resolvedEmail,
+                                username = resolvedUsername,
+                                name = resolvedName,
+                                phoneNumber = resolvedPhone,
+                                countryName = resolvedCountry,
+                                jayraId = jayraId
+                            )
+                            AppModule.userRepository.syncAuthenticatedUser(
+                                uid = activeUid,
+                                email = resolvedEmail,
+                                username = resolvedUsername,
+                                name = resolvedName,
+                                phoneNumber = resolvedPhone,
+                                jayraId = jayraId
+                            )
+                            _uiState.value = AuthUiState.Success
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            _uiState.value = AuthUiState.Error(mapFirebaseError(e))
                         }
-                        persistEncryptedSession(context)
-                        _uiState.value = AuthUiState.Success
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        _uiState.value = AuthUiState.Error(mapFirebaseError(e))
+                    },
+                    onFailure = { error ->
+                        _uiState.value = AuthUiState.Error(
+                            mapFirebaseError(error)
+                        )
                     }
-                },
-                onFailure = { error ->
-                    _uiState.value = AuthUiState.Error(
-                        mapFirebaseError(error)
-                    )
-                }
-            )
+                )
             } finally {
                 if (_uiState.value is AuthUiState.Loading) {
                     _uiState.value = AuthUiState.Error(
@@ -379,24 +462,64 @@ class AuthViewModel(
         }
     }
 
-    private suspend fun ensureFirestoreAccountExists(fallbackEmail: String) {
-        try {
+    private suspend fun ensureFirestoreAccountExists(fallbackEmail: String): UserAccount? {
+        return try {
+            val uid = auth.currentUser?.uid.orEmpty()
             val existing = authRepository.getUserAccount().getOrNull()
+            val (bgCountry, bgPhone) = resolveBackgroundCountryAndPhone()
             if (existing == null) {
-                val defaultCountry = _selectedCountry.value ?: _availableCountries.value.first()
-                val phone = _generatedPhoneNumber.value.ifBlank {
-                    generatePhoneNumberForCountry(defaultCountry)
-                }
+                val fallbackUsername = UserRepository.deriveUsernameFromEmail(fallbackEmail)
+                val fallbackName = auth.currentUser?.displayName?.takeIf { it.isNotBlank() }
+                    ?: fallbackUsername
                 authRepository.saveRegisteredUser(
                     email = fallbackEmail,
-                    phoneNumber = phone,
-                    countryName = defaultCountry.name
+                    phoneNumber = bgPhone,
+                    countryName = bgCountry.name,
+                    username = fallbackUsername,
+                    name = fallbackName
+                )
+                UserAccount(
+                    id = uid,
+                    userId = uid,
+                    email = fallbackEmail,
+                    username = fallbackUsername,
+                    name = fallbackName,
+                    phoneNumber = bgPhone,
+                    country = bgCountry.name
+                )
+            } else {
+                val resolvedEmail = existing.email.ifBlank { fallbackEmail }
+                val missingUsername = existing.username.isBlank()
+                val missingName = existing.name.isBlank()
+                val missingPhone = existing.phoneNumber.isBlank()
+                val resolvedUsername = existing.username.ifBlank {
+                    UserRepository.deriveUsernameFromEmail(resolvedEmail)
+                }
+                val resolvedName = existing.name.ifBlank {
+                    auth.currentUser?.displayName?.takeIf { it.isNotBlank() } ?: resolvedUsername
+                }
+                val resolvedPhone = existing.phoneNumber.ifBlank { bgPhone }
+                val resolvedCountry = existing.country.ifBlank { bgCountry.name }
+                if (missingUsername || missingName || missingPhone) {
+                    authRepository.updateProfileIdentity(
+                        username = resolvedUsername,
+                        name = resolvedName,
+                        phoneNumber = if (missingPhone) resolvedPhone else null,
+                        countryName = if (existing.country.isBlank()) resolvedCountry else null
+                    )
+                }
+                existing.copy(
+                    email = resolvedEmail,
+                    username = resolvedUsername,
+                    name = resolvedName,
+                    phoneNumber = resolvedPhone,
+                    country = resolvedCountry
                 )
             }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            // Handled via structured FirestoreErrorHandler inside AuthRepository
+            null
         }
     }
 
@@ -408,28 +531,51 @@ class AuthViewModel(
      */
     private suspend fun persistEncryptedSession(
         context: Context,
+        email: String? = null,
+        username: String? = null,
+        name: String? = null,
         phoneNumber: String? = null,
-        countryName: String? = null
+        countryName: String? = null,
+        jayraId: String? = null
     ) = withContext(Dispatchers.IO) {
         val uid = auth.currentUser?.uid ?: return@withContext
-        EncryptionHelper.saveEncryptedPref(context.applicationContext, KEY_SESSION_UID, uid)
+        val appCtx = context.applicationContext
+        EncryptionHelper.saveEncryptedPref(appCtx, KEY_SESSION_UID, uid)
+        if (!email.isNullOrBlank()) {
+            EncryptionHelper.saveEncryptedPref(appCtx, KEY_SESSION_EMAIL, email)
+        }
+        if (!username.isNullOrBlank()) {
+            EncryptionHelper.saveEncryptedPref(appCtx, KEY_SESSION_USERNAME, username)
+        }
+        if (!name.isNullOrBlank()) {
+            EncryptionHelper.saveEncryptedPref(appCtx, KEY_SESSION_NAME, name)
+        }
         if (!phoneNumber.isNullOrBlank()) {
-            EncryptionHelper.saveEncryptedPref(context.applicationContext, KEY_SESSION_PHONE, phoneNumber)
+            EncryptionHelper.saveEncryptedPref(appCtx, KEY_SESSION_PHONE, phoneNumber)
         }
         if (!countryName.isNullOrBlank()) {
-            EncryptionHelper.saveEncryptedPref(context.applicationContext, KEY_SESSION_COUNTRY, countryName)
+            EncryptionHelper.saveEncryptedPref(appCtx, KEY_SESSION_COUNTRY, countryName)
+        }
+        if (!jayraId.isNullOrBlank()) {
+            EncryptionHelper.saveEncryptedPref(appCtx, KEY_SESSION_JAYRA_ID, jayraId)
         }
     }
 
     fun signOut(context: Context, onComplete: () -> Unit = {}) {
         auth.signOut()
+        AppModule.userRepository.clearAuthenticatedSession()
         val credentialManager = CredentialManager.create(context)
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_UID)
-                    EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_PHONE)
-                    EncryptionHelper.removeEncryptedPref(context.applicationContext, KEY_SESSION_COUNTRY)
+                    val appCtx = context.applicationContext
+                    EncryptionHelper.removeEncryptedPref(appCtx, KEY_SESSION_UID)
+                    EncryptionHelper.removeEncryptedPref(appCtx, KEY_SESSION_EMAIL)
+                    EncryptionHelper.removeEncryptedPref(appCtx, KEY_SESSION_USERNAME)
+                    EncryptionHelper.removeEncryptedPref(appCtx, KEY_SESSION_NAME)
+                    EncryptionHelper.removeEncryptedPref(appCtx, KEY_SESSION_PHONE)
+                    EncryptionHelper.removeEncryptedPref(appCtx, KEY_SESSION_COUNTRY)
+                    EncryptionHelper.removeEncryptedPref(appCtx, KEY_SESSION_JAYRA_ID)
                 }
                 credentialManager.clearCredentialState(ClearCredentialStateRequest())
             } catch (e: Exception) {
@@ -447,9 +593,14 @@ class AuthViewModel(
 
     companion object {
         private const val TAG = "Auth"
+        private val USERNAME_REGEX = Regex("^[a-z0-9_.]{3,32}$")
         private const val KEY_SESSION_UID = "auth_session_uid"
+        private const val KEY_SESSION_EMAIL = "auth_session_email"
+        private const val KEY_SESSION_USERNAME = "auth_session_username"
+        private const val KEY_SESSION_NAME = "auth_session_name"
         private const val KEY_SESSION_PHONE = "auth_session_phone"
         private const val KEY_SESSION_COUNTRY = "auth_session_country"
+        private const val KEY_SESSION_JAYRA_ID = "auth_session_jayra_id"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

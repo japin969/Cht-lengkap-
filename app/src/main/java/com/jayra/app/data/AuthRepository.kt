@@ -81,25 +81,86 @@ class AuthRepository(
     suspend fun saveRegisteredUser(
         email: String,
         phoneNumber: String,
-        countryName: String
+        countryName: String,
+        username: String = "",
+        name: String = ""
     ): Result<String> {
         val uid = requireUserId()
         val docRef = firestore.collection("users").document(uid)
-        val payload = mapOf(
-            "userId" to uid,
-            "email" to email,
-            "phoneNumber" to phoneNumber,
-            "country" to countryName,
-            "createdAt" to FieldValue.serverTimestamp()
-        )
+        val cleanUsername = username.trim().removePrefix("@").lowercase()
+        val cleanName = name.trim().ifBlank { cleanUsername }
+        val payload = buildMap<String, Any> {
+            put("userId", uid)
+            put("email", email)
+            put("phoneNumber", phoneNumber)
+            put("country", countryName)
+            put("createdAt", FieldValue.serverTimestamp())
+            if (cleanUsername.isNotEmpty()) {
+                put("username", cleanUsername.take(64))
+            }
+            if (cleanName.isNotEmpty()) {
+                put("name", cleanName.take(100))
+            }
+        }
         return try {
             docRef.set(payload).await()
+            if (cleanName.isNotEmpty()) {
+                updateAuthDisplayName(cleanName)
+            }
             Result.success(uid)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             handleFirestoreError(e, OperationType.CREATE, docRef.path)
             Result.failure(e)
+        }
+    }
+
+    suspend fun updateProfileIdentity(
+        username: String,
+        name: String = username,
+        phoneNumber: String? = null,
+        countryName: String? = null
+    ): Result<Unit> {
+        val uid = requireUserId()
+        val docRef = firestore.collection("users").document(uid)
+        val cleanUsername = username.trim().removePrefix("@").lowercase().take(64)
+        val cleanName = name.trim().ifBlank { cleanUsername }.take(100)
+        val updates = buildMap<String, Any> {
+            if (cleanUsername.isNotEmpty()) put("username", cleanUsername)
+            if (cleanName.isNotEmpty()) put("name", cleanName)
+            if (!phoneNumber.isNullOrBlank()) put("phoneNumber", phoneNumber.trim().take(24))
+            if (!countryName.isNullOrBlank()) put("country", countryName.trim().take(100))
+            put("updatedAt", FieldValue.serverTimestamp())
+        }
+        return try {
+            docRef.update(updates).await()
+            if (cleanName.isNotEmpty()) {
+                updateAuthDisplayName(cleanName)
+            }
+            Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateAuthDisplayName(displayName: String) {
+        val user = auth.currentUser ?: return
+        val clean = displayName.trim().take(100)
+        if (clean.isEmpty() || user.displayName == clean) return
+        try {
+            user.updateProfile(
+                userProfileChangeRequest {
+                    this.displayName = clean
+                }
+            ).await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Best-effort FirebaseAuth profile sync
         }
     }
 

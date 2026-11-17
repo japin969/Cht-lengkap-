@@ -792,6 +792,8 @@ data class UserAccount(
     @com.google.firebase.firestore.DocumentId val id: String = "",
     val userId: String = "",
     val email: String = "",
+    val username: String = "",
+    val name: String = "",
     val phoneNumber: String = "",
     val country: String = "",
     val fcmToken: String = "",
