@@ -124,6 +124,7 @@ fun ChatListScreen(
     viewModel: ChatListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val archivedChats by viewModel.archivedChats.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -382,6 +383,46 @@ fun ChatListScreen(
                     is ChatListUiState.Empty -> EmptyState(onStartChat = onContactsClick)
                     is ChatListUiState.Success -> {
                         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 180.dp)) {
+                            if (archivedChats.isNotEmpty()) {
+                                item(key = "archived_chats_folder") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable(onClick = onArchivedClick)
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Archive,
+                                            contentDescription = "Diarsipkan",
+                                            tint = IOSBlue,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(Modifier.width(14.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            AppText(
+                                                text = "Diarsipkan",
+                                                fontSize = 17.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = if (isSystemInDarkTheme()) {
+                                                    com.jayra.app.ui.theme.IOSLabelDark
+                                                } else {
+                                                    com.jayra.app.ui.theme.IOSLabel
+                                                }
+                                            )
+                                            AppText(
+                                                text = "${archivedChats.size} chat",
+                                                fontSize = 14.sp,
+                                                color = if (isSystemInDarkTheme()) {
+                                                    IOSSecondaryLabelDark
+                                                } else {
+                                                    IOSSecondaryLabel
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                             items(state.chats, key = { it.id }, contentType = { "chat_item" }) { chat ->
                                 SwipeableChatRow(
                                     chat = chat,
