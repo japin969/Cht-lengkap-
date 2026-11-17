@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -33,6 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private const val THEME_TRANSITION_DURATION_MS = 300
+
+private val JayraShapes = Shapes(
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(28.dp)
+)
 
 private val JayraDarkColorScheme = darkColorScheme(
     primary = JayraBlue,
@@ -133,7 +140,8 @@ fun JayraTheme(
 
     MaterialTheme(
         colorScheme = animatedColorScheme,
-        typography = Typography
+        typography = Typography,
+        shapes = JayraShapes
     ) {
         CompositionLocalProvider(
             LocalTextStyle provides TextStyle(fontFamily = SFProFontFamily)

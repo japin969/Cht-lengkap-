@@ -19,43 +19,52 @@ object GlassEffectPrefs {
     private const val PREFS = "jayra_ui_prefs"
     private const val KEY = "glass_effect_enabled"
 
-    private var appContext: Context? = null
+    // Status perangkat dihitung sekali saat inisialisasi, bukan setiap render.
+    private var deviceTier: GlassTier = GlassTier.MEDIUM
 
-    // State reaktif global (dibaca Composable)
+    // State reaktif global (dibaca Composable).
     val enabledState: MutableState<Boolean> = mutableStateOf(false)
 
     fun init(context: Context) {
-        appContext = context.applicationContext
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        enabledState.value = prefs.getBoolean(KEY, true)  // default aktif
+        val appContext = context.applicationContext
+        deviceTier = resolveDeviceTier(appContext)
+
+        val prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        enabledState.value = prefs.getBoolean(KEY, true)
     }
 
     fun set(context: Context, enabled: Boolean) {
+        deviceTier = resolveDeviceTier(context.applicationContext)
         enabledState.value = enabled
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putBoolean(KEY, enabled).apply()
+            .edit()
+            .putBoolean(KEY, enabled)
+            .apply()
     }
 
     /** Blur benar-benar didukung OS (API 31+). */
     fun supportsRealBlur(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     /**
-     * Resolve render tier berdasarkan: user toggle, API level, RAM, low-RAM flag.
-     * Non-composable; aman dipanggil dari remember() di Composable.
+     * Mengembalikan tier yang sudah dihitung saat init atau saat pengaturan berubah.
+     * Tidak meminta informasi RAM lagi pada setiap komposisi UI.
      */
     fun resolveTier(): GlassTier {
-        if (!enabledState.value) return GlassTier.OFF
+        return if (enabledState.value) deviceTier else GlassTier.OFF
+    }
+
+    private fun resolveDeviceTier(context: Context): GlassTier {
         if (!supportsRealBlur()) return GlassTier.LOW
 
-        val ctx = appContext ?: return GlassTier.MEDIUM
-        val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-            ?: return GlassTier.MEDIUM
+        val activityManager =
+            context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                ?: return GlassTier.MEDIUM
 
-        if (am.isLowRamDevice) return GlassTier.LOW
+        if (activityManager.isLowRamDevice) return GlassTier.LOW
 
-        val mi = ActivityManager.MemoryInfo()
-        am.getMemoryInfo(mi)
-        val ramGB = mi.totalMem / (1024.0 * 1024.0 * 1024.0)
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+        val ramGB = memoryInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
 
         return when {
             ramGB >= 6.0 -> GlassTier.HIGH

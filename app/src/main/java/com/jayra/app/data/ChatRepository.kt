@@ -936,13 +936,16 @@ class ChatRepository(
         try { firestore?.collection("chats")?.document(chatId)?.update(mapOf("unreadCount" to 0, "isRead" to true)) } catch (_: Exception) {}
     }
 
-    fun createGroupChat(
+    suspend fun createGroupChat(
         chatId: String,
         name: String,
         avatarUrl: String,
         participants: List<String>,
         hasTopics: Boolean = true
     ) {
+        val normalizedParticipants = (
+            participants.filterNot { it == "user_telegram_me" } + currentUserId
+        ).distinct()
         val newChat = Chat(
             id = chatId,
             name = name,
@@ -955,14 +958,17 @@ class ChatRepository(
             isRead = true,
             isGroup = true,
             hasTopics = hasTopics,
-            participants = participants
+            participants = normalizedParticipants
         )
+        firestore?.let { database ->
+            database.collection("chats")
+                .document(chatId)
+                .set(newChat)
+                .await()
+        }
         _localChats.update { current ->
             listOf(newChat) + current.filter { it.id != chatId }
         }
-        try {
-            firestore?.collection("chats")?.document(chatId)?.set(newChat)
-        } catch (_: Exception) {}
     }
 
     suspend fun ensureSavedMessagesChat(): String {
