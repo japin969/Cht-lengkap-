@@ -809,10 +809,11 @@ class ChatRepository(
     }
 
     suspend fun markAsRead(chatId: String) {
+        val uid = currentUserId
         scope.launch { 
             try { 
                 chatDao.resetUnreadCount(chatId)
-                messageDao.markAllMessagesStatus(chatId, MessageStatus.READ.name)
+                messageDao.markAllMessagesStatus(chatId, uid, MessageStatus.READ.name)
             } catch (_: Exception) {} 
         }
     }
