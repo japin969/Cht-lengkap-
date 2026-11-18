@@ -24,27 +24,6 @@ interface SiputzxApi {
         @Query("temperature") temperature: Float = 0.7f
     ): Response<AIResponse>
 
-    @GET("api/ai/glm47flash")
-    suspend fun askGlm47Flash(
-        @Query("prompt") prompt: String,
-        @Query("system") system: String = "You are a helpful assistant.",
-        @Query("temperature") temperature: Float = 0.7f
-    ): Response<AIResponse>
-
-    @GET("api/ai/phi2")
-    suspend fun askPhi2(
-        @Query("prompt") prompt: String,
-        @Query("system") system: String = "You are a helpful assistant.",
-        @Query("temperature") temperature: Float = 0.7f
-    ): Response<AIResponse>
-
-    @GET("api/ai/qwq32b")
-    suspend fun askQwq32b(
-        @Query("prompt") prompt: String,
-        @Query("system") system: String = "You are a helpful assistant.",
-        @Query("temperature") temperature: Float = 0.7f
-    ): Response<AIResponse>
-
     @GET("api/ai/deepseekr1")
     suspend fun askDeepseekR1(
         @Query("prompt") prompt: String,
@@ -52,17 +31,23 @@ interface SiputzxApi {
         @Query("temperature") temperature: Float = 0.7f
     ): Response<AIResponse>
 
-    @GET("api/ai/gita")
-    suspend fun askGita(@Query("q") q: String): Response<AIResponse>
-
     companion object {
         private const val AI_BASE_URL = "https://api.siputzx.my.id/"
+        private const val BROWSER_UA =
+            "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
 
         fun create(): SiputzxApi {
             val okHttpClient = OkHttpClient.Builder()
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .writeTimeout(60, TimeUnit.SECONDS)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(45, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .addInterceptor { chain ->
+                    val req = chain.request().newBuilder()
+                        .header("User-Agent", BROWSER_UA)
+                        .header("Accept", "application/json")
+                        .build()
+                    chain.proceed(req)
+                }
                 .build()
 
             val moshi = Moshi.Builder()

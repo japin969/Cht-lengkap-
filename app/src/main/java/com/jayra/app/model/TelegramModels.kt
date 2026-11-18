@@ -92,6 +92,7 @@ data class Message(
     val dateGroup: String = "Today",
     val status: MessageStatus = MessageStatus.SENT,
     val isMine: Boolean = false,
+    val thinkText: String? = null,
     val replyToId: String? = null,
     val replyToText: String? = null,
     val replyToSender: String? = null,
@@ -421,7 +422,8 @@ sealed interface AssistantUiState {
     data object Loading : AssistantUiState
     data class Success(
         val messages: List<Message>,
-        val isLoading: Boolean = false
+        val isLoading: Boolean = false,
+        val mode: AiMode = AiMode.NORMAL
     ) : AssistantUiState
     data object Empty : AssistantUiState
     data class Error(val message: String) : AssistantUiState
@@ -1234,3 +1236,9 @@ data class VoiceTrimmerStrings(
 )
 
 
+
+// ================= FASE 27: AI MODE =================
+enum class AiMode {
+    NORMAL,
+    THINKING
+}
