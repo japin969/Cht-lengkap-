@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
@@ -158,7 +159,7 @@ fun GroupInfoContent(
     val topBarBg = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
     val topBarTint = if (isDark) Color(0xFF0A84FF) else Color(0xFF007AFF)
     val topBarTitle = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
-    val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
+    val screenBg = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
     val cardBg = if (isDark) JayraCardDark else JayraCardLight
 
     var showLeaveDialog by remember { mutableStateOf(false) }
@@ -183,10 +184,10 @@ fun GroupInfoContent(
                         .testTag("group_info_back")
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.Rounded.ChevronLeft,
                         contentDescription = "Back",
                         tint = topBarTint,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
@@ -298,7 +299,7 @@ fun GroupInfoContent(
                                     modifier = Modifier
                                         .padding(top = 16.dp)
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(cardBg)
                                         .padding(16.dp)
                                 ) {
@@ -339,7 +340,7 @@ fun GroupInfoContent(
                                     modifier = Modifier
                                         .padding(top = 12.dp)
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(
@@ -365,7 +366,7 @@ fun GroupInfoContent(
                                     modifier = Modifier
                                         .padding(top = 12.dp)
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(cardBg)
                                         .clickable(onClick = onMembersClick)
                                         .padding(16.dp)
@@ -421,7 +422,7 @@ fun GroupInfoContent(
                                     modifier = Modifier
                                         .padding(top = 12.dp)
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(cardBg)
                                 ) {
                                     InfoSwitchRow(
@@ -463,7 +464,7 @@ fun GroupInfoContent(
                                     modifier = Modifier
                                         .padding(top = 12.dp, bottom = 24.dp)
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(cardBg)
                                 ) {
                                     InfoSettingRow(

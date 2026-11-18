@@ -7,7 +7,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -561,7 +560,7 @@ private fun MainNavigationGraph(
                 slideOutHorizontally(
                     animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                     targetOffsetX = { fullWidth -> -fullWidth / 4 }
-                ) + fadeOut(animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing))
+                )
             }
         },
         popEnterTransition = {
@@ -585,7 +584,7 @@ private fun MainNavigationGraph(
                 slideOutHorizontally(
                     animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                     targetOffsetX = { fullWidth -> fullWidth / 4 }
-                ) + fadeOut(animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing))
+                )
             }
         }
     ) {

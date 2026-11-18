@@ -78,6 +78,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        // Anti flash hitam (Bug 1): paksa background window = warna app sejak frame
+        // pertama. Dengan begini tidak ada frame hitam saat activity start, recreate,
+        // atau saat NavHost sedang transisi.
+        window.setBackgroundDrawable(
+            android.graphics.drawable.ColorDrawable(
+                ContextCompat.getColor(this, R.color.jayra_window_background)
+            )
+        )
+        window.setDimAmount(0f)
+
         // Screen Security: Prevent screenshots and recents screen sniffing in release builds
         if (!BuildConfig.DEBUG) {
             window.setFlags(

@@ -9,6 +9,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.rounded.FormatBold
 import androidx.compose.material.icons.rounded.FormatItalic
 import androidx.compose.material.icons.rounded.FormatStrikethrough
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -220,7 +222,7 @@ fun RichTextEditor(
                 onValueChange = onValueChange,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(24.dp))
                     .testTag("chat_input_textfield"),
                 textStyle = TextStyle(
                     fontSize = 16.sp,
@@ -237,7 +239,7 @@ fun RichTextEditor(
                 singleLine = false,
                 minLines = 1,
                 maxLines = 5,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = fieldBg,
                     unfocusedContainerColor = fieldBg,
@@ -251,25 +253,45 @@ fun RichTextEditor(
                 )
             )
 
-            AnimatedVisibility(
-                visible = value.text.isNotBlank(),
-                enter = scaleIn(animationSpec = tween(durationMillis = 150)) +
-                    fadeIn(animationSpec = tween(durationMillis = 150)),
-                exit = scaleOut(animationSpec = tween(durationMillis = 150)) +
-                    fadeOut(animationSpec = tween(durationMillis = 150))
-            ) {
-                IconButton(
-                    onClick = onSend,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .testTag("send_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = config.sendContentDescription,
-                        tint = JayraBlue,
-                        modifier = Modifier.size(24.dp)
-                    )
+            // Tombol kanan morph: teks kosong = mic, ada teks = send hijau bulat.
+            Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                androidx.compose.animation.Crossfade(
+                    targetState = value.text.isNotBlank(),
+                    animationSpec = tween(durationMillis = 160),
+                    label = "send_mic_morph"
+                ) { hasText ->
+                    if (hasText) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(if (isDark) Color(0xFF00A884) else Color(0xFF25D366))
+                                .clickable(onClick = onSend)
+                                .testTag("send_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = config.sendContentDescription,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    } else {
+                        IconButton(
+                            onClick = onAttachClick,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .testTag("mic_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Mic,
+                                contentDescription = "Pesan suara",
+                                tint = JayraSubtext,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

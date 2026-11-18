@@ -29,6 +29,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.rounded.Cake
+import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
@@ -150,7 +151,7 @@ fun ContactInfoContent(
 ) {
     val isDark = isSystemInDarkTheme()
     val headerBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
-    val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
+    val screenBg = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
     val cardBg = if (isDark) JayraCardDark else JayraCardLight
     val separatorColor = if (isDark) JayraSeparatorDark else JayraSeparatorLight
 
@@ -169,7 +170,7 @@ fun ContactInfoContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("contact_info_back")) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.Rounded.ChevronLeft,
                             contentDescription = "Kembali",
                             tint = Color.White
                         )
@@ -286,13 +287,13 @@ fun ContactInfoContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             // Action Grid (3 buttons: Panggilan, Video, Cari)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(cardBg)
                                     .padding(12.dp),
                                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -318,7 +319,7 @@ fun ContactInfoContent(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(cardBg)
                             ) {
                                 SettingItemRow(
@@ -366,7 +367,7 @@ fun ContactInfoContent(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(cardBg)
                             ) {
                                 SettingSwitchRow(
@@ -409,7 +410,7 @@ fun ContactInfoContent(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(cardBg)
                             ) {
                                 SettingSwitchRow(
@@ -425,7 +426,7 @@ fun ContactInfoContent(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(cardBg)
                                     .padding(14.dp)
                             ) {
@@ -451,6 +452,40 @@ fun ContactInfoContent(
                                     lineHeight = 18.sp,
                                     color = JayraSubtext
                                 )
+                            }
+
+                            // Danger zone iOS style: teks merah di card sendiri, bukan tombol kotak merah.
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(cardBg)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { /* block contact */ }
+                                        .padding(horizontal = 16.dp, vertical = 15.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Blokir Kontak", fontSize = 16.sp, color = Color(0xFFFF3B30))
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(0.5.dp)
+                                        .padding(start = 16.dp)
+                                        .background(separatorColor)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { /* delete chat */ }
+                                        .padding(horizontal = 16.dp, vertical = 15.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Hapus Chat", fontSize = 16.sp, color = Color(0xFFFF3B30))
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -591,7 +626,7 @@ private fun PersonalNoteCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(cardBg)
             .padding(16.dp)
             .testTag("contact_personal_note_card")
@@ -711,7 +746,7 @@ private fun BirthdayCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(cardBg)
             .padding(16.dp)
             .testTag("contact_birthday_card")
