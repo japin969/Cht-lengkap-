@@ -66,6 +66,7 @@ import com.jayra.app.model.ChatFilter
 import com.jayra.app.model.ChatListUiState
 import com.jayra.app.model.MessageStatus
 import com.jayra.app.ui.viewmodel.ChatListViewModel
+import com.jayra.app.ui.auth.iosGlassEntrance
 import com.jayra.app.ui.theme.PoeLogo
 import com.jayra.app.util.iosGlass
 import kotlinx.coroutines.delay
@@ -196,10 +197,12 @@ fun ChatListScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // ========== TOP BAR ==========
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .iosGlassEntrance(delayMillis = 0)
             ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -297,7 +300,10 @@ fun ChatListScreen(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.04).sp,
                 color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 0.dp)
+                    .iosGlassEntrance(delayMillis = 45)
             )
             // ========== SEARCH BAR (A3 Glass) ==========
             val searchIsDark = isSystemInDarkTheme()
@@ -310,6 +316,7 @@ fun ChatListScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .height(40.dp)
+                    .iosGlassEntrance(delayMillis = 90)
                     .glassSurfaceV2(searchSpec.surface, solidColor = searchBg, cornerRadius = 20.dp)
                     .padding(horizontal = 12.dp)
                     .clickable { searchActive = true },
@@ -346,7 +353,11 @@ fun ChatListScreen(
 
             // ========== FILTER CHIP ==========
             Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .iosGlassEntrance(delayMillis = 135),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val chipTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
@@ -614,7 +625,19 @@ fun SwipeableChatRow(
         )
     }
     if (showMenu) {
-        ModalBottomSheet(onDismissRequest = { showMenu = false }, containerColor = if (isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark else com.jayra.app.ui.theme.IOSSystemGroupedBackground, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
+        ModalBottomSheet(
+            onDismissRequest = { showMenu = false },
+            containerColor = Color.Transparent,
+            tonalElevation = 0.dp,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            com.jayra.app.ui.auth.IOSGlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .iosGlassEntrance(delayMillis = 0),
+                cornerRadius = 28.dp,
+                contentPadding = PaddingValues(0.dp)
+            ) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                 AppText(chat.name, fontSize = 13.sp, color = if (isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSSecondaryLabelDark else IOSSecondaryLabel, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark else com.jayra.app.ui.theme.IOSSecondarySystemBackground)) {
@@ -634,6 +657,7 @@ fun SwipeableChatRow(
                     AppText("Batal", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = IOSBlue)
                 }
                 Spacer(Modifier.height(8.dp))
+            }
             }
         }
     }
