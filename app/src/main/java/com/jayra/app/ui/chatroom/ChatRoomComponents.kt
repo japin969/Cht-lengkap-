@@ -198,14 +198,10 @@ fun MessageBubble(
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         AnimatedVisibility(
-            enter = fadeIn(animationSpec = tween(150)) +
-                androidx.compose.animation.scaleIn(
-                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
-                    initialScale = 0.94f
-                ),
+            enter = fadeIn(animationSpec = tween(150)),
             exit = fadeOut()
         ) {
-        Box(
+            Box(
             modifier = Modifier
                 .widthIn(max = 300.dp)
                 .graphicsLayer {
