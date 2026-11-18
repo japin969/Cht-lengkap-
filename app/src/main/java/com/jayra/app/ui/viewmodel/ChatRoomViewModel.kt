@@ -418,6 +418,5 @@ class ChatRoomViewModel @JvmOverloads constructor(
         chatMetadataJob?.cancel()
         messagesCollectionJob?.cancel()
         typingJob?.cancel()
-        simulatedResponseJob?.cancel()
     }
 }

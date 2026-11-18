@@ -1,6 +1,5 @@
 package com.jayra.app.data
 
-import android.util.Log
 import com.jayra.app.data.local.ChatDao
 import com.jayra.app.data.local.ChatEntity
 import com.jayra.app.data.local.Converters
@@ -23,7 +22,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -38,7 +39,6 @@ class ChatRepository(
     private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
 ) {
 
-    private val logger = Log
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val currentUserId: String
@@ -190,13 +190,13 @@ class ChatRepository(
     }
 
     suspend fun getChatSnapshotByIdSuspend(chatId: String): Chat? =
-        withContext(Dispatchers.IO) { chatDao.getChat(chatId)?.let { toChat(it) } }
+        withContext(Dispatchers.IO) { chatDao.getChat(chatId).firstOrNull()?.let { toChat(it) } }
 
     fun getChatSnapshotById(chatId: String): Chat? {
         // Sinkron langsung (non-suspend) untuk inisialisasi UI cepat; Room di-akses via dispatcher.
         var result: Chat? = null
         scope.launch {
-            result = withContext(Dispatchers.IO) { chatDao.getChat(chatId)?.let { toChat(it) } }
+            result = withContext(Dispatchers.IO) { chatDao.getChat(chatId).firstOrNull()?.let { toChat(it) } }
         }
         // Tidak ada cara sinkron benar dari Room tanpa suspend; kembalikan null jika belum siap,
         // UI akan mengamati observeChat melalui Flow.
@@ -336,7 +336,7 @@ class ChatRepository(
     }
 
     private suspend fun updateChatOnSend(chatId: String, lastMessage: String, now: Long) {
-        val existing = withContext(Dispatchers.IO) { chatDao.getChat(chatId) }
+        val existing = withContext(Dispatchers.IO) { chatDao.getChat(chatId).firstOrNull() }
         val ent = existing ?: ChatEntity(chatId = chatId, lastMessageTime = now)
         chatDao.insertChat(ent.copy(
             lastMessage = lastMessage,
@@ -621,7 +621,7 @@ class ChatRepository(
         val cipherText = data["cipherText"] as? String ?: (data["text"] as? String ?: "")
         val iv = data["iv"] as? String ?: ""
         val decrypted = if (iv.isNotEmpty()) EncryptionHelper.decrypt(cipherText, iv) else cipherText
-        val ts = (data["timestamp"] as? com.google.firebase.Timestamp)?.date?.time ?: System.currentTimeMillis()
+        val ts = (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: System.currentTimeMillis()
         val uid = currentUserId
         return Message(
             id = doc.id,
