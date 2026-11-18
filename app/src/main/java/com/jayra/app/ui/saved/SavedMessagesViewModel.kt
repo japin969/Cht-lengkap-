@@ -96,7 +96,9 @@ class SavedMessagesViewModel(
     }
 
     fun onReaction(messageId: String, emoji: String) {
-        chatRepository.addReaction(savedChatId, messageId, emoji)
+        viewModelScope.launch {
+            try { chatRepository.addReaction(savedChatId, messageId, emoji) } catch (_: Exception) {}
+        }
     }
 
     fun onToggleChecklistItem(messageId: String, itemId: String) {
@@ -106,7 +108,9 @@ class SavedMessagesViewModel(
     }
 
     fun onDelete(messageId: String) {
-        chatRepository.deleteMessage(savedChatId, messageId)
+        viewModelScope.launch {
+            try { chatRepository.deleteMessage(savedChatId, messageId) } catch (_: Exception) {}
+        }
     }
 
     fun onSearchQueryChange(query: String) {
