@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.play.services.await
+import com.google.android.gms.tasks.Tasks
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -232,7 +232,7 @@ class ChatRepository(
             .endBefore(cursor)
             .limitToLast(MESSAGE_PAGE_SIZE)
             .get()
-            .await()
+            .let { Tasks.await(it) }
             .documents
             .filterIsInstance<QueryDocumentSnapshot>()
         if (documents.isEmpty()) {
@@ -311,7 +311,7 @@ class ChatRepository(
                     .collection("messages")
                     .document(msgId)
                     .set(data)
-                    .await()
+                    .let { Tasks.await(it) }
             }
             // 3. Sukses → status SENT.
             val sentMsg = sendingMsg.copy(status = MessageStatus.SENT)
@@ -553,7 +553,7 @@ class ChatRepository(
             "allowOthersToToggle" to message.allowOthersToToggle,
             "participants" to listOf(uid).take(50)
         )
-        db.collection("chats").document(chatId).collection("messages").document(message.id).set(payload).await()
+        Tasks.await(db.collection("chats").document(chatId).collection("messages").document(message.id).set(payload))
     }
 
     suspend fun persistVoiceNoteMessageRemote(
@@ -579,7 +579,7 @@ class ChatRepository(
             "voiceWaveform" to safeWaveform,
             "participants" to listOf(uid).take(50)
         )
-        db.collection("chats").document(chatId).collection("messages").document(message.id).set(payload).await()
+        Tasks.await(db.collection("chats").document(chatId).collection("messages").document(message.id).set(payload))
     }
 
     // -------------------------------------------------------------------------
@@ -721,7 +721,7 @@ class ChatRepository(
         val finalItems = if (precomputedItems != null && precomputedItems.isNotEmpty()) {
             precomputedItems
         } else {
-            val snap = msgRef.get().await()
+            val snap = Tasks.await(msgRef.get())
             val existingItems = parseChecklistItemsFromRaw(snap.data?.get("checklistItems"))
             existingItems.map { item ->
                 if (item.id == itemId) item.copy(isDone = !item.isDone) else item
@@ -730,7 +730,7 @@ class ChatRepository(
         val itemMaps = finalItems.map { item ->
             mapOf("id" to item.id.take(128), "text" to item.text.take(300), "isDone" to item.isDone)
         }
-        msgRef.update("checklistItems", itemMaps).await()
+        Tasks.await(msgRef.update("checklistItems", itemMaps))
         return finalItems
     }
 
