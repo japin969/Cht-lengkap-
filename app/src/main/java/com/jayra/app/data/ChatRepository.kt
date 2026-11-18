@@ -43,8 +43,43 @@ class ChatRepository(
     private val oldestMessageCursor = mutableMapOf<String, QueryDocumentSnapshot>()
     private val exhaustedMessageHistory = mutableSetOf<String>()
 
-    private companion object {
+    companion object {
         const val MESSAGE_PAGE_SIZE = 50L
+
+        fun buildChecklistSummaryText(title: String, items: List<ChecklistItem>): String {
+            val lines = items.joinToString("\n") { item ->
+                val mark = if (item.isDone) "[x]" else "[ ]"
+                "$mark ${item.text}"
+            }
+            return "☑️ Daftar Tugas: $title\n$lines"
+        }
+
+        fun buildVoiceNoteSummaryText(durationMillis: Long): String {
+            val compact = com.jayra.app.util.AudioWaveTrimmer.formatCompactDurationMillis(durationMillis)
+            return "🎤 [Voice Note $compact]"
+        }
+
+        fun parseChecklistItemsFromRaw(raw: Any?): List<ChecklistItem> {
+            val rawList = raw as? List<*> ?: return emptyList()
+            return rawList.mapNotNull { entry ->
+                val map = entry as? Map<*, *> ?: return@mapNotNull null
+                val id = (map["id"] as? String)?.trim().orEmpty()
+                val text = (map["text"] as? String)?.trim().orEmpty()
+                val isDone = (map["isDone"] as? Boolean) ?: false
+                if (id.isNotEmpty() && text.isNotEmpty()) {
+                    ChecklistItem(id = id, text = text, isDone = isDone)
+                } else {
+                    null
+                }
+            }
+        }
+
+        fun parseVoiceWaveformFromRaw(raw: Any?): List<Float> {
+            val rawList = raw as? List<*> ?: return emptyList()
+            return rawList.mapNotNull { entry ->
+                (entry as? Number)?.toFloat()?.coerceIn(0.08f, 1.0f)
+            }.take(80)
+        }
     }
 
     // DEV: seed dummy messages untuk test bubble iOS
@@ -1385,42 +1420,6 @@ class ChatRepository(
         }
     }
 
-    companion object {
-        fun buildChecklistSummaryText(title: String, items: List<ChecklistItem>): String {
-            val lines = items.joinToString("\n") { item ->
-                val mark = if (item.isDone) "[x]" else "[ ]"
-                "$mark ${item.text}"
-            }
-            return "☑️ Daftar Tugas: $title\n$lines"
-        }
-
-        fun buildVoiceNoteSummaryText(durationMillis: Long): String {
-            val compact = com.jayra.app.util.AudioWaveTrimmer.formatCompactDurationMillis(durationMillis)
-            return "🎤 [Voice Note $compact]"
-        }
-
-        fun parseChecklistItemsFromRaw(raw: Any?): List<ChecklistItem> {
-            val rawList = raw as? List<*> ?: return emptyList()
-            return rawList.mapNotNull { entry ->
-                val map = entry as? Map<*, *> ?: return@mapNotNull null
-                val id = (map["id"] as? String)?.trim().orEmpty()
-                val text = (map["text"] as? String)?.trim().orEmpty()
-                val isDone = (map["isDone"] as? Boolean) ?: false
-                if (id.isNotEmpty() && text.isNotEmpty()) {
-                    ChecklistItem(id = id, text = text, isDone = isDone)
-                } else {
-                    null
-                }
-            }
-        }
-
-        fun parseVoiceWaveformFromRaw(raw: Any?): List<Float> {
-            val rawList = raw as? List<*> ?: return emptyList()
-            return rawList.mapNotNull { entry ->
-                (entry as? Number)?.toFloat()?.coerceIn(0.08f, 1.0f)
-            }.take(80)
-        }
-    }
 }
 
 
