@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -390,10 +392,17 @@ fun ChatListScreen(
             // ========== LIST ==========
             Box(modifier = Modifier.fillMaxSize()) {
                 when (val state = uiState) {
-                    is ChatListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF007AFF)) }
+                    is ChatListUiState.Loading -> ShimmerChatList()
                     is ChatListUiState.Empty -> EmptyState(onStartChat = onContactsClick)
                     is ChatListUiState.Success -> {
-                        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 180.dp)) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 180.dp)
+                        ) {
+                            // iOS-style: halus geser item saat daftar chat berubah urutan.
+                            animateItemPlacement(
+                                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                            )
                             if (archivedChats.isNotEmpty()) {
                                 item(key = "archived_chats_folder") {
                                     Row(
@@ -862,4 +871,66 @@ private fun AppText(
         fontWeight = fontWeight, fontFamily = fontFamily, letterSpacing = letterSpacing,
         maxLines = maxLines, overflow = overflow, textAlign = textAlign
     )
+}
+
+// ========== Shimmer skeleton untuk loading state ChatList (iOS style, tanpa blur) ==========
+@Composable
+fun ShimmerChatList() {
+    val isDark = isSystemInDarkTheme()
+    val shimmerBg = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+    val shimmerHighlight = if (isDark) Color(0xFF3A3A3C) else Color(0xFFE5E5EA)
+    val corner = RoundedCornerShape(12.dp)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        repeat(6) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(corner)
+                        .background(shimmerBg)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(18.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(shimmerBg)
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(40.percent)
+                            .height(14.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(shimmerBg)
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(corner)
+                        .background(shimmerBg)
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(com.jayra.app.ui.theme.IOSSeparator.copy(alpha = 0.36f))
+            )
+        }
+    }
 }

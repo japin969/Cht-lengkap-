@@ -314,11 +314,13 @@ class ChatRepository(
                     .set(data)
                     .let { Tasks.await(it) }
             }
-            // 3. Sukses → status SENT.
+            // 3. Sukses → status SENT → DELIVERED (terkirim ke server).
             val sentMsg = sendingMsg.copy(status = MessageStatus.SENT)
             messageDao.insertMessage(toMessageEntity(sentMsg))
+            val deliveredMsg = sentMsg.copy(status = MessageStatus.DELIVERED)
+            messageDao.insertMessage(toMessageEntity(deliveredMsg))
             markChatRead(chatId)
-            sentMsg
+            deliveredMsg
         } catch (e: Exception) {
             // 4. Gagal → status FAILED, pesan JANGAN dihapus.
             val failedMsg = sendingMsg.copy(status = MessageStatus.FAILED)
@@ -354,8 +356,10 @@ class ChatRepository(
         chatDao.resetUnreadCount(chatId)
     }
 
-    private fun otherUserIdFor(chatId: String): String {
-        return ""
+    private suspend fun otherUserIdFor(chatId: String): String {
+        return withContext(Dispatchers.IO) {
+            chatDao.getChat(chatId).firstOrNull()?.otherUserId ?: ""
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -604,7 +608,23 @@ class ChatRepository(
                 val msgs = docs.mapNotNull { parseMessageDocument(chatId, it) }
                 val entities = msgs.map { toMessageEntity(it) }
                 scope.launch {
-                    try { withContext(Dispatchers.IO) { messageDao.insertMessages(entities) } } catch (_: Exception) {}
+                    try {
+                        withContext(Dispatchers.IO) {
+                            messageDao.insertMessages(entities)
+                            // Update ChatList entry saat pesan MASUK (lawanc chat), biar lastMessage + unreadCount ter-update.
+                            val incoming = msgs.filter { it.senderId != currentUserId }
+                            if (incoming.isNotEmpty()) {
+                                val latest = incoming.maxByOrNull { it.timestampMillis }
+                                if (latest != null) {
+                                    chatDao.onNewMessage(
+                                        chatId = chatId,
+                                        lastMessage = latest.text,
+                                        lastMessageTime = latest.timestampMillis
+                                    )
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {}
                 }
                 trySend(msgs)
             }
@@ -789,7 +809,13 @@ class ChatRepository(
     }
 
     suspend fun markAsRead(chatId: String) {
-        scope.launch { try { chatDao.resetUnreadCount(chatId) } catch (_: Exception) {} }
+        val uid = currentUserId
+        scope.launch { 
+            try { 
+                chatDao.resetUnreadCount(chatId)
+                messageDao.markAllMessagesStatus(chatId, uid, MessageStatus.READ.name)
+            } catch (_: Exception) {} 
+        }
     }
 
     suspend fun createGroupChat(
