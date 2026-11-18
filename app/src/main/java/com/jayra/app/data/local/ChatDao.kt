@@ -88,6 +88,9 @@ interface ChatDao {
         lastMessageTime: Long
     )
 
+    @Query("UPDATE messages SET status = :newStatus WHERE chatId = :chatId AND status IN ('SENDING', 'SENT', 'DELIVERED')")
+    suspend fun markAllMessagesStatus(chatId: String, newStatus: String)
+
     @Query("DELETE FROM chats WHERE chatId = :chatId")
     suspend fun deleteChat(chatId: String)
 }

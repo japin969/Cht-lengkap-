@@ -1,5 +1,6 @@
 package com.jayra.app.ui.chatroom
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -8,6 +9,10 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -192,6 +197,14 @@ fun MessageBubble(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
+        AnimatedVisibility(
+            enter = fadeIn(animationSpec = tween(150)) +
+                androidx.compose.animation.scaleIn(
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    initialScale = 0.94f
+                ),
+            exit = fadeOut()
+        ) {
         Box(
             modifier = Modifier
                 .widthIn(max = 300.dp)
@@ -389,6 +402,7 @@ fun MessageBubble(
                 DropdownMenuItem(text = { Text("Delete", color = Color(0xFFFF3B30)) }, onClick = { onDeleteClick(); showMenu = false })
             }
         }
+    }
 
         // #22/#23 Reactions
         if (message.reactions.isNotEmpty()) {
