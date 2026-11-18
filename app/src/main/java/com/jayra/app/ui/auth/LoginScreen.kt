@@ -1,5 +1,7 @@
 package com.jayra.app.ui.auth
 
+import android.util.Patterns
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -47,6 +49,8 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val email by viewModel.email.collectAsStateWithLifecycle()
     val password by viewModel.password.collectAsStateWithLifecycle()
+    val canLogin = Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() &&
+        password.length >= 6
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val dark = isSystemInDarkTheme()
@@ -126,7 +130,9 @@ fun LoginScreen(
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 focusManager.clearFocus()
-                                viewModel.onLoginClick(context, email, password)
+                                if (canLogin) {
+                                    viewModel.onLoginClick(context, email, password)
+                                }
                             }
                         )
                     )
@@ -154,6 +160,7 @@ fun LoginScreen(
                 }
                 IOSPrimaryButton(
                     text = "Masuk",
+                    enabled = canLogin,
                     isLoading = uiState is AuthUiState.Loading,
                     onClick = {
                         focusManager.clearFocus()

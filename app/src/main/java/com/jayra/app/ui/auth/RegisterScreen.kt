@@ -1,5 +1,7 @@
 package com.jayra.app.ui.auth
 
+import android.util.Patterns
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -57,6 +59,11 @@ fun RegisterScreen(
     val username by viewModel.username.collectAsStateWithLifecycle()
     val email by viewModel.email.collectAsStateWithLifecycle()
     val password by viewModel.password.collectAsStateWithLifecycle()
+    val cleanUsername = username.trim().removePrefix("@").lowercase()
+    val canRegister =
+        Regex("^[a-z0-9_.]{3,32}$").matches(cleanUsername) &&
+            Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() &&
+            password.length >= 6
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val view = LocalView.current
@@ -183,7 +190,9 @@ fun RegisterScreen(
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 focusManager.clearFocus()
-                                viewModel.onRegisterClick(context, email, password, username)
+                                if (canRegister) {
+                                    viewModel.onRegisterClick(context, email, password, username)
+                                }
                             }
                         )
                     )
@@ -217,6 +226,7 @@ fun RegisterScreen(
 
                 IOSPrimaryButton(
                     text = "Daftar",
+                    enabled = canRegister,
                     isLoading = uiState is AuthUiState.Loading,
                     onClick = {
                         focusManager.clearFocus()

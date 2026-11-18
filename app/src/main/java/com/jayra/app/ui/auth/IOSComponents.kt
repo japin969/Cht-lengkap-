@@ -476,13 +476,33 @@ fun IOSPrimaryButton(
         GlassEffectPrefs.resolveTier()
     }
     val glassEnabled = tier != GlassTier.OFF
-    val buttonModifier = remember(dark, glassEnabled, enabled) {
+    val disabledStart = if (dark) Color(0xFF55565A) else Color(0xFFD1D1D6)
+    val disabledMid = if (dark) Color(0xFF48484A) else Color(0xFFC7C7CC)
+    val disabledEnd = if (dark) Color(0xFF3A3A3C) else Color(0xFFB8B8BE)
+    val fillStart by animateColorAsState(
+        targetValue = if (enabled) Color(0xFF1D8EFF) else disabledStart,
+        animationSpec = tween(durationMillis = 220),
+        label = "ios_button_fill_start"
+    )
+    val fillMid by animateColorAsState(
+        targetValue = if (enabled) IOSBlue else disabledMid,
+        animationSpec = tween(durationMillis = 220),
+        label = "ios_button_fill_mid"
+    )
+    val fillEnd by animateColorAsState(
+        targetValue = if (enabled) Color(0xFF4A56E2) else disabledEnd,
+        animationSpec = tween(durationMillis = 220),
+        label = "ios_button_fill_end"
+    )
+    val enabledAlpha by animateFloatAsState(
+        targetValue = if (enabled) 1f else 0.72f,
+        animationSpec = tween(durationMillis = 180),
+        label = "ios_button_enabled_alpha"
+    )
+    val buttonModifier = remember(dark, glassEnabled, enabled, fillStart, fillMid, fillEnd) {
         val cornerDp = 16.dp
         val shape = RoundedCornerShape(cornerDp)
         val glowTint = IOSBlue.copy(alpha = if (dark) 0.40f else 0.28f)
-        val fillStart = if (enabled) Color(0xFF1D8EFF) else IOSBlue.copy(alpha = 0.35f)
-        val fillMid = if (enabled) IOSBlue else IOSBlue.copy(alpha = 0.30f)
-        val fillEnd = if (enabled) Color(0xFF4A56E2) else IOSIndigo.copy(alpha = 0.30f)
         Modifier
             .then(
                 if (glassEnabled && enabled) {
@@ -528,7 +548,7 @@ fun IOSPrimaryButton(
             .graphicsLayer {
                 scaleX = scaleState.value
                 scaleY = scaleState.value
-                alpha = (if (enabled) 1f else 0.55f) * pressAlphaState.value
+                alpha = enabledAlpha * pressAlphaState.value
             }
             .then(buttonModifier)
             .clickable(
