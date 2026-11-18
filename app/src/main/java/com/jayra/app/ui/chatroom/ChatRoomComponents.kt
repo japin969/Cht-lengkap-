@@ -6,10 +6,14 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +53,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
+import android.view.HapticFeedbackConstants
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
@@ -82,6 +89,9 @@ import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import com.jayra.app.util.EmojiParser
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
 
 @Composable
 fun DateSeparator(dateText: String) {
@@ -125,6 +135,14 @@ fun MessageBubble(
 ) {
     val isDark = isSystemInDarkTheme()
     var showMenu by remember { mutableStateOf(false) }
+    val bubbleInteraction = remember { MutableInteractionSource() }
+    val bubblePressed by bubbleInteraction.collectIsPressedAsState()
+    val bubbleScale by animateFloatAsState(
+        targetValue = if (bubblePressed) 0.97f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+        label = "message_bubble_jelly"
+    )
+    val bubbleView = LocalView.current
 
     // #25 System bubble (pill center)
     if (!message.systemText.isNullOrBlank()) {
@@ -177,10 +195,22 @@ fun MessageBubble(
         Box(
             modifier = Modifier
                 .widthIn(max = 300.dp)
+                .graphicsLayer {
+                    scaleX = bubbleScale
+                    scaleY = bubbleScale
+                }
                 .shadow(0.5.dp, bubbleShape)
                 .clip(bubbleShape)
                 .background(bubbleBg)
-                .combinedClickable(onClick = {}, onLongClick = { showMenu = true })
+                .combinedClickable(
+                    interactionSource = bubbleInteraction,
+                    indication = null,
+                    onClick = {},
+                    onLongClick = {
+                        bubbleView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        showMenu = true
+                    }
+                )
                 .padding(horizontal = 12.dp, vertical = 8.dp)
                 .testTag("bubble_${message.id}")
         ) {
@@ -464,11 +494,17 @@ fun ChatInputBar(
 ) {
     val isDark = isSystemInDarkTheme()
     val bg = if (isDark) JayraInputDark else JayraInputLight
+    val glassTier = remember(GlassEffectPrefs.enabledState.value) {
+        GlassEffectPrefs.resolveTier()
+    }
+    val glassSpec = remember(glassTier, isDark) {
+        LiquidGlassSpecV2.forTier(glassTier, isDark)
+    }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(bg)
+            .glassSurfaceV2(glassSpec.surface, solidColor = bg, cornerRadius = 20.dp)
     ) {
         // Reply bar banner
         if (replyTo != null) {

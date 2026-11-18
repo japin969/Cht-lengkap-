@@ -9,6 +9,7 @@ import com.jayra.app.security.EncryptionHelper
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QueryDocumentSnapshot
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,11 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
+data class OlderMessagePage(
+    val messages: List<Message>,
+    val hasMore: Boolean
+)
+
 class ChatRepository(
     private val firestore: FirebaseFirestore? = com.jayra.app.di.AppModule.firestore,
     private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
@@ -34,6 +40,12 @@ class ChatRepository(
     private val _localChats = MutableStateFlow<List<Chat>>(emptyList())
     private val _deletedIds = mutableSetOf<String>()
     private val _messagesByChat = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
+    private val oldestMessageCursor = mutableMapOf<String, QueryDocumentSnapshot>()
+    private val exhaustedMessageHistory = mutableSetOf<String>()
+
+    private companion object {
+        const val MESSAGE_PAGE_SIZE = 50L
+    }
 
     // DEV: seed dummy messages untuk test bubble iOS
     fun seedDemoMessages(chatId: String) {
@@ -226,61 +238,95 @@ class ChatRepository(
         }
     }
 
+    private fun parseMessageDocument(
+        chatId: String,
+        doc: QueryDocumentSnapshot
+    ): Message? {
+        val data = doc.data
+        val cipherText = data["cipherText"] as? String ?: (data["text"] as? String ?: "")
+        val iv = data["iv"] as? String ?: ""
+        val decrypted = if (iv.isNotEmpty()) EncryptionHelper.decrypt(cipherText, iv) else cipherText
+        val cachedVoicePath = _messagesByChat.value[chatId]
+            ?.firstOrNull { it.id == doc.id }
+            ?.voiceFilePath
+
+        return Message(
+            id = doc.id,
+            chatId = chatId,
+            senderId = data["senderId"] as? String ?: "",
+            senderName = data["senderName"] as? String ?: "",
+            text = decrypted,
+            timestamp = data["timestampFormatted"] as? String ?: "Baru saja",
+            dateGroup = "Hari Ini",
+            status = MessageStatus.READ,
+            replyToId = data["replyToId"] as? String,
+            replyToText = data["replyToText"] as? String,
+            replyToSender = data["replyToSender"] as? String,
+            forwardedFrom = data["forwardedFrom"] as? String,
+            topicId = (data["topicId"] as? String)?.takeIf { it.isNotBlank() } ?: "general",
+            checklistTitle = (data["checklistTitle"] as? String)?.takeIf { it.isNotBlank() },
+            checklistItems = parseChecklistItemsFromRaw(data["checklistItems"]),
+            allowOthersToToggle = (data["allowOthersToToggle"] as? Boolean) ?: true,
+            voiceFilePath = cachedVoicePath,
+            voiceDurationMillis = (data["voiceDurationMillis"] as? Number)?.toLong(),
+            voiceWaveform = parseVoiceWaveformFromRaw(data["voiceWaveform"])
+        )
+    }
+
     fun getMessages(chatId: String): Flow<List<Message>> = callbackFlow {
         if (firestore != null) {
-            val listener = firestore.collection("chats")
+            val cacheJob = launch {
+                _messagesByChat.collect { map ->
+                    map[chatId]?.takeIf { it.isNotEmpty() }?.let { trySend(it) }
+                }
+            }
+            val query = firestore.collection("chats")
                 .document(chatId)
                 .collection("messages")
                 .orderBy("timestamp", Query.Direction.ASCENDING)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null || snapshot == null || snapshot.isEmpty) {
-                        trySend(_messagesByChat.value[chatId] ?: emptyList())
-                        return@addSnapshotListener
-                    }
-                    val remoteMessages = snapshot.documents.mapNotNull { doc ->
-                        val data = doc.data ?: return@mapNotNull null
-                        val cipherText = data["cipherText"] as? String ?: (data["text"] as? String ?: "")
-                        val iv = data["iv"] as? String ?: ""
-                        val decrypted = if (iv.isNotEmpty()) EncryptionHelper.decrypt(cipherText, iv) else cipherText
+                .limitToLast(MESSAGE_PAGE_SIZE)
 
-                        val parsedChecklistItems = parseChecklistItemsFromRaw(data["checklistItems"])
-                        val parsedChecklistTitle = (data["checklistTitle"] as? String)?.takeIf { it.isNotBlank() }
-                        val allowOthersToToggle = (data["allowOthersToToggle"] as? Boolean) ?: true
-                        val parsedVoiceDuration = (data["voiceDurationMillis"] as? Number)?.toLong()
-                        val parsedVoiceWaveform = parseVoiceWaveformFromRaw(data["voiceWaveform"])
-                        val cachedVoicePath = _messagesByChat.value[chatId]
-                            ?.firstOrNull { it.id == doc.id }
-                            ?.voiceFilePath
+            val listener = query.addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
 
-                        Message(
-                            id = doc.id,
-                            chatId = chatId,
-                            senderId = data["senderId"] as? String ?: "",
-                            senderName = data["senderName"] as? String ?: "",
-                            text = decrypted,
-                            timestamp = data["timestampFormatted"] as? String ?: "Baru saja",
-                            dateGroup = "Hari Ini",
-                            status = MessageStatus.READ,
-                            replyToId = data["replyToId"] as? String,
-                            replyToText = data["replyToText"] as? String,
-                            replyToSender = data["replyToSender"] as? String,
-                            forwardedFrom = data["forwardedFrom"] as? String,
-                            topicId = (data["topicId"] as? String)?.takeIf { it.isNotBlank() } ?: "general",
-                            checklistTitle = parsedChecklistTitle,
-                            checklistItems = parsedChecklistItems,
-                            allowOthersToToggle = allowOthersToToggle,
-                            voiceFilePath = cachedVoicePath,
-                            voiceDurationMillis = parsedVoiceDuration,
-                            voiceWaveform = parsedVoiceWaveform
-                        )
-                    }
-                    if (remoteMessages.isNotEmpty()) {
-                        trySend(remoteMessages)
+                val documents = snapshot.documents.filterIsInstance<QueryDocumentSnapshot>()
+                if (documents.isEmpty()) {
+                    oldestMessageCursor.remove(chatId)
+                    exhaustedMessageHistory.add(chatId)
+                    trySend(_messagesByChat.value[chatId] ?: emptyList())
+                    return@addSnapshotListener
+                }
+
+                // Keep the cursor at the oldest loaded page. Live updates must not
+                // move it forward and make older history inaccessible.
+                if (oldestMessageCursor[chatId] == null) {
+                    oldestMessageCursor[chatId] = documents.first()
+                    if (documents.size.toLong() < MESSAGE_PAGE_SIZE) {
+                        exhaustedMessageHistory.add(chatId)
                     } else {
-                        trySend(_messagesByChat.value[chatId] ?: emptyList())
+                        exhaustedMessageHistory.remove(chatId)
                     }
                 }
-            awaitClose { listener.remove() }
+
+                val remoteMessages = documents.mapNotNull { parseMessageDocument(chatId, it) }
+                if (remoteMessages.isNotEmpty()) {
+                    val remoteIds = remoteMessages.mapTo(mutableSetOf()) { it.id }
+                    _messagesByChat.update { current ->
+                        val existing = current[chatId].orEmpty()
+                        current + (
+                            chatId to (
+                                existing.filterNot { it.id in remoteIds } + remoteMessages
+                            )
+                        )
+                    }
+                    trySend(_messagesByChat.value[chatId] ?: emptyList())
+                }
+            }
+
+            awaitClose {
+                listener.remove()
+                cacheJob.cancel()
+            }
         } else {
             val job = launch {
                 _messagesByChat.collect { map ->
@@ -289,6 +335,53 @@ class ChatRepository(
             }
             awaitClose { job.cancel() }
         }
+    }
+
+    fun hasOlderMessages(chatId: String): Boolean =
+        oldestMessageCursor.containsKey(chatId) && chatId !in exhaustedMessageHistory
+
+    suspend fun loadOlderMessages(chatId: String): OlderMessagePage {
+        if (firestore == null || chatId in exhaustedMessageHistory) {
+            return OlderMessagePage(emptyList(), hasMore = false)
+        }
+
+        val cursor = oldestMessageCursor[chatId]
+            ?: return OlderMessagePage(emptyList(), hasMore = false)
+
+        val documents = firestore.collection("chats")
+            .document(chatId)
+            .collection("messages")
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .endBefore(cursor)
+            .limitToLast(MESSAGE_PAGE_SIZE)
+            .get()
+            .await()
+            .documents
+            .filterIsInstance<QueryDocumentSnapshot>()
+
+        if (documents.isEmpty()) {
+            oldestMessageCursor.remove(chatId)
+            exhaustedMessageHistory.add(chatId)
+            return OlderMessagePage(emptyList(), hasMore = false)
+        }
+
+        oldestMessageCursor[chatId] = documents.first()
+        val hasMore = documents.size.toLong() == MESSAGE_PAGE_SIZE
+        if (!hasMore) exhaustedMessageHistory.add(chatId)
+
+        val olderMessages = documents.mapNotNull { parseMessageDocument(chatId, it) }
+        val olderIds = olderMessages.mapTo(mutableSetOf()) { it.id }
+
+        _messagesByChat.update { current ->
+            val existing = current[chatId].orEmpty()
+            current + (
+                chatId to (
+                    olderMessages + existing.filterNot { it.id in olderIds }
+                )
+            )
+        }
+
+        return OlderMessagePage(olderMessages, hasMore)
     }
 
     fun getAllMessages(): Flow<List<Message>> = callbackFlow {
