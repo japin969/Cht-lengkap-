@@ -10,6 +10,7 @@ import com.jayra.app.data.CommunityRepository
 import com.jayra.app.data.ContactNoteRepository
 import com.jayra.app.data.ContactRepository
 import com.jayra.app.data.GroupRepository
+import com.jayra.app.data.local.AppDatabase
 import com.jayra.app.data.StoryRepository
 import com.jayra.app.data.UserRepository
 import com.jayra.app.security.EncryptionHelper
@@ -24,11 +25,21 @@ object AppModule {
     @Volatile
     private var databaseId: String? = null
 
+    @Volatile
+    private var appDatabase: AppDatabase? = null
+
     fun init(context: Context) {
         if (databaseId == null) {
             synchronized(this) {
                 if (databaseId == null) {
                     databaseId = context.applicationContext.getString(R.string.firestore_database_id)
+                }
+            }
+        }
+        if (appDatabase == null) {
+            synchronized(this) {
+                if (appDatabase == null) {
+                    appDatabase = AppDatabase.getDatabase(context.applicationContext)
                 }
             }
         }
@@ -54,13 +65,16 @@ object AppModule {
             }
         }
 
+    val database: AppDatabase
+        get() = appDatabase ?: throw IllegalStateException("AppDatabase not initialized. Call AppModule.init(context) first.")
+
     fun provideAuthRepository(context: Context): AuthRepository {
         val dbId = context.applicationContext.getString(R.string.firestore_database_id)
         return AuthRepository(FirebaseFirestore.getInstance(dbId))
     }
 
     val chatRepository: ChatRepository by lazy {
-        ChatRepository()
+        ChatRepository(database.chatDao(), database.messageDao())
     }
 
     val contactRepository: ContactRepository by lazy {

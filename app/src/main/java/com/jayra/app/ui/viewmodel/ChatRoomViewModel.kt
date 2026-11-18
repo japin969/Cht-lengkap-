@@ -69,7 +69,6 @@ class ChatRoomViewModel @JvmOverloads constructor(
     private var typingJob: Job? = null
     private var chatMetadataJob: Job? = null
     private var messagesCollectionJob: Job? = null
-    private var simulatedResponseJob: Job? = null
     private var messageSnapshotListener: ListenerRegistration? = null
     private val notifiedMessageIds = mutableSetOf<String>()
 
@@ -84,6 +83,10 @@ class ChatRoomViewModel @JvmOverloads constructor(
         observeChatMetadata(chatId)
         attachRealtimeBackgroundNotificationListener(chatId)
         loadMessages(chatId)
+        // Reset unread count saat obrolan dibuka.
+        viewModelScope.launch {
+            try { chatRepository.markAsRead(chatId) } catch (_: Exception) {}
+        }
     }
 
     private fun observeChatMetadata(chatId: String) {
@@ -310,56 +313,22 @@ class ChatRoomViewModel @JvmOverloads constructor(
                     topicId = activeTopicId
                 )
 
-                simulatePeerInteraction(activeTopicId)
+                // Pesan sudah disimpan Room dengan status SENDING → SENT / FAILED
+                // oleh ChatRepository; UI akan otomatis terupdate melalui Flow.
             } catch (_: Exception) {
-                _uiState.update { state ->
-                    if (state is ChatRoomUiState.Success) {
-                        state.copy(
-                            messages = state.messages.map {
-                                if (it.text == trimmed) it.copy(status = MessageStatus.FAILED) else it
-                            }
-                        )
-                    } else state
-                }
+                // ChatRepository sudah mencatat status FAILED ke Room, Flow akan
+                // menampilkannya. Tidak perlu memanipulasi ulang messages di sini.
             }
         }
     }
 
-    private fun simulatePeerInteraction(topicId: String = ChatTopic.GENERAL_TOPIC_ID) {
-        simulatedResponseJob?.cancel()
-        simulatedResponseJob = viewModelScope.launch {
-            delay(1200L)
-            this@ChatRoomViewModel.setTyping(true)
-            delay(2400L)
-            this@ChatRoomViewModel.setTyping(false)
-
-            val contactName = contactRepository.getContactById(currentChatId).name
-            val replies = listOf(
-                "Siap! Tampilan dan responsnya sangat mulus.",
-                "Desain Jayra di Android terasa cepat dan presisi.",
-                "Mantap! Enkripsi end-to-end berjalan sesuai harapan.",
-                "Mari kita uji panggilan grup dan berbagi pesan selanjutnya!"
-            )
-            val randomReply = replies.random()
-            val sent = chatRepository.sendMessage(
-                chatId = currentChatId,
-                text = randomReply,
-                topicId = topicId
-            )
-
-            // Jika pengguna meminimalkan aplikasi sebelum balasan tiba, picu notifikasi lokal
-            val appContext = getApplication<Application>().applicationContext
-            if (LocalNotificationManager.isAppInBackground(appContext) &&
-                notifiedMessageIds.add("peer_${sent.id}")
-            ) {
-                LocalNotificationManager.showMessageNotification(
-                    context = appContext,
-                    chatId = currentChatId,
-                    senderName = contactName,
-                    messageText = randomReply,
-                    messageId = sent.id
-                )
-            }
+    fun onRetrySend(messageId: String) {
+        val chatId = currentChatId
+        if (chatId.isBlank()) return
+        viewModelScope.launch {
+            try {
+                chatRepository.resendMessage(chatId, messageId)
+            } catch (_: Exception) {}
         }
     }
 
@@ -413,7 +382,9 @@ class ChatRoomViewModel @JvmOverloads constructor(
     }
 
     fun onReaction(messageId: String, emoji: String) {
-        chatRepository.addReaction(currentChatId, messageId, emoji)
+        viewModelScope.launch {
+            try { chatRepository.addReaction(currentChatId, messageId, emoji) } catch (_: Exception) {}
+        }
     }
 
     fun onToggleChecklistItem(messageId: String, itemId: String) {
@@ -424,7 +395,9 @@ class ChatRoomViewModel @JvmOverloads constructor(
     }
 
     fun onDelete(messageId: String) {
-        chatRepository.deleteMessage(currentChatId, messageId)
+        viewModelScope.launch {
+            try { chatRepository.deleteMessage(currentChatId, messageId) } catch (_: Exception) {}
+        }
     }
 
     fun seedDemoMessages() {
