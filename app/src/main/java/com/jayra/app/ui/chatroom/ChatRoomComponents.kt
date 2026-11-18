@@ -198,6 +198,7 @@ fun MessageBubble(
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         AnimatedVisibility(
+            visible = true,
             enter = fadeIn(animationSpec = tween(150)),
             exit = fadeOut()
         ) {
