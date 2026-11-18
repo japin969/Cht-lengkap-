@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Window background solid (sama dengan JayraLightChatBg) untuk mencegah flash hitam. -->
+    <color name="jayra_window_background">#E6EBEE</color>
+
     <!-- Apple iOS System Colors -->
     <color name="apple_system_blue">#007AFF</color>
     <color name="apple_system_green">#34C759</color>

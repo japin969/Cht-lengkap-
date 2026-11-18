@@ -73,15 +73,19 @@ class ChatRoomViewModel @JvmOverloads constructor(
     private val notifiedMessageIds = mutableSetOf<String>()
 
     fun initChat(chatId: String) {
+        if (chatId.isBlank()) {
+            _uiState.value = ChatRoomUiState.Error("Chat tidak ditemukan")
+            return
+        }
         if (currentChatId == chatId && (_uiState.value is ChatRoomUiState.Success || _uiState.value is ChatRoomUiState.Empty)) return
         currentChatId = chatId
         _isLoadingOlderMessages.value = false
         _hasOlderMessages.value = false
         listenToTyping(chatId)
         _selectedTopicId.value = ChatTopic.GENERAL_TOPIC_ID
-        _currentChat.value = chatRepository.getChatSnapshotById(chatId)
-        observeChatMetadata(chatId)
-        attachRealtimeBackgroundNotificationListener(chatId)
+        runCatching { _currentChat.value = chatRepository.getChatSnapshotById(chatId) }
+        runCatching { observeChatMetadata(chatId) }
+        runCatching { attachRealtimeBackgroundNotificationListener(chatId) }
         loadMessages(chatId)
         // Reset unread count saat obrolan dibuka.
         viewModelScope.launch {
@@ -176,6 +180,10 @@ class ChatRoomViewModel @JvmOverloads constructor(
     }
 
     fun loadMessages(chatId: String) {
+        if (chatId.isBlank()) {
+            _uiState.value = ChatRoomUiState.Error("Chat tidak ditemukan")
+            return
+        }
         _uiState.value = ChatRoomUiState.Loading
         val contact = contactRepository.getContactById(chatId)
         cachedContact = contact
@@ -366,11 +374,16 @@ class ChatRoomViewModel @JvmOverloads constructor(
     // Listener diletakkan di init block ViewModel
     private fun listenToTyping(chatId: String) {
         viewModelScope.launch {
-            chatRepository.observeTyping(chatId).collect { typingUsers ->
-                val othersTyping = typingUsers.filter { it != auth.currentUser?.uid }
-                _uiState.update { state ->
-                    if (state is ChatRoomUiState.Success) state.copy(isTyping = othersTyping.isNotEmpty()) else state
+            try {
+                chatRepository.observeTyping(chatId).collect { typingUsers ->
+                    val othersTyping = typingUsers.filter { it != auth.currentUser?.uid }
+                    _uiState.update { state ->
+                        if (state is ChatRoomUiState.Success) state.copy(isTyping = othersTyping.isNotEmpty()) else state
+                    }
                 }
+            } catch (_: Exception) {
+                // Listener indikator mengetik bersifat opsional; jangan sampai
+                // menghentikan pembukaan room chat bila backend tidak tersedia.
             }
         }
     }
