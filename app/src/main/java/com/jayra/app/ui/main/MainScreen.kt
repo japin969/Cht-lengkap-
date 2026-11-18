@@ -3,11 +3,12 @@
 package com.jayra.app.ui.main
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.jayra.app.util.glassSurfaceV2
@@ -537,10 +538,10 @@ private fun MainNavigationGraph(
             ) {
                 androidx.compose.animation.EnterTransition.None
             } else {
-                slideInHorizontally(
-                    animationSpec = tween(durationMillis = 220),
-                    initialOffsetX = { fullWidth -> fullWidth / 4 }
-                )
+                slideInVertically(
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    initialOffsetY = { it -> it }
+                ) + fadeIn(animationSpec = tween(180))
             }
         },
         exitTransition = {
@@ -549,10 +550,10 @@ private fun MainNavigationGraph(
             ) {
                 androidx.compose.animation.ExitTransition.None
             } else {
-                slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 220),
-                    targetOffsetX = { fullWidth -> -fullWidth / 4 }
-                )
+                slideOutVertically(
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    targetOffsetY = { it -> it }
+                ) + fadeOut(animationSpec = tween(180))
             }
         },
         popEnterTransition = {
@@ -561,10 +562,10 @@ private fun MainNavigationGraph(
             ) {
                 androidx.compose.animation.EnterTransition.None
             } else {
-                slideInHorizontally(
-                    animationSpec = tween(durationMillis = 220),
-                    initialOffsetX = { fullWidth -> -fullWidth / 4 }
-                )
+                slideInVertically(
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    initialOffsetY = { it -> -it }
+                ) + fadeIn(animationSpec = tween(180))
             }
         },
         popExitTransition = {
@@ -573,10 +574,10 @@ private fun MainNavigationGraph(
             ) {
                 androidx.compose.animation.ExitTransition.None
             } else {
-                slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 220),
-                    targetOffsetX = { fullWidth -> fullWidth / 4 }
-                )
+                slideOutVertically(
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    targetOffsetY = { it -> it }
+                ) + fadeOut(animationSpec = tween(180))
             }
         }
     ) {
