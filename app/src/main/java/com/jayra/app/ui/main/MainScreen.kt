@@ -3,6 +3,7 @@
 package com.jayra.app.ui.main
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -538,9 +539,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.EnterTransition.None
             } else {
                 slideInHorizontally(
-                    animationSpec = tween(durationMillis = 220),
-                    initialOffsetX = { fullWidth -> fullWidth / 4 }
-                )
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    initialOffsetX = { fullWidth -> fullWidth / 3 }
+                ) + fadeIn(animationSpec = tween(150))
             }
         },
         exitTransition = {
@@ -550,9 +551,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.ExitTransition.None
             } else {
                 slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 220),
-                    targetOffsetX = { fullWidth -> -fullWidth / 4 }
-                )
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 }
+                ) + fadeOut(animationSpec = tween(150))
             }
         },
         popEnterTransition = {
@@ -562,9 +563,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.EnterTransition.None
             } else {
                 slideInHorizontally(
-                    animationSpec = tween(durationMillis = 220),
-                    initialOffsetX = { fullWidth -> -fullWidth / 4 }
-                )
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 }
+                ) + fadeIn(animationSpec = tween(150))
             }
         },
         popExitTransition = {
@@ -574,9 +575,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.ExitTransition.None
             } else {
                 slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 220),
-                    targetOffsetX = { fullWidth -> fullWidth / 4 }
-                )
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
+                    targetOffsetX = { fullWidth -> fullWidth / 3 }
+                ) + fadeOut(animationSpec = tween(150))
             }
         }
     ) {

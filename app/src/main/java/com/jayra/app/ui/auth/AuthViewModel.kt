@@ -56,6 +56,10 @@ class AuthViewModel(
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
+    // Guard double-klik / spam tombol login dan register.
+    private val _isAuthInFlight = MutableStateFlow(false)
+    val isAuthInFlight: StateFlow<Boolean> = _isAuthInFlight.asStateFlow()
+
     private val _email = MutableStateFlow("")
     val email: StateFlow<String> = _email.asStateFlow()
 
@@ -202,6 +206,8 @@ class AuthViewModel(
             _uiState.value = AuthUiState.Error("Kata sandi minimal 6 karakter")
             return
         }
+        if (_isAuthInFlight.value) return
+        _isAuthInFlight.value = true
         val (country, phone) = resolveBackgroundCountryAndPhone()
 
         _uiState.value = AuthUiState.Loading
@@ -271,6 +277,7 @@ class AuthViewModel(
                         "Pendaftaran tidak selesai. Cek koneksi internet lalu coba lagi."
                     )
                 }
+                _isAuthInFlight.value = false
             }
         }
     }
@@ -285,6 +292,8 @@ class AuthViewModel(
             _uiState.value = AuthUiState.Error("Email atau password salah")
             return
         }
+        if (_isAuthInFlight.value) return
+        _isAuthInFlight.value = true
 
         _uiState.value = AuthUiState.Loading
         viewModelScope.launch {
@@ -349,6 +358,7 @@ class AuthViewModel(
                         "Login tidak selesai. Cek koneksi internet lalu coba lagi."
                     )
                 }
+                _isAuthInFlight.value = false
             }
         }
     }
