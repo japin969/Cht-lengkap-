@@ -9,6 +9,8 @@ import com.jayra.app.data.EncryptionHelper
 import com.jayra.app.data.NexadevAiApi
 import com.jayra.app.data.NexadevAiResponse
 import com.jayra.app.data.SiputzxApi
+import com.jayra.app.data.ChatRepository
+import com.jayra.app.di.AppModule
 import com.jayra.app.model.AssistantUiState
 import com.jayra.app.model.Message
 import com.jayra.app.model.MessageStatus
@@ -38,7 +40,8 @@ class AssistantViewModel @JvmOverloads constructor(
     private val siputzxApi: SiputzxApi = SiputzxApi.create(),
     private val nexadevAiApi: NexadevAiApi = NexadevAiApi.create(),
     private val firestore: FirebaseFirestore? = com.jayra.app.di.AppModule.provideFirestore(application),
-    private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
+    private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null },
+    private val chatRepository: ChatRepository = AppModule.chatRepository
 ) : AndroidViewModel(application) {
 
     private val prefs = application.getSharedPreferences("jayra_security_prefs", Context.MODE_PRIVATE)
@@ -259,6 +262,13 @@ class AssistantViewModel @JvmOverloads constructor(
 
                     _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false)
                     lastFailedPrompt = null
+
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try {
+                            chatRepository.ensureAssistantChat()
+                            chatRepository.updateChatLastMessage("jayra_ai", aiText ?: "", System.currentTimeMillis())
+                        } catch (_: Exception) {}
+                    }
 
                     saveBothToFirestoreSequential(deliveredUserMsg, aiMsg)
                 } else {

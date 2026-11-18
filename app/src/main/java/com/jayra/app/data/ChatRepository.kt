@@ -193,6 +193,14 @@ class ChatRepository(
     suspend fun getChatSnapshotByIdSuspend(chatId: String): Chat? =
         withContext(Dispatchers.IO) { chatDao.getChat(chatId).firstOrNull()?.let { toChat(it) } }
 
+    suspend fun updateChatLastMessage(chatId: String, lastMessage: String, timeMillis: Long) {
+        withContext(Dispatchers.IO) {
+            try {
+                chatDao.onNewMessage(chatId, lastMessage, timeMillis)
+            } catch (_: Exception) {}
+        }
+    }
+
     suspend fun ensureAssistantChat() {
         withContext(Dispatchers.IO) {
             if (chatDao.getChat("jayra_ai").firstOrNull() != null) return@withContext
