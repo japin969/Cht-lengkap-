@@ -42,6 +42,12 @@ class ChatRoomViewModel @JvmOverloads constructor(
     private val _uiState = MutableStateFlow<ChatRoomUiState>(ChatRoomUiState.Loading)
     val uiState: StateFlow<ChatRoomUiState> = _uiState.asStateFlow()
 
+    private val _isLoadingOlderMessages = MutableStateFlow(false)
+    val isLoadingOlderMessages: StateFlow<Boolean> = _isLoadingOlderMessages.asStateFlow()
+
+    private val _hasOlderMessages = MutableStateFlow(false)
+    val hasOlderMessages: StateFlow<Boolean> = _hasOlderMessages.asStateFlow()
+
     private val _editorValue = MutableStateFlow(TextFieldValue(""))
     val editorValue: StateFlow<TextFieldValue> = _editorValue.asStateFlow()
 
@@ -70,6 +76,8 @@ class ChatRoomViewModel @JvmOverloads constructor(
     fun initChat(chatId: String) {
         if (currentChatId == chatId && (_uiState.value is ChatRoomUiState.Success || _uiState.value is ChatRoomUiState.Empty)) return
         currentChatId = chatId
+        _isLoadingOlderMessages.value = false
+        _hasOlderMessages.value = false
         listenToTyping(chatId)
         _selectedTopicId.value = ChatTopic.GENERAL_TOPIC_ID
         _currentChat.value = chatRepository.getChatSnapshotById(chatId)
@@ -115,6 +123,7 @@ class ChatRoomViewModel @JvmOverloads constructor(
                 .document(chatId)
                 .collection("messages")
                 .orderBy("timestamp", Query.Direction.ASCENDING)
+                .limitToLast(50)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
 
@@ -198,10 +207,32 @@ class ChatRoomViewModel @JvmOverloads constructor(
                     }
 
                     allMessagesForChat = messages
+                    _hasOlderMessages.value = chatRepository.hasOlderMessages(chatId)
                     applyTopicFilterAndEmitState()
                 }
             } catch (e: Exception) {
                 _uiState.value = ChatRoomUiState.Error(e.message ?: "Gagal memuat pesan")
+            }
+        }
+    }
+
+    fun loadOlderMessages() {
+        val chatId = currentChatId
+        if (chatId.isBlank() ||
+            _isLoadingOlderMessages.value ||
+            !_hasOlderMessages.value
+        ) return
+
+        viewModelScope.launch {
+            _isLoadingOlderMessages.value = true
+            try {
+                val page = chatRepository.loadOlderMessages(chatId)
+                _hasOlderMessages.value = page.hasMore ||
+                    chatRepository.hasOlderMessages(chatId)
+            } catch (_: Exception) {
+                // Keep the flag enabled so the user can retry by scrolling up again.
+            } finally {
+                _isLoadingOlderMessages.value = false
             }
         }
     }

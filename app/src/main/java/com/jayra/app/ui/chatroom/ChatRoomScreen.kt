@@ -63,6 +63,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -104,8 +105,12 @@ import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.ui.viewmodel.ChatRoomViewModel
 import com.jayra.app.util.MarkdownParser
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import androidx.compose.ui.graphics.Brush
 import com.jayra.app.util.glassSurface
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
 
 @Composable
 fun ChatRoomScreen(
@@ -132,6 +137,8 @@ fun ChatRoomScreen(
     val currentChat by viewModel.currentChat.collectAsStateWithLifecycle()
     val topics by viewModel.topics.collectAsStateWithLifecycle()
     val selectedTopicId by viewModel.selectedTopicId.collectAsStateWithLifecycle()
+    val isLoadingOlderMessages by viewModel.isLoadingOlderMessages.collectAsStateWithLifecycle()
+    val hasOlderMessages by viewModel.hasOlderMessages.collectAsStateWithLifecycle()
 
     ChatRoomContent(
         chatId = chatId,
@@ -157,7 +164,10 @@ fun ChatRoomScreen(
         onNavigateToLocation = onNavigateToLocation,
         onNavigateToContact = onNavigateToContact,
         onForwardMessage = onForwardMessage,
-        onSeedDemo = { viewModel.seedDemoMessages() }
+        onSeedDemo = { viewModel.seedDemoMessages() },
+        onLoadOlderMessages = viewModel::loadOlderMessages,
+        isLoadingOlderMessages = isLoadingOlderMessages,
+        hasOlderMessages = hasOlderMessages
     )
 }
 
@@ -187,13 +197,22 @@ fun ChatRoomContent(
     onNavigateToLocation: (String) -> Unit = {},
     onNavigateToContact: (String) -> Unit = {},
     onForwardMessage: (String, String) -> Unit = { _, _ -> },
-    onSeedDemo: () -> Unit = {}
+    onSeedDemo: () -> Unit = {},
+    onLoadOlderMessages: () -> Unit = {},
+    isLoadingOlderMessages: Boolean = false,
+    hasOlderMessages: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val isDark = isSystemInDarkTheme()
     val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
     val chatBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
+    val chatGlassTier = remember(GlassEffectPrefs.enabledState.value) {
+        GlassEffectPrefs.resolveTier()
+    }
+    val chatGlassSpec = remember(chatGlassTier, isDark) {
+        LiquidGlassSpecV2.forTier(chatGlassTier, isDark)
+    }
 
     var fallbackEditorValue by remember { mutableStateOf(TextFieldValue("")) }
     val activeEditorValue = editorValue ?: fallbackEditorValue
@@ -208,6 +227,10 @@ fun ChatRoomContent(
     var showAttachmentSheet by remember { mutableStateOf(false) }
     var reactionDetail by remember { mutableStateOf<Pair<Message, String>?>(null) }
     val listState = rememberLazyListState()
+    var initialPositioned by remember(chatId) { mutableStateOf(false) }
+    var pendingOlderAnchor by remember(chatId) {
+        mutableStateOf<Triple<Int, Int, Int>?>(null)
+    }
 
     val showScrollToBottom by remember {
         derivedStateOf {
@@ -217,6 +240,59 @@ fun ChatRoomContent(
                 val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
                 lastVisible < totalItems - 2
             }
+        }
+    }
+
+    LaunchedEffect(chatId, uiState is ChatRoomUiState.Success) {
+        val success = uiState as? ChatRoomUiState.Success
+        if (!initialPositioned && success != null) {
+            val lastItem = success.messages.size + 1 +
+                if (success.isTyping) 1 else 0
+            listState.scrollToItem(lastItem.coerceAtLeast(0))
+            initialPositioned = true
+        }
+    }
+
+    LaunchedEffect(chatId, hasOlderMessages, isLoadingOlderMessages, initialPositioned) {
+        if (!initialPositioned) return@LaunchedEffect
+
+        var previousIndex = listState.firstVisibleItemIndex
+        var previousOffset = listState.firstVisibleItemScrollOffset
+
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (index, offset) ->
+            val scrollingTowardHistory =
+                index < previousIndex || (index == previousIndex && offset < previousOffset)
+            previousIndex = index
+            previousOffset = offset
+
+            val success = uiState as? ChatRoomUiState.Success
+            if (scrollingTowardHistory &&
+                index <= 1 &&
+                hasOlderMessages &&
+                !isLoadingOlderMessages &&
+                success != null &&
+                pendingOlderAnchor == null
+            ) {
+                pendingOlderAnchor = Triple(index, offset, success.messages.size)
+                onLoadOlderMessages()
+            }
+        }
+    }
+
+    LaunchedEffect(chatId, (uiState as? ChatRoomUiState.Success)?.messages?.size) {
+        val success = uiState as? ChatRoomUiState.Success
+        val anchor = pendingOlderAnchor
+        if (success != null && anchor != null &&
+            success.messages.size > anchor.third
+        ) {
+            val shiftedIndex = anchor.first + success.messages.size - anchor.third
+            listState.scrollToItem(
+                index = shiftedIndex.coerceAtLeast(0),
+                scrollOffset = anchor.second
+            )
+            pendingOlderAnchor = null
         }
     }
 
@@ -234,7 +310,7 @@ fun ChatRoomContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .glassSurface(solidColor = topBarBg, tintAlpha = 0.85f, blurRadius = 20.dp)
+                    .glassSurfaceV2(chatGlassSpec.surface, solidColor = topBarBg, cornerRadius = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -502,15 +578,6 @@ fun ChatRoomContent(
                             contentType = { "message_item" }
                         ) { msg ->
                             val isOutgoing = msg.senderId == "user_telegram_me" || msg.senderName == "Me"
-                            androidx.compose.animation.AnimatedVisibility(
-                                visible = true,
-                                enter = androidx.compose.animation.slideInVertically(
-                                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 180),
-                                    initialOffsetY = { it / 3 }
-                                ) + androidx.compose.animation.fadeIn(
-                                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 180)
-                                )
-                            ) {
                             MessageBubble(
                                 message = msg,
                                 isOutgoing = isOutgoing,
@@ -533,7 +600,6 @@ fun ChatRoomContent(
                                     reactionDetail = msg to emoji
                                 }
                             )
-                            }
                         }
 
                         if (uiState.isTyping) {
@@ -547,6 +613,17 @@ fun ChatRoomContent(
                         }
                     }
                 }
+            }
+
+            if (isLoadingOlderMessages) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
+                        .size(20.dp),
+                    color = JayraBlue,
+                    strokeWidth = 2.dp
+                )
             }
 
             // Scroll to Bottom Floating Action Button
