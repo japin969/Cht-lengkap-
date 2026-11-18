@@ -12,14 +12,14 @@ class Converters {
 
     @TypeConverter
     fun listStringFromDb(value: String?): List<String> =
-        value?.split(",").filter { it.isNotEmpty() } ?: emptyList()
+        value?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
 
     @TypeConverter
     fun listFloatToDb(list: List<Float>?): String? = list?.joinToString(",")
 
     @TypeConverter
     fun listFloatFromDb(value: String?): List<Float> =
-        value?.split(",").filter { it.isNotEmpty() }.map { it.toFloat() } ?: emptyList()
+        value?.split(",")?.filter { it.isNotEmpty() }?.map { it.toFloat() } ?: emptyList()
 
     @TypeConverter
     fun checklistItemsToDb(items: List<ChecklistItem>?): String? =
@@ -27,7 +27,7 @@ class Converters {
 
     @TypeConverter
     fun checklistItemsFromDb(value: String?): List<ChecklistItem> =
-        value?.split("|").filter { it.isNotEmpty() }.map { part ->
+        value?.split("|")?.filter { it.isNotEmpty() }?.map { part ->
             val (id, text, isDone) = part.split("~")
             ChecklistItem(id = id, text = text, isDone = isDone.toBoolean())
         } ?: emptyList()
@@ -38,7 +38,7 @@ class Converters {
 
     @TypeConverter
     fun reactionsFromDb(value: String?): List<Reaction> =
-        value?.split("|").filter { it.isNotEmpty() }.map { part ->
+        value?.split("|")?.filter { it.isNotEmpty() }?.map { part ->
             val cols = part.split("~")
             Reaction(
                 emoji = cols.getOrElse(0) { "" },
