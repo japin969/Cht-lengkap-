@@ -93,10 +93,16 @@ class AssistantViewModel @JvmOverloads constructor(
                             return@addSnapshotListener
                         }
                         if (snapshot == null || snapshot.isEmpty) {
+                            val previous = _uiState.value as? AssistantUiState.Success
                             _uiState.value = if (inMemoryMessages.isEmpty()) AssistantUiState.Empty
-                                else AssistantUiState.Success(inMemoryMessages.toList(), isLoading = false, mode = getMode())
+                                else AssistantUiState.Success(
+                                    messages = inMemoryMessages.toList(),
+                                    isLoading = previous?.isLoading ?: false,
+                                    mode = getMode()
+                                )
                             return@addSnapshotListener
                         }
+
                         val loaded = snapshot.documents.mapNotNull { doc ->
                             try {
                                 val encryptedText = doc.getString("text") ?: ""
@@ -115,10 +121,26 @@ class AssistantViewModel @JvmOverloads constructor(
                                 )
                             } catch (_: Exception) { null }
                         }
+                        // Jangan replace total: gabungkan snapshot remote dengan pesan lokal
+                        // yang belum tersimpan (SENDING/FAILED atau balasan AI yang baru tampil),
+                        // supaya pesan tidak "muncul lalu hilang".
+                        val merged = mergeWithLocalMessages(loaded)
+                        val previous = _uiState.value as? AssistantUiState.Success
                         inMemoryMessages.clear()
-                        inMemoryMessages.addAll(loaded)
-                        _uiState.value = if (loaded.isEmpty()) AssistantUiState.Empty
-                            else AssistantUiState.Success(loaded, isLoading = false, mode = getMode())
+                        inMemoryMessages.addAll(merged)
+                        _uiState.value = if (merged.isEmpty()) {
+                            if (previous?.isLoading == true) {
+                                AssistantUiState.Success(emptyList(), isLoading = true, mode = getMode())
+                            } else {
+                                AssistantUiState.Empty
+                            }
+                        } else {
+                            AssistantUiState.Success(
+                                messages = merged,
+                                isLoading = previous?.isLoading ?: false,
+                                mode = getMode()
+                            )
+                        }
                     }
             } catch (e: Exception) {
                 _uiState.value = AssistantUiState.Error(e.localizedMessage ?: "Terjadi kesalahan saat memuat chat")
@@ -288,6 +310,19 @@ Jayra AI:"""
         inMemoryMessages.addAll(finalMessages)
         _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false, mode = mode)
         _toastEvents.tryEmit(errorMessage)
+    }
+
+    /**
+     * Gabungkan daftar dari Firestore dengan pesan yang masih lokal (belum tersimpan).
+     * Pesan remote jadi acuan urutan; pesan lokal yang belum ada di remote tetap
+     * dipertahankan di akhir supaya bubble optimistik / balasan AI tidak hilang.
+     */
+    private fun mergeWithLocalMessages(remote: List<Message>): List<Message> {
+        if (remote.isEmpty()) return inMemoryMessages.toList()
+        val remoteIds = remote.map { it.id }.toHashSet()
+        val localOnly = inMemoryMessages.filter { it.id !in remoteIds }
+        if (localOnly.isEmpty()) return remote
+        return remote + localOnly
     }
 
     private fun saveBothToFirestoreSequential(userMsg: Message, aiMsg: Message) {
