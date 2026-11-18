@@ -6,6 +6,8 @@ import android.media.MediaPlayer
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.NexadevApi
+import com.jayra.app.data.DeezerApi
+import com.jayra.app.data.DeezerTrack
 import com.jayra.app.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -31,7 +33,8 @@ sealed interface MusicUiState {
 @OptIn(FlowPreview::class)
 class MusicViewModel @JvmOverloads constructor(
     application: Application,
-    private val nexadevApi: NexadevApi = NexadevApi.create()
+    private val nexadevApi: NexadevApi = NexadevApi.create(),
+    private val deezerApi: DeezerApi = DeezerApi.create()
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Empty)
@@ -124,41 +127,55 @@ class MusicViewModel @JvmOverloads constructor(
             _uiState.value = MusicUiState.Success(emptyList())
             return
         }
+        lastQuery = query
         _uiState.value = MusicUiState.Loading
-        val results = mutableListOf<Song>()
         try {
-            val spotifyDeferred = viewModelScope.async(Dispatchers.IO) {
-                try {
-                    val r = nexadevApi.searchSpotify(query)
-                    if (r.isSuccessful && r.body()?.status == true) {
-                        r.body()?.data?.let { s ->
-                            s.toSong(
-                                fallbackId = "sp_${System.currentTimeMillis()}"
-                            ).copy(source = "spotify")
-                        }
-                    } else null
-                } catch (_: Exception) { null }
-            }
-            val ytDeferred = viewModelScope.async(Dispatchers.IO) {
-                try {
-                    val r = nexadevApi.searchYouTube(query)
-                    if (r.isSuccessful && r.body()?.status == true) {
-                        r.body()?.toSong("yt_${System.currentTimeMillis()}")
-                            ?.copy(source = "youtube")
-                    } else null
-                } catch (_: Exception) { null }
-            }
-            spotifyDeferred.await()?.let { results.add(it) }
-            ytDeferred.await()?.let { results.add(it) }
-            if (results.isNotEmpty()) {
-                _uiState.value = MusicUiState.Success(results)
+            // Sumber data baru: Deezer (API lama api.nexadev.my.id sudah mati / 403).
+            val response = withContext(Dispatchers.IO) { deezerApi.search(query) }
+            val tracks = response.body()?.data.orEmpty()
+            val songs = tracks.map { it.toSong() }
+            if (songs.isNotEmpty()) {
+                _uiState.value = MusicUiState.Success(songs)
                 addHistory(query)
             } else {
-                _uiState.value = MusicUiState.Empty
+                val fallback = curatedSongs.filter {
+                    it.title.contains(query, ignoreCase = true) ||
+                        it.artist.contains(query, ignoreCase = true)
+                }
+                _uiState.value = if (fallback.isNotEmpty()) {
+                    MusicUiState.Success(fallback)
+                } else {
+                    MusicUiState.Empty
+                }
             }
         } catch (e: Exception) {
-            _uiState.value = MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
+            val fallback = curatedSongs.filter {
+                it.title.contains(query, ignoreCase = true) ||
+                    it.artist.contains(query, ignoreCase = true)
+            }
+            _uiState.value = if (fallback.isNotEmpty()) {
+                MusicUiState.Success(fallback)
+            } else {
+                MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
+            }
         }
+    }
+
+    private fun DeezerTrack.toSong(): Song = Song(
+        id = "dz_${id ?: System.currentTimeMillis()}",
+        title = title ?: "Tanpa Judul",
+        artist = artist?.name ?: "Unknown",
+        album = album?.title ?: "",
+        duration = formatDuration(duration ?: 0),
+        coverUrl = album?.coverBig ?: album?.coverMedium ?: "",
+        audioUrl = preview ?: "",
+        source = "deezer"
+    )
+
+    private fun formatDuration(totalSeconds: Int): String {
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "%d:%02d".format(minutes, seconds)
     }
 
     private suspend fun searchYouTubeFallback(query: String) {

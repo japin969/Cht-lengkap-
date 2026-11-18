@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.foundation.horizontalScroll
@@ -214,7 +215,8 @@ fun ChatRoomContent(
     val scope = rememberCoroutineScope()
     val isDark = isSystemInDarkTheme()
     val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
-    val chatBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
+    // Wallpaper WhatsApp lembut (bukan putih/hitam polos), NO blur.
+    val chatBg = if (isDark) Color(0xFF0B141A) else Color(0xFFEFEAE2)
     val chatGlassTier = remember(GlassEffectPrefs.enabledState.value) {
         GlassEffectPrefs.resolveTier()
     }
@@ -359,10 +361,10 @@ fun ChatRoomContent(
                         .testTag("chat_room_back")
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.Rounded.ChevronLeft,
                         contentDescription = "Back",
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                 }
 

@@ -236,7 +236,7 @@ fun MessageBubble(
         ) {
             Column {
                 if (!isOutgoing && showSenderName && message.senderName.isNotBlank() && message.senderName != "Me") {
-                    Text(message.senderName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = senderColor, modifier = Modifier.padding(bottom = 2.dp))
+                    Text(message.senderName, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = senderColor, modifier = Modifier.padding(bottom = 2.dp))
                 }
 
                 // #20 Forwarded
@@ -385,7 +385,7 @@ fun MessageBubble(
                         Text("⏱", fontSize = 11.sp, color = secondary)
                         Spacer(Modifier.width(3.dp))
                     }
-                    Text(message.timestamp, fontSize = 13.sp, color = secondary)
+                    Text(message.timestamp, fontSize = 11.sp, color = secondary.copy(alpha = 0.75f))
                     if (isOutgoing) {
                         Spacer(Modifier.width(4.dp))
                         OutgoingStatusIndicator(
@@ -595,7 +595,7 @@ fun ChatInputBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .glassSurfaceV2(glassSpec.surface, solidColor = bg, cornerRadius = 20.dp)
+            .glassSurfaceV2(glassSpec.surface, solidColor = bg, cornerRadius = 26.dp)
     ) {
         // Reply bar banner
         if (replyTo != null) {

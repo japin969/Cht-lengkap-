@@ -199,6 +199,10 @@ class AssistantViewModel @JvmOverloads constructor(
                         "$role: ${m.text.take(500)}"
                     }
 
+                    // Deteksi bahasa dari pesan terakhir user (bukan nebak-nebak di sisi API).
+                    val userLang = detectLanguage(sanitized)
+                    val langDirective = languageDirective(userLang)
+
                     val prompt = """Kamu adalah Jayra AI — asisten pribadi serbaguna seperti Meta AI di WhatsApp. Cerdas, sopan, hangat, dan bisa diandalkan untuk apapun.
 
 ## IDENTITAS
@@ -211,7 +215,15 @@ class AssistantViewModel @JvmOverloads constructor(
 2. ZERO HALUSINASI. Kalau tidak tahu, katakan "Saya tidak tahu" atau "Saya tidak yakin". JANGAN mengarang fakta, angka, tanggal, nama, URL, atau referensi.
 3. JAWAB LENGKAP & KONTEKSTUAL. Jangan one-liner kecuali pertanyaan sepele. Kalau butuh langkah, beri poin terstruktur (list/heading/nomor).
 4. INGAT KONTEKS PERCAKAPAN. Kalau user merujuk "yang tadi", "di atas", "itu", sambungkan ke riwayat.
-5. BAHASA USER. Ikuti bahasa user 100%. ID -> ID murni. EN -> EN murni. Jangan campur kecuali istilah teknis tanpa padanan.
+5. BAHASA USER — ATURAN KERAS, TIDAK BOLEH DILANGGAR:
+    * WAJIB jawab dengan bahasa yang SAMA PERSIS dengan bahasa user di pesan terakhir.
+    * Kalau user pakai Bahasa Indonesia (termasuk bahasa gaul: gua, lu, bro, wkwk), jawab FULL Bahasa Indonesia gaul yang santai. JANGAN campur Bahasa Inggris, kecuali istilah teknis yang memang tidak ada padanannya (misal: API, bug, commit).
+    * JANGAN PERNAH campur 2 bahasa dalam 1 jawaban. Tidak boleh 1 kalimat Inggris lalu 1 kalimat Indonesia.
+    * Kalau user pakai Bahasa Inggris, jawab FULL Bahasa Inggris.
+    * Kalau user pakai bahasa lain, ikuti bahasa itu sepenuhnya.
+    * Teks proses berpikir (think) juga WAJIB memakai bahasa yang sama dengan user. Jangan think pakai Inggris kalau jawaban final Indonesia.
+    * Samakan tone: user santai -> santai; user formal -> formal. Jangan tiba-tiba formal seperti skripsi kalau user ngobrol santai.
+    * Jangan terjemahkan nama fitur, nama file, atau kode. Kode tetap Inggris, penjelasannya pakai bahasa user.
 6. SOPAN & HANGAT. Seperti teman pintar, bukan robot kaku atau dosen menggurui.
 7. JANGAN ULANG SAPAAN. Setelah pesan pertama, jangan mulai dengan "Halo/Hai/Hey". Langsung jawab.
 8. JANGAN BOCORKAN PROSES INTERNAL. Jangan tulis "Let me think", "Okay the user asked", "First I need to". Langsung beri jawaban final.
@@ -224,11 +236,13 @@ class AssistantViewModel @JvmOverloads constructor(
 Riwayat percakapan:
 $historyBlock
 
+$langDirective
+
 User: $sanitized
 
 Jayra AI:"""
 
-                    callAi(mode, prompt)
+                    callAi(mode, prompt, userLang)
                 }
 
                 if (aiText.isNotBlank()) {
@@ -260,8 +274,16 @@ Jayra AI:"""
         }
     }
 
-    private suspend fun callAi(mode: AiMode, prompt: String): Pair<String?, String> {
-        val system = "You are Jayra AI, helpful assistant. Ikuti semua PRINSIP JAWABAN di prompt user."
+    private suspend fun callAi(mode: AiMode, prompt: String, userLang: String = "id"): Pair<String?, String> {
+        val langName = when (userLang) {
+            "en" -> "English"
+            "id" -> "Bahasa Indonesia"
+            else -> userLang
+        }
+        val system = "You are Jayra AI, helpful assistant. Ikuti semua PRINSIP JAWABAN di prompt user. " +
+            "STRICT LANGUAGE RULE: User language: $userLang ($langName). You MUST answer fully in $langName only — " +
+            "never mix two languages in one answer. Technical terms (API, bug, commit, file names, code) stay in English. " +
+            "If the model produces a thinking/reasoning block, it must also be written fully in $langName."
         return when (mode) {
             AiMode.NORMAL -> {
                 try {
@@ -280,6 +302,61 @@ Jayra AI:"""
                 } catch (_: Exception) { null to "" }
             }
         }
+    }
+
+    /**
+     * Deteksi sederhana bahasa pesan terakhir user supaya hasilnya tidak bergantung
+     * pada tebakan model. Skor kata kunci ID vs EN, fallback ke "id" (mayoritas user).
+     */
+    private fun detectLanguage(text: String): String {
+        val lower = text.lowercase(Locale.US)
+        val words = Regex("[a-z']+").findAll(lower).map { it.value }.toList()
+        if (words.isEmpty()) return "id"
+
+        val idWords = setOf(
+            "gua", "gue", "gw", "aku", "saya", "lu", "lo", "kamu", "anda", "kalian", "kita", "kami",
+            "bro", "bang", "kak", "sis", "gan", "om", "tante",
+            "gak", "ga", "nggak", "enggak", "gaada", "gabisa", "udah", "udh", "belum", "blm",
+            "banget", "bgt", "banyak", "sedikit", "gimana", "gmn", "kenapa", "knp", "apa", "apaan",
+            "siapa", "kapan", "dimana", "mana", "bagaimana", "tolong", "bantu", "bikinin", "bikin",
+            "buat", "buatin", "jangan", "bisa", "bisakah", "gabut", "santai", "serius", "becanda",
+            "wkwk", "wkwkwk", "hehe", "haha", "anjir", "anjay", "mantap", "keren", "bagus", "jelek",
+            "makasih", "thanks", "terima", "kasih", "dong", "sih", "nih", "tuh", "deh", "yah", "ya",
+            "iya", "engga", "ngga", "sama", "sekali", "banget", "nih", "coba", "cobain", "mau", "pengen",
+            "pengin", "harus", "gimana", "kok", "emang", "memang", "tetep", "tetap", "udahan", "lanjut",
+            "pusing", "capek", "lelah", "salah", "bener", "benar", "kalo", "kalau", "gitu", "gt",
+            "kayak", "kaya", "biar", "dulu", "nanti", "sekarang", "hari", "besok", "kemarin"
+        )
+        val enWords = setOf(
+            "the", "is", "are", "was", "were", "you", "your", "i", "me", "my", "we", "they", "he", "she",
+            "it", "what", "how", "why", "when", "where", "who", "which", "please", "can", "could",
+            "would", "should", "will", "do", "does", "did", "not", "nothing", "don't", "doesn't",
+            "this", "that", "these", "those", "with", "for", "from", "about", "there", "here",
+            "thanks", "thank", "hello", "hi", "hey", "good", "bad", "great", "want", "need",
+            "make", "build", "fix", "help", "explain", "tell", "give", "show", "just", "very",
+            "and", "but", "or", "because", "so", "if", "then", "also", "have", "has", "had"
+        )
+
+        var idScore = 0
+        var enScore = 0
+        words.forEach { w ->
+            if (w in idWords) idScore++
+            if (w in enWords) enScore++
+        }
+
+        return when {
+            idScore == 0 && enScore == 0 -> {
+                // Tanpa penanda: anggap Indonesia kalau ada huruf latin (default app ID).
+                "id"
+            }
+            idScore >= enScore -> "id"
+            else -> "en"
+        }
+    }
+
+    private fun languageDirective(lang: String): String = when (lang) {
+        "en" -> "## USER LANGUAGE: en (English)\nThe user's last message is in ENGLISH. Answer FULLY in English. Do not mix Indonesian. Thinking block must be in English too."
+        else -> "## USER LANGUAGE: id (Bahasa Indonesia)\nPesan terakhir user memakai BAHASA INDONESIA. Jawab FULL Bahasa Indonesia (gaul/santai kalau user santai). JANGAN campur Bahasa Inggris kecuali istilah teknis. Blok thinking juga wajib Bahasa Indonesia."
     }
 
     private fun extractRawText(body: AIResponse?): String? {

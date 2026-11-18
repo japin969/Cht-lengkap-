@@ -172,29 +172,13 @@ fun ChatListScreen(
     }
 
     val bgDark = isSystemInDarkTheme()
-    val bgTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
-    val bgSpec = remember(bgTier, bgDark) { LiquidGlassSpecV2.forTier(bgTier, bgDark) }
-    val bgGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
-        *bgSpec.backdrop.gradientStops.map { it.position to it.color }.toTypedArray()
-    )
-
-    val bgOrbs = remember(bgSpec) { bgSpec.backdrop.radialOrbs }
+    // iOS grouped background: #F2F2F7 (light) / #1C1C1E (dark), supaya kartu putih
+    // punya depth dan tidak terasa "putih polos kaku".
+    val listBg = if (bgDark) androidx.compose.ui.graphics.Color(0xFF1C1C1E) else androidx.compose.ui.graphics.Color(0xFFF2F2F7)
 
     val totalUnread = (uiState as? ChatListUiState.Success)?.chats?.sumOf { it.unreadCount } ?: 0
 
-    Box(modifier = Modifier.fillMaxSize().background(bgGradient).drawBehind {
-        bgOrbs.forEach { orb ->
-            val c = androidx.compose.ui.geometry.Offset(size.width * orb.centerXRatio, size.height * orb.centerYRatio)
-            val r = size.minDimension * orb.radiusRatio
-            drawCircle(
-                brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                    colors = listOf(orb.color.copy(alpha = 0.25f), androidx.compose.ui.graphics.Color.Transparent),
-                    center = c, radius = r
-                ),
-                radius = r, center = c
-            )
-        }
-    }) {
+    Box(modifier = Modifier.fillMaxSize().background(listBg)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // ========== TOP BAR ==========
             Column(
@@ -310,15 +294,15 @@ fun ChatListScreen(
             val searchIsDark = isSystemInDarkTheme()
             val searchTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
             val searchSpec = remember(searchTier, searchIsDark) { LiquidGlassSpecV2.forTier(searchTier, searchIsDark) }
-            val searchBg = androidx.compose.ui.graphics.Color(0x1F767680)
+            val searchBg = if (searchIsDark) androidx.compose.ui.graphics.Color(0xFF1C1C1E) else androidx.compose.ui.graphics.Color(0xFFE3E3E8)
             val searchPlaceholderColor = if (searchIsDark) IOSSecondaryLabelDark else IOSSecondaryLabel
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(40.dp)
+                    .height(38.dp)
                     .iosGlassEntrance(delayMillis = 90)
-                    .glassSurfaceV2(searchSpec.surface, solidColor = searchBg, cornerRadius = 20.dp)
+                    .glassSurfaceV2(searchSpec.surface, solidColor = searchBg, cornerRadius = 12.dp)
                     .padding(horizontal = 12.dp)
                     .clickable { searchActive = true },
                 contentAlignment = Alignment.CenterStart
@@ -682,11 +666,6 @@ fun ChatRowContent(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val rowBg by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isPressed) androidx.compose.ui.graphics.Color(0x1F000000) else androidx.compose.ui.graphics.Color.Transparent,
-        animationSpec = androidx.compose.animation.core.tween(0),
-        label = "row_bg"
-    )
     val isDark = isSystemInDarkTheme()
     val view = LocalView.current
     val scale by animateFloatAsState(
@@ -694,18 +673,34 @@ fun ChatRowContent(
         animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
         label = "item_press_jelly"
     )
-    val highlightOverlay by animateColorAsState(
-        targetValue = if (isPressed) {
-            if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.08f)
-        } else Color.Transparent,
-        label = "item_press_highlight"
+    // iOS grouped list: kartu putih rounded di atas background grouped.
+    val cardShape = RoundedCornerShape(18.dp)
+    val cardBg = if (isDark) Color(0xFF1C1C1E) else Color.White
+    val pressedBg by animateColorAsState(
+        targetValue = when {
+            isPressed && isDark -> Color(0xFF2C2C2E)
+            isPressed -> Color(0xFFF2F2F7)
+            else -> cardBg
+        },
+        animationSpec = tween(120),
+        label = "row_card_bg"
     )
-    Column {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 3.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer { scaleX = scale; scaleY = scale }
-                .background(rowBg)
+                .clip(cardShape)
+                .background(pressedBg)
+                .border(
+                    width = 0.5.dp,
+                    color = if (isDark) Color(0x14FFFFFF) else Color(0x0F000000),
+                    shape = cardShape
+                )
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -718,7 +713,7 @@ fun ChatRowContent(
                         if (!isSelectionMode) onLongPress()
                     }
                 )
-                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box {
@@ -746,7 +741,7 @@ fun ChatRowContent(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    AppText(chat.name, fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.02).sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    AppText(chat.name, fontWeight = if (chat.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold, fontSize = 16.sp, letterSpacing = (-0.02).sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) com.jayra.app.ui.theme.IOSLabelDark else com.jayra.app.ui.theme.IOSLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (chat.isPinned) {
                             Icon(Icons.Rounded.PushPin, null, tint = IOSGray2, modifier = Modifier.size(12.dp))
@@ -756,21 +751,21 @@ fun ChatRowContent(
                             Icon(Icons.Rounded.NotificationsOff, null, tint = IOSGray2, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
                         }
-                        AppText(chat.timestamp, fontSize = 13.sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.4f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.4f))
+                        AppText(chat.timestamp, fontSize = 12.sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color(0xFF98989F) else androidx.compose.ui.graphics.Color(0xFF8A8A8E))
                     }
                 }
                 Spacer(Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (chat.hasDraft) {
-                        AppText("Draf: ", fontSize = 15.sp, color = IOSRed, fontWeight = FontWeight.SemiBold)
+                        AppText("Draf: ", fontSize = 14.sp, color = IOSRed, fontWeight = FontWeight.SemiBold)
                     }
                     if (chat.lastMessageIsOutgoing && !chat.hasDraft) {
-                        AppText("Anda: ", fontSize = 15.sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f))
+                        AppText("Anda: ", fontSize = 14.sp, color = if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color(0xFF98989F) else androidx.compose.ui.graphics.Color(0xFF8A8A8E))
                     }
                     AppText(
                         text = if (chat.hasDraft) chat.draftText else chat.lastMessage,
-                        fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                        color = if (chat.hasDraft) IOSRed else if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)
+                        fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                        color = if (chat.hasDraft) IOSRed else if (androidx.compose.foundation.isSystemInDarkTheme()) androidx.compose.ui.graphics.Color(0xFF98989F) else androidx.compose.ui.graphics.Color(0xFF8A8A8E)
                     )
                     when (chat.lastMessageStatus) {
                         MessageStatus.SENT -> Icon(Icons.Rounded.Check, null, tint = IOSGray2, modifier = Modifier.size(14.dp))
@@ -780,10 +775,10 @@ fun ChatRowContent(
                     }
                     if (chat.unreadCount > 0) {
                         Spacer(Modifier.width(8.dp))
-                        Box(modifier = Modifier.size(20.dp).background(IOSBlue, CircleShape), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(18.dp).background(IOSBlue, CircleShape), contentAlignment = Alignment.Center) {
                             AppText(
                                 text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
-                                color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                                color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -804,13 +799,6 @@ fun ChatRowContent(
                 }
             }
         }
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 78.dp, end = 16.dp)
-                .height(0.5.dp)
-                .background(com.jayra.app.ui.theme.IOSSeparator.copy(alpha = 0.36f))
-        )
     }
 }
 

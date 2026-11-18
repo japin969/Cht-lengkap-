@@ -28,38 +28,90 @@ fun DramaScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    if (state.isLoading) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-    } else if (state.error != null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Error: ${state.error}", color = Color.Red)
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(bottom = 16.dp)
-        ) {
-            // Banner Utama (Featured)
-            if (state.featured.isNotEmpty()) {
-                item {
-                    BannerItem(drama = state.featured.first()) { onDramaClick(it) }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        when {
+            state.isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
 
-            // Section Rekomendasi
-            item {
-                Text(
-                    text = "Trending Minggu Ini",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp)
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            state.featured.isEmpty() && state.error != null -> {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    items(state.featured.drop(1)) { drama ->
-                        DramaPosterCard(drama) { onDramaClick(it) }
+                    Text(
+                        text = "Gagal memuat drama",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = state.error ?: "Koneksi bermasalah",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Button(onClick = { viewModel.retry() }) { Text("Coba Lagi") }
+                }
+            }
+
+            state.featured.isEmpty() -> {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("Belum ada drama", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Daftar drama sedang kosong. Coba muat ulang.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Button(onClick = { viewModel.retry() }) { Text("Coba Lagi") }
+                }
+            }
+
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    // Banner Utama (Featured)
+                    item {
+                        BannerItem(drama = state.featured.first()) { onDramaClick(it) }
+                    }
+
+                    // Section Rekomendasi
+                    if (state.featured.size > 1) item {
+                        Text(
+                            text = "Trending Minggu Ini",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(state.featured.drop(1)) { drama ->
+                                DramaPosterCard(drama) { onDramaClick(it) }
+                            }
+                        }
                     }
                 }
             }

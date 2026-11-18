@@ -54,23 +54,12 @@ object GlassEffectPrefs {
     }
 
     private fun resolveDeviceTier(context: Context): GlassTier {
-        if (!supportsRealBlur()) return GlassTier.LOW
-
-        val activityManager =
-            context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                ?: return GlassTier.MEDIUM
-
-        if (activityManager.isLowRamDevice) return GlassTier.LOW
-
-        val memoryInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memoryInfo)
-        val ramGB = memoryInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
-
-        return when {
-            ramGB >= 6.0 -> GlassTier.HIGH
-            ramGB >= 4.0 -> GlassTier.MEDIUM
-            else -> GlassTier.LOW
-        }
+        // NO BLUR POLICY: seluruh device dipaksa ke fakir blur (faux glass).
+        // Efek kaca dibuat dari gradient + border + transparansi saja, jadi
+        // tidak ada RenderEffect / blur library yang membebani GPU di HP mid/low.
+        @Suppress("UNUSED_PARAMETER", "UNUSED_EXPRESSION")
+        context
+        return GlassTier.LOW
     }
 }
 
