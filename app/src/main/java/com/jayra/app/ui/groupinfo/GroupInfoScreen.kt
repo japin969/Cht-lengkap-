@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
@@ -277,14 +278,15 @@ fun GroupInfoContent(
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
                             ) {
-                                // 2. Action Grid (Audio, Video, Cari)
+                                // 2. Action Grid khusus GRUP (bukan call pribadi):
+                                //    tambah anggota, media grup, cari di grup.
                                 InfoActionGrid(
-                                    action1Icon = Icons.Rounded.Call,
-                                    action1Label = "audio",
-                                    onAction1Click = onAudioClick,
-                                    action2Icon = Icons.Rounded.Videocam,
-                                    action2Label = "video",
-                                    onAction2Click = onVideoClick,
+                                    action1Icon = Icons.Rounded.PersonAdd,
+                                    action1Label = "tambah",
+                                    onAction1Click = onMembersClick,
+                                    action2Icon = Icons.Rounded.Photo,
+                                    action2Label = "media",
+                                    onAction2Click = onMediaClick,
                                     action3Icon = Icons.Rounded.Search,
                                     action3Label = "cari",
                                     onAction3Click = onSearchClick,

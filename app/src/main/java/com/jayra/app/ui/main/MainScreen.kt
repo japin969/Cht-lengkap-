@@ -318,7 +318,7 @@ fun MainScreen(
         containerColor = screenBg,
         bottomBar = { }
     ) { innerPadding ->
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().background(screenBg)) {
             MainNavigationGraph(
             navController = navController,
             currentUser = currentUser,
@@ -511,9 +511,14 @@ private fun MainNavigationGraph(
     modifier: Modifier = Modifier
 ) {
     fun navigateToInfo(targetId: String) {
-        when (targetId) {
-            "chat_2", "chat_5" -> navController.navigate("group/$targetId")
-            "chat_4", "durov" -> navController.navigate("channel/$targetId")
+        when {
+            // Grup (termasuk grup baru hasil Create Group dengan id "group_<uuid>")
+            targetId.startsWith("group_") || targetId == "chat_2" || targetId == "chat_5" ->
+                navController.navigate("group/$targetId")
+            // Channel
+            targetId.startsWith("channel_") || targetId == "chat_4" || targetId == "durov" ->
+                navController.navigate("channel/$targetId")
+            // Sisanya = chat pribadi → info profil orang
             else -> navController.navigate("contact/$targetId")
         }
     }
@@ -531,6 +536,7 @@ private fun MainNavigationGraph(
     NavHost(
         navController = navController,
         startDestination = MainViewModel.ROUTE_SPLASH,
+        sizeTransform = { null },
         modifier = modifier.background(
             if (isSystemInDarkTheme()) JayraDarkChatBg else JayraLightChatBg
         ),
@@ -541,9 +547,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.EnterTransition.None
             } else {
                 slideInHorizontally(
-                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                     initialOffsetX = { fullWidth -> fullWidth / 4 }
-                ) + fadeIn(animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing))
+                ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
             }
         },
         exitTransition = {
@@ -553,9 +559,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.ExitTransition.None
             } else {
                 slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                     targetOffsetX = { fullWidth -> -fullWidth / 4 }
-                ) + fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing))
+                ) + fadeOut(animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing))
             }
         },
         popEnterTransition = {
@@ -565,9 +571,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.EnterTransition.None
             } else {
                 slideInHorizontally(
-                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                     initialOffsetX = { fullWidth -> -fullWidth / 4 }
-                ) + fadeIn(animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing))
+                ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
             }
         },
         popExitTransition = {
@@ -577,9 +583,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.ExitTransition.None
             } else {
                 slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                     targetOffsetX = { fullWidth -> fullWidth / 4 }
-                ) + fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing))
+                ) + fadeOut(animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing))
             }
         }
     ) {

@@ -194,6 +194,14 @@ class ChatRoomViewModel @JvmOverloads constructor(
         messagesCollectionJob = viewModelScope.launch {
             try {
                 chatRepository.getMessages(chatId).collect { messages ->
+                    // Jangan hapus bubble optimistik hanya karena Room sempat
+                    // mengirim emission kosong transien (mis. saat insert berjalan).
+                    if (messages.isEmpty() &&
+                        allMessagesForChat.isNotEmpty() &&
+                        allMessagesForChat.any { it.status == MessageStatus.SENDING }
+                    ) {
+                        return@collect
+                    }
                     if (isFirstEmission) {
                         isFirstEmission = false
                         messages.forEach { notifiedMessageIds.add(it.id) }
@@ -253,7 +261,10 @@ class ChatRoomViewModel @JvmOverloads constructor(
         val topicFilteringActive = chat?.isGroup == true && chat.hasTopics
         val activeTopic = _selectedTopicId.value
         val filtered = if (topicFilteringActive) {
-            allMessagesForChat.filter { it.topicId == activeTopic }
+            allMessagesForChat.filter {
+                it.topicId == activeTopic ||
+                    (activeTopic == ChatTopic.GENERAL_TOPIC_ID && it.topicId.isBlank())
+            }
         } else {
             allMessagesForChat
         }

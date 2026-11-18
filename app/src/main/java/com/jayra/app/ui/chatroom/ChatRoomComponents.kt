@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -137,7 +138,11 @@ fun MessageBubble(
     onCopyClick: () -> Unit,
     onForwardClick: () -> Unit = {},
     onToggleChecklistItem: (String) -> Unit = {},
-    onReactionLongClick: (String) -> Unit = {}
+    onReactionLongClick: (String) -> Unit = {},
+    isGroupChat: Boolean = false,
+    showSenderName: Boolean = false,
+    peerIsOnline: Boolean = false,
+    networkConnected: Boolean = true
 ) {
     val isDark = isSystemInDarkTheme()
     var showMenu by remember { mutableStateOf(false) }
@@ -230,7 +235,7 @@ fun MessageBubble(
                 .testTag("bubble_${message.id}")
         ) {
             Column {
-                if (!isOutgoing && message.senderName.isNotBlank() && message.senderName != "Me") {
+                if (!isOutgoing && showSenderName && message.senderName.isNotBlank() && message.senderName != "Me") {
                     Text(message.senderName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = senderColor, modifier = Modifier.padding(bottom = 2.dp))
                 }
 
@@ -383,13 +388,13 @@ fun MessageBubble(
                     Text(message.timestamp, fontSize = 13.sp, color = secondary)
                     if (isOutgoing) {
                         Spacer(Modifier.width(4.dp))
-                        when (message.status) {
-                            MessageStatus.SENDING -> Text("...", fontSize = 11.sp, color = secondary)
-                            MessageStatus.SENT -> Icon(Icons.Rounded.Done, "Sent", tint = secondary, modifier = Modifier.size(14.dp))
-                            MessageStatus.DELIVERED -> Icon(Icons.Rounded.DoneAll, "Delivered", tint = secondary, modifier = Modifier.size(14.dp))
-                            MessageStatus.READ -> Icon(Icons.Rounded.DoneAll, "Read", tint = Color(0xFF007AFF), modifier = Modifier.size(14.dp))
-                            MessageStatus.FAILED -> Text("!", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF3B30))
-                        }
+                        OutgoingStatusIndicator(
+                            status = message.status,
+                            isGroupChat = isGroupChat,
+                            peerIsOnline = peerIsOnline,
+                            networkConnected = networkConnected,
+                            tintSecondary = secondary
+                        )
                     }
                 }
             }
@@ -429,6 +434,76 @@ fun MessageBubble(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun OutgoingStatusIndicator(
+    status: MessageStatus,
+    isGroupChat: Boolean,
+    peerIsOnline: Boolean,
+    networkConnected: Boolean,
+    tintSecondary: Color
+) {
+    // ATURAN GRUP: WhatsApp hanya menampilkan centang 1, tidak pernah centang 2 / biru / jam.
+    if (isGroupChat) {
+        Icon(
+            imageVector = Icons.Rounded.Done,
+            contentDescription = "Terkirim",
+            tint = tintSecondary,
+            modifier = Modifier.size(14.dp)
+        )
+        return
+    }
+
+    // ATURAN P2P: jam (belum terkirim) → centang 1 (server) → centang 2 abu (sampai HP lawan) → centang 2 biru (dibaca).
+    if (!networkConnected || status == MessageStatus.SENDING || status == MessageStatus.FAILED) {
+        Icon(
+            imageVector = Icons.Rounded.Schedule,
+            contentDescription = "Menunggu terkirim",
+            tint = tintSecondary,
+            modifier = Modifier.size(14.dp)
+        )
+        return
+    }
+
+    when (status) {
+        MessageStatus.READ -> Icon(
+            imageVector = Icons.Rounded.DoneAll,
+            contentDescription = "Dibaca",
+            tint = Color(0xFF007AFF),
+            modifier = Modifier.size(14.dp)
+        )
+        MessageStatus.DELIVERED -> Icon(
+            imageVector = Icons.Rounded.DoneAll,
+            contentDescription = "Sampai di perangkat",
+            tint = tintSecondary,
+            modifier = Modifier.size(14.dp)
+        )
+        MessageStatus.SENT -> {
+            // Lawan chat online dianggap sudah menerima pesan → centang 2 abu.
+            if (peerIsOnline) {
+                Icon(
+                    imageVector = Icons.Rounded.DoneAll,
+                    contentDescription = "Diterima",
+                    tint = tintSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Done,
+                    contentDescription = "Terkirim",
+                    tint = tintSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+        else -> Icon(
+            imageVector = Icons.Rounded.Done,
+            contentDescription = "Terkirim",
+            tint = tintSecondary,
+            modifier = Modifier.size(14.dp)
+        )
     }
 }
 

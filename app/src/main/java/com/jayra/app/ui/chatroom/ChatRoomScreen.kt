@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Poll
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,6 +59,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -74,6 +76,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -312,13 +318,24 @@ fun ChatRoomContent(
     }
 
     val contact = (uiState as? ChatRoomUiState.Success)?.contact
-    val contactName = contact?.name ?: currentChat?.name ?: "Chat"
-    val contactStatus = contact?.status ?: if (currentChat?.isGroup == true) {
-        "${currentChat.participants.size.coerceAtLeast(2)} anggota"
+    val isGroupChat = currentChat?.isGroup == true || currentChat?.isChannel == true
+    val contactName = (if (isGroupChat) currentChat?.name else contact?.name)
+        ?: currentChat?.name
+        ?: "Chat"
+    val contactStatus = if (isGroupChat) {
+        val memberCount = currentChat?.participants?.size?.coerceAtLeast(2) ?: 2
+        val onlineCount = currentChat?.participants?.count { it == "user_telegram_me" } ?: 0
+        if (onlineCount > 0) "$memberCount anggota, $onlineCount online"
+        else "$memberCount anggota"
     } else {
-        "online"
+        when {
+            contact?.isOnline == true -> "online"
+            !contact?.status.isNullOrBlank() -> contact?.status ?: "terakhir dilihat baru-baru ini"
+            else -> "terakhir dilihat baru-baru ini"
+        }
     }
-    val showTopicTabs = currentChat?.isGroup == true && currentChat.hasTopics
+    val showTopicTabs = isGroupChat && currentChat?.hasTopics == true
+    val networkConnected = rememberNetworkConnected()
 
     Scaffold(
         topBar = {
@@ -357,14 +374,21 @@ fun ChatRoomContent(
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Avatar 36dp
+                    // Avatar 36dp — grup pakai ikon grup, pribadi pakai foto orang.
                     Box(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(JayraBlue)
+                            .background(if (isGroupChat) JayraSubtext else JayraBlue)
                     ) {
-                        if (contact?.avatarUrl?.isNotBlank() == true) {
+                        if (isGroupChat) {
+                            Icon(
+                                imageVector = Icons.Rounded.Groups,
+                                contentDescription = "Grup",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp).align(Alignment.Center)
+                            )
+                        } else if (contact?.avatarUrl?.isNotBlank() == true) {
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
                                     .data(contact.avatarUrl)
@@ -399,7 +423,7 @@ fun ChatRoomContent(
                         Text(
                             text = contactStatus,
                             fontSize = 13.sp,
-                            color = JayraStatusOnline,
+                            color = if (!isGroupChat && contact?.isOnline == true) JayraStatusOnline else Color.White.copy(alpha = 0.82f),
                             maxLines = 1
                         )
                     }
@@ -613,7 +637,11 @@ fun ChatRoomContent(
                                 },
                                 onReactionLongClick = { emoji ->
                                     reactionDetail = msg to emoji
-                                }
+                                },
+                                isGroupChat = isGroupChat,
+                                showSenderName = isGroupChat,
+                                peerIsOnline = contact?.isOnline == true,
+                                networkConnected = networkConnected
                             )
                         }
 
@@ -1020,4 +1048,43 @@ private fun ChatRoomGroupTopicsDarkPreview() {
             )
         }
     }
+}
+
+/** Pantau status koneksi internet untuk indikator jam vs centang di chat pribadi. */
+@Composable
+private fun rememberNetworkConnected(): Boolean {
+    val context = LocalContext.current
+    var connected by remember { mutableStateOf(true) }
+    DisposableEffect(context) {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        if (cm == null) {
+            onDispose { }
+        } else {
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    connected = true
+                }
+
+                override fun onLost(network: Network) {
+                    val active = cm.activeNetwork
+                    val caps = active?.let { cm.getNetworkCapabilities(it) }
+                    connected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+                }
+            }
+            try {
+                cm.registerDefaultNetworkCallback(callback)
+                val caps = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+                connected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ?: false
+            } catch (_: Exception) {
+                connected = true
+            }
+            onDispose {
+                try {
+                    cm.unregisterNetworkCallback(callback)
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
+    return connected
 }

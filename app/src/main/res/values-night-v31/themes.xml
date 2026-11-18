@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="NoWindowAnimation">
+        <item name="android:windowEnterAnimation">@anim/no_window_animation</item>
+        <item name="android:windowExitAnimation">@anim/no_window_animation</item>
+        <item name="android:windowShowAnimation">@anim/no_window_animation</item>
+        <item name="android:windowHideAnimation">@anim/no_window_animation</item>
+        <item name="android:activityOpenEnterAnimation">@anim/no_window_animation</item>
+        <item name="android:activityOpenExitAnimation">@anim/no_window_animation</item>
+        <item name="android:activityCloseEnterAnimation">@anim/no_window_animation</item>
+        <item name="android:activityCloseExitAnimation">@anim/no_window_animation</item>
+    </style>
+
+    <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@color/jayra_window_background</item>
+        <item name="android:colorBackground">@color/jayra_window_background</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:windowAnimationStyle">@style/NoWindowAnimation</item>
+        <item name="android:windowSplashScreenBackground">@color/jayra_window_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowSplashScreenAnimationDuration">80</item>
+    </style>
+</resources>
