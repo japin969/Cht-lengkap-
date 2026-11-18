@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -399,10 +398,6 @@ fun ChatListScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 180.dp)
                         ) {
-                            // iOS-style: halus geser item saat daftar chat berubah urutan.
-                            animateItemPlacement(
-                                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
-                            )
                             if (archivedChats.isNotEmpty()) {
                                 item(key = "archived_chats_folder") {
                                     Row(
