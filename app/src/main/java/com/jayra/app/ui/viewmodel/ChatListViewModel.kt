@@ -151,15 +151,21 @@ class ChatListViewModel(
     }
 
     fun onPinToggle(chatId: String) {
-        repository.togglePin(chatId)
+        viewModelScope.launch {
+            try { repository.togglePin(chatId) } catch (_: Exception) {}
+        }
     }
 
     fun onMuteToggle(chatId: String) {
-        repository.toggleMute(chatId)
+        viewModelScope.launch {
+            try { repository.toggleMute(chatId) } catch (_: Exception) {}
+        }
     }
 
     fun onMarkAsRead(chatId: String) {
-        repository.markAsRead(chatId)
+        viewModelScope.launch {
+            try { repository.markAsRead(chatId) } catch (_: Exception) {}
+        }
     }
 
     fun onRetry() {

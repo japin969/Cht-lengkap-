@@ -296,6 +296,19 @@ fun ChatRoomContent(
         }
     }
 
+    // Auto-scroll ke bawah saat pesan baru masuk, HANYA jika user sudah di posisi bawah.
+    LaunchedEffect(chatId, (uiState as? ChatRoomUiState.Success)?.messages) {
+        val success = uiState as? ChatRoomUiState.Success
+        if (!initialPositioned || success == null || success.messages.isEmpty()) return@LaunchedEffect
+        val totalItems = listState.layoutInfo.totalItemsCount
+        if (totalItems == 0) return@LaunchedEffect
+        val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+        val atBottom = lastVisible >= totalItems - 2
+        if (atBottom) {
+            listState.animateScrollToItem(success.messages.size - 1)
+        }
+    }
+
     val contact = (uiState as? ChatRoomUiState.Success)?.contact
     val contactName = contact?.name ?: currentChat?.name ?: "Chat"
     val contactStatus = contact?.status ?: if (currentChat?.isGroup == true) {
@@ -577,7 +590,7 @@ fun ChatRoomContent(
                             key = { it.id },
                             contentType = { "message_item" }
                         ) { msg ->
-                            val isOutgoing = msg.senderId == "user_telegram_me" || msg.senderName == "Me"
+                            val isOutgoing = msg.isMine
                             MessageBubble(
                                 message = msg,
                                 isOutgoing = isOutgoing,

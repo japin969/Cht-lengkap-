@@ -19,6 +19,13 @@ enum class MessageStatus {
     FAILED
 }
 
+enum class MessageType {
+    TEXT,
+    IMAGE,
+    VOICE,
+    CHECKLIST
+}
+
 enum class CallType {
     INCOMING,
     OUTGOING,
@@ -45,8 +52,11 @@ data class Chat(
     val id: String = "",
     val name: String = "",
     val avatarUrl: String = "",
+    val otherUserId: String = "",
+    val otherUserName: String = "",
     val lastMessage: String = "",
     val timestamp: String = "",
+    val lastMessageTime: Long = 0L,
     val unreadCount: Int = 0,
     val isPinned: Boolean = false,
     val isMuted: Boolean = false,
@@ -63,7 +73,10 @@ data class Chat(
     val lastMessageStatus: MessageStatus = MessageStatus.SENT,
     val lastMessageIsOutgoing: Boolean = false,
     val timestampMillis: Long = 0L
-)
+) {
+    val chatId: String
+        get() = id
+}
 
 @Immutable
 data class Message(
@@ -71,10 +84,14 @@ data class Message(
     val chatId: String = "",
     val senderId: String = "",
     val senderName: String = "",
+    val receiverId: String = "",
     val text: String = "",
+    val type: MessageType = MessageType.TEXT,
     val timestamp: String = "",
+    val timestampMillis: Long = 0L,
     val dateGroup: String = "Today",
     val status: MessageStatus = MessageStatus.SENT,
+    val isMine: Boolean = false,
     val replyToId: String? = null,
     val replyToText: String? = null,
     val replyToSender: String? = null,
