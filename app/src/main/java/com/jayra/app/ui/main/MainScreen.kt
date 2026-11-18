@@ -6,6 +6,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.jayra.app.util.glassSurfaceV2
@@ -535,7 +537,10 @@ private fun MainNavigationGraph(
             ) {
                 androidx.compose.animation.EnterTransition.None
             } else {
-                fadeIn(animationSpec = tween(durationMillis = 140))
+                slideInHorizontally(
+                    animationSpec = tween(durationMillis = 220),
+                    initialOffsetX = { fullWidth -> fullWidth / 4 }
+                )
             }
         },
         exitTransition = {
@@ -544,7 +549,10 @@ private fun MainNavigationGraph(
             ) {
                 androidx.compose.animation.ExitTransition.None
             } else {
-                fadeOut(animationSpec = tween(durationMillis = 100))
+                slideOutHorizontally(
+                    animationSpec = tween(durationMillis = 220),
+                    targetOffsetX = { fullWidth -> -fullWidth / 4 }
+                )
             }
         },
         popEnterTransition = {
@@ -553,7 +561,10 @@ private fun MainNavigationGraph(
             ) {
                 androidx.compose.animation.EnterTransition.None
             } else {
-                fadeIn(animationSpec = tween(durationMillis = 140))
+                slideInHorizontally(
+                    animationSpec = tween(durationMillis = 220),
+                    initialOffsetX = { fullWidth -> -fullWidth / 4 }
+                )
             }
         },
         popExitTransition = {
@@ -562,7 +573,10 @@ private fun MainNavigationGraph(
             ) {
                 androidx.compose.animation.ExitTransition.None
             } else {
-                fadeOut(animationSpec = tween(durationMillis = 100))
+                slideOutHorizontally(
+                    animationSpec = tween(durationMillis = 220),
+                    targetOffsetX = { fullWidth -> fullWidth / 4 }
+                )
             }
         }
     ) {
