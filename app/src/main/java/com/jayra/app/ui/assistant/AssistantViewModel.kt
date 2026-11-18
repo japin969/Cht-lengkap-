@@ -6,9 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AIResponse
 import com.jayra.app.data.EncryptionHelper
-import com.jayra.app.data.NexadevAiApi
-import com.jayra.app.data.NexadevAiResponse
 import com.jayra.app.data.SiputzxApi
+import com.jayra.app.model.AiMode
 import com.jayra.app.model.AssistantUiState
 import com.jayra.app.model.Message
 import com.jayra.app.model.MessageStatus
@@ -23,10 +22,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,7 +33,6 @@ import kotlinx.coroutines.tasks.await
 class AssistantViewModel @JvmOverloads constructor(
     application: Application,
     private val siputzxApi: SiputzxApi = SiputzxApi.create(),
-    private val nexadevAiApi: NexadevAiApi = NexadevAiApi.create(),
     private val firestore: FirebaseFirestore? = com.jayra.app.di.AppModule.provideFirestore(application),
     private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
 ) : AndroidViewModel(application) {
@@ -60,20 +56,28 @@ class AssistantViewModel @JvmOverloads constructor(
     private var lastFailedPrompt: String? = null
     private val inMemoryMessages = mutableListOf<Message>()
 
-    init {
-        loadHistory()
+    init { loadHistory() }
+
+    fun isAssistantEnabled(): Boolean = prefs.getBoolean("assistant_ai_enabled", true)
+
+    fun getMode(): AiMode {
+        val raw = prefs.getString("assistant_ai_mode", AiMode.NORMAL.name) ?: AiMode.NORMAL.name
+        return try { AiMode.valueOf(raw) } catch (_: Exception) { AiMode.NORMAL }
     }
 
-    fun isAssistantEnabled(): Boolean {
-        return prefs.getBoolean("assistant_ai_enabled", true)
+    fun setMode(mode: AiMode) {
+        prefs.edit().putString("assistant_ai_mode", mode.name).apply()
+        when (val cur = _uiState.value) {
+            is AssistantUiState.Success -> _uiState.value = cur.copy(mode = mode)
+            is AssistantUiState.Empty -> _uiState.value =
+                AssistantUiState.Success(emptyList(), isLoading = false, mode = mode)
+            else -> { }
+        }
+        _toastEvents.tryEmit(if (mode == AiMode.THINKING) "Mode: Berpikir (DeepSeek R1)" else "Mode: Biasa (GPT-OSS)")
     }
 
     fun loadHistory() {
-        if (!isAssistantEnabled()) {
-            _uiState.value = AssistantUiState.Empty
-            return
-        }
-
+        if (!isAssistantEnabled()) { _uiState.value = AssistantUiState.Empty; return }
         _uiState.value = AssistantUiState.Loading
 
         if (firestore != null) {
@@ -88,87 +92,58 @@ class AssistantViewModel @JvmOverloads constructor(
                             _uiState.value = AssistantUiState.Error(error.localizedMessage ?: "Gagal memuat riwayat chat")
                             return@addSnapshotListener
                         }
-
                         if (snapshot == null || snapshot.isEmpty) {
-                            _uiState.value = if (inMemoryMessages.isEmpty()) {
-                                AssistantUiState.Empty
-                            } else {
-                                AssistantUiState.Success(inMemoryMessages.toList(), isLoading = false)
-                            }
+                            _uiState.value = if (inMemoryMessages.isEmpty()) AssistantUiState.Empty
+                                else AssistantUiState.Success(inMemoryMessages.toList(), isLoading = false, mode = getMode())
                             return@addSnapshotListener
                         }
-
                         val loaded = snapshot.documents.mapNotNull { doc ->
                             try {
                                 val encryptedText = doc.getString("text") ?: ""
                                 val decryptedText = EncryptionHelper.decryptString(encryptedText)
                                 val statusStr = doc.getString("status") ?: MessageStatus.READ.name
-                                val status = try {
-                                    MessageStatus.valueOf(statusStr)
-                                } catch (_: Exception) {
-                                    MessageStatus.READ
-                                }
-
+                                val status = try { MessageStatus.valueOf(statusStr) } catch (_: Exception) { MessageStatus.READ }
                                 Message(
                                     id = doc.id,
                                     chatId = "assistant",
                                     senderId = doc.getString("senderId") ?: "",
                                     senderName = doc.getString("senderName") ?: "Jayra AI",
                                     text = decryptedText,
-                                    timestamp = doc.getString("timeFormatted") ?: doc.getString("timestamp") ?: "12:00 PM",
-                                    status = status
+                                    timestamp = doc.getString("timeFormatted") ?: "12:00 PM",
+                                    status = status,
+                                    thinkText = doc.getString("thinkText")
                                 )
-                            } catch (_: Exception) {
-                                null
-                            }
+                            } catch (_: Exception) { null }
                         }
-
                         inMemoryMessages.clear()
                         inMemoryMessages.addAll(loaded)
-
-                        _uiState.value = if (loaded.isEmpty()) {
-                            AssistantUiState.Empty
-                        } else {
-                            AssistantUiState.Success(loaded, isLoading = false)
-                        }
+                        _uiState.value = if (loaded.isEmpty()) AssistantUiState.Empty
+                            else AssistantUiState.Success(loaded, isLoading = false, mode = getMode())
                     }
             } catch (e: Exception) {
                 _uiState.value = AssistantUiState.Error(e.localizedMessage ?: "Terjadi kesalahan saat memuat chat")
             }
         } else {
-            // Offline / In-memory fallback
-            _uiState.value = if (inMemoryMessages.isEmpty()) {
-                AssistantUiState.Empty
-            } else {
-                AssistantUiState.Success(inMemoryMessages.toList(), isLoading = false)
-            }
+            _uiState.value = if (inMemoryMessages.isEmpty()) AssistantUiState.Empty
+                else AssistantUiState.Success(inMemoryMessages.toList(), isLoading = false, mode = getMode())
         }
     }
 
     fun sendMessage(text: String) {
-        if (!isAssistantEnabled()) {
-            _toastEvents.tryEmit("Asisten AI dinonaktifkan")
-            return
-        }
-
+        if (!isAssistantEnabled()) { _toastEvents.tryEmit("Asisten AI dinonaktifkan"); return }
         if (text.isBlank()) return
 
-        // 3.3 Rate Limiting: 1 message per 2 seconds (2000 ms)
         val nowMs = System.currentTimeMillis()
-        if (nowMs - lastMessageTimestamp < 2000L) {
-            _toastEvents.tryEmit("Tunggu sebentar")
-            return
-        }
+        if (nowMs - lastMessageTimestamp < 2000L) { _toastEvents.tryEmit("Tunggu sebentar"); return }
         lastMessageTimestamp = nowMs
 
-        // 3.2 Anti-Injection Input Sanitization
         val sanitized = text.replace(Regex("[<>\"'%;()&+]"), "").trim()
         val dangerousPattern = Regex("(?i).*(DROP\\s+TABLE|ALTER\\s+TABLE|DELETE\\s+FROM|<script|javascript:|SELECT\\s+\\*).*")
         if (dangerousPattern.matches(text) || sanitized.isEmpty()) {
-            _toastEvents.tryEmit("Input tidak valid")
-            return
+            _toastEvents.tryEmit("Input tidak valid"); return
         }
 
+        val mode = getMode()
         val timeFormatted = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
         val userMsgId = UUID.randomUUID().toString()
         val userMsg = Message(
@@ -183,7 +158,6 @@ class AssistantViewModel @JvmOverloads constructor(
 
         lastFailedPrompt = sanitized
 
-        // Optimistic UI update
         val currentMessages = when (val state = _uiState.value) {
             is AssistantUiState.Success -> state.messages
             else -> emptyList()
@@ -191,157 +165,119 @@ class AssistantViewModel @JvmOverloads constructor(
         val updatedMessages = currentMessages + userMsg
         inMemoryMessages.clear()
         inMemoryMessages.addAll(updatedMessages)
-        _uiState.value = AssistantUiState.Success(messages = updatedMessages, isLoading = true)
+        _uiState.value = AssistantUiState.Success(messages = updatedMessages, isLoading = true, mode = mode)
 
-        // Snapshot immutable untuk dipakai di coroutine (hindari mutable reference)
-        val historySnapshot: List<Message> = updatedMessages.toList()
+        val historySnapshot = updatedMessages.toList()
 
         viewModelScope.launch {
             try {
-                val aiText = withContext(Dispatchers.IO) {
+                val (thinkText, aiText) = withContext(Dispatchers.IO) {
                     val historyBlock = historySnapshot.dropLast(1).takeLast(10).joinToString("\n") { m ->
                         val role = if (m.senderId == "jayra_ai") "Jayra AI" else "User"
                         "$role: ${m.text.take(500)}"
                     }
-                    val prompt = """Kamu adalah Jayra AI — asisten pribadi serbaguna seperti Meta AI.
 
-GAYA JAWABAN (WAJIB):
-1. Jawab LENGKAP dan KONTEKSTUAL. Jangan one-liner kecuali memang pertanyaan sepele.
-2. Jika pertanyaan butuh langkah/rencana, berikan poin-poin terstruktur (list/heading).
-3. Sambungkan ke riwayat percakapan — jika user merujuk "di atas", "yang tadi", pahami konteksnya.
-4. Jangan mengulang sapaan "Halo/Hai" atau "Saya Jayra AI" setelah pesan pertama.
-5. Jangan pernah menampilkan token kontrol seperti <|start|>, <|end|>, <|im_start|>, <|assistant|> — output hanya teks bersih.
-6. WAJIB jawab dalam BAHASA USER. Jika user pakai Bahasa Indonesia → jawab BAHASA INDONESIA murni (jangan English). Jika user pakai English → jawab English. Jangan campur.
-7. Jika tidak yakin, katakan tidak tahu. Jangan halusinasi.
-8. Gunakan markdown untuk struktur (heading, bullet, bold, code block) bila membantu.
-9. JANGAN tampilkan proses berpikir / reasoning. Jangan tulis "Let me think", "Okay, the user asked...", "First, ...". LANGSUNG berikan JAWABAN FINAL saja.
+                    val prompt = """Kamu adalah Jayra AI — asisten pribadi serbaguna seperti Meta AI di WhatsApp. Cerdas, sopan, hangat, dan bisa diandalkan untuk apapun.
+
+## IDENTITAS
+- Nama: Jayra AI
+- Peran: Asisten pribadi serbaguna (curhat, riset, coding, hitung, translate, kreatif, apapun)
+- Kepribadian: Ramah, sopan, langsung ke inti, tidak bertele-tele, tidak menggurui
+
+## PRINSIP JAWABAN (WAJIB DIPATUHI)
+1. BERPIKIR DULU, BARU JAWAB. Analisis pertanyaan secara kritis sebelum merespons. Jangan refleks menjawab.
+2. ZERO HALUSINASI. Kalau tidak tahu, katakan "Saya tidak tahu" atau "Saya tidak yakin". JANGAN mengarang fakta, angka, tanggal, nama, URL, atau referensi.
+3. JAWAB LENGKAP & KONTEKSTUAL. Jangan one-liner kecuali pertanyaan sepele. Kalau butuh langkah, beri poin terstruktur (list/heading/nomor).
+4. INGAT KONTEKS PERCAKAPAN. Kalau user merujuk "yang tadi", "di atas", "itu", sambungkan ke riwayat.
+5. BAHASA USER. Ikuti bahasa user 100%. ID -> ID murni. EN -> EN murni. Jangan campur kecuali istilah teknis tanpa padanan.
+6. SOPAN & HANGAT. Seperti teman pintar, bukan robot kaku atau dosen menggurui.
+7. JANGAN ULANG SAPAAN. Setelah pesan pertama, jangan mulai dengan "Halo/Hai/Hey". Langsung jawab.
+8. JANGAN BOCORKAN PROSES INTERNAL. Jangan tulis "Let me think", "Okay the user asked", "First I need to". Langsung beri jawaban final.
+9. MARKDOWN UNTUK STRUKTUR. Gunakan heading (##), bullet (-), bold (**), code block bila membantu keterbacaan.
+10. JANGAN TAMPILKAN TOKEN KONTROL seperti <|start|>, <|end|>, <|im_start|>, <|assistant|>, <|user|>, <|system|>. Output hanya teks bersih.
+11. SERBA GUNA. Bisa bantu: curhat/emosional, riset/edukasi, coding/debug, hitung/math, translate, nulis kreatif, brainstorm ide, ringkas dokumen, jelaskan konsep rumit dengan sederhana.
+12. KALAU PERTANYAAN AMBIGU, tanya balik dengan sopan untuk klarifikasi, jangan asumsi.
+13. PANJANG JAWABAN PROPORSIONAL. Pertanyaan sepele -> jawab singkat. Pertanyaan kompleks -> jawab tuntas.
 
 Riwayat percakapan:
 $historyBlock
 
 User: $sanitized
 
-Jayra AI (jawab lengkap & kontekstual):"""
+Jayra AI:"""
 
-                    // Fallback berlapis: 11 endpoint AI (prioritas Siputzx karena cepat + stabil)
-                    var localAiText: String? = null
-                    
-                    // 1. Siputzx gptoss120b (utama, paling cepat + pintar)
-                    try {
-                        val res = siputzxApi.askGptOss(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                        if (res.isSuccessful && res.body()?.status == true) {
-                            localAiText = res.body()?.getExtractedText()
-                        }
-                    } catch (_: Exception) {}
-
-                    // 2. Siputzx glm47flash
-                    if (localAiText.isNullOrBlank()) {
-                        try {
-                            val res = siputzxApi.askGlm47Flash(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                            if (res.isSuccessful && res.body()?.status == true) {
-                                localAiText = res.body()?.getExtractedText()
-                            }
-                        } catch (_: Exception) {}
-                    }
-
-                    // 3. Siputzx qwq32b
-                    if (localAiText.isNullOrBlank()) {
-                        try {
-                            val res = siputzxApi.askQwq32b(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                            if (res.isSuccessful && res.body()?.status == true) {
-                                localAiText = res.body()?.getExtractedText()
-                            }
-                        } catch (_: Exception) {}
-                    }
-
-                    // 4. Siputzx phi2
-                    if (localAiText.isNullOrBlank()) {
-                        try {
-                            val res = siputzxApi.askPhi2(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                            if (res.isSuccessful && res.body()?.status == true) {
-                                localAiText = res.body()?.getExtractedText()
-                            }
-                        } catch (_: Exception) {}
-                    }
-
-                    // 6. Siputzx deepseekr1 (paling pintar, tapi lambat ~15-30s)
-                    if (localAiText.isNullOrBlank()) {
-                        try {
-                            val res = siputzxApi.askDeepseekR1(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                            if (res.isSuccessful && res.body()?.status == true) {
-                                localAiText = res.body()?.getExtractedText()
-                            }
-                        } catch (_: Exception) {}
-                    }
-
-                    // 7-11. Nexadev fallback (kadang error, taruh terakhir)
-                    if (localAiText.isNullOrBlank()) {
-                        val nexadevEndpoints = listOf<suspend () -> Response<NexadevAiResponse>>(
-                            { nexadevAiApi.askGpt4(query = prompt) },
-                            { nexadevAiApi.askChatGptPro(query = prompt) },
-                            { nexadevAiApi.askFelo(query = prompt) },
-                            { nexadevAiApi.askLlama(query = prompt) },
-                            { nexadevAiApi.askDeepseek(text = prompt) }
-                        )
-                        for (call in nexadevEndpoints) {
-                            try {
-                                val res = call()
-                                if (res.isSuccessful && res.body() != null) {
-                                    localAiText = res.body()?.extractText()
-                                    if (!localAiText.isNullOrBlank()) break
-                                }
-                            } catch (_: Exception) {}
-                        }
-                    }
-
-                    localAiText?.let { raw ->
-                        val stripped = raw
-                            .replace(Regex("<\\|[^|>]*\\|>"), "")            // <|start|> <|end|> dll
-                            .replace(Regex("(?i)\\b(im_start|im_end|start|end|assistant|system|user)\\b(?=[\\s:])"), "")
-                            .replace(Regex("^(Halo|Hai|Hey|Hello)\\!?[,.\\s]+", RegexOption.IGNORE_CASE), "")
-                            .replace(Regex("^(Saya Jayra AI[,.]?\\s*)", RegexOption.IGNORE_CASE), "")
-                            .replace(Regex("^(Asisten[^.]+\\.\\s*)", RegexOption.IGNORE_CASE), "")
-                            .replace(Regex("(?i)^(okay|ok|sure|alright)[,.].*?(?=\\n|$)"), "")
-                            .replace(Regex("(?i)let me (think|see|check)[^.\\n]*[.\\n]"), "")
-                            .replace(Regex("(?i)^(first|second|third|so|now|well)[,.].*?(?=\\n)"), "")
-                            .replace(Regex("(?i)they (asked|want|need|might need)[^.\\n]*[.\\n]"), "")
-                            .replace(Regex("\\n{3,}"), "\n\n")
-                            .trim()
-                        if (stripped.isBlank()) raw else stripped
-                    }
+                    callAi(mode, prompt)
                 }
 
-                if (!aiText.isNullOrBlank()) {
+                if (aiText.isNotBlank()) {
                     val aiTime = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
                     val aiMsg = Message(
                         id = UUID.randomUUID().toString(),
                         chatId = "assistant",
                         senderId = "jayra_ai",
                         senderName = "Jayra AI",
-                        text = aiText ?: "",
+                        text = aiText,
                         timestamp = aiTime,
-                        status = MessageStatus.READ
+                        status = MessageStatus.READ,
+                        thinkText = thinkText
                     )
 
                     val deliveredUserMsg = userMsg.copy(status = MessageStatus.READ)
                     val finalMessages = updatedMessages.dropLast(1) + deliveredUserMsg + aiMsg
                     inMemoryMessages.clear()
                     inMemoryMessages.addAll(finalMessages)
-
-                    _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false)
+                    _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false, mode = mode)
                     lastFailedPrompt = null
-
                     saveBothToFirestoreSequential(deliveredUserMsg, aiMsg)
                 } else {
-                    handleSendFailure(userMsg, "Semua endpoint AI gagal. Coba lagi nanti.")
+                    handleSendFailure(userMsg, "Endpoint AI sedang sibuk. Coba lagi sebentar.", mode)
                 }
             } catch (e: Exception) {
-                handleSendFailure(userMsg, e.localizedMessage ?: "Terjadi kesalahan koneksi")
+                handleSendFailure(userMsg, e.localizedMessage ?: "Terjadi kesalahan koneksi", mode)
             }
         }
     }
 
-    private fun handleSendFailure(userMsg: Message, errorMessage: String) {
+    private suspend fun callAi(mode: AiMode, prompt: String): Pair<String?, String> {
+        val system = "You are Jayra AI, helpful assistant. Ikuti semua PRINSIP JAWABAN di prompt user."
+        return when (mode) {
+            AiMode.NORMAL -> {
+                try {
+                    val res = siputzxApi.askGptOss(prompt = prompt, system = system)
+                    if (res.isSuccessful && res.body()?.status == true) {
+                        null to (extractRawText(res.body()) ?: "").trim()
+                    } else null to ""
+                } catch (_: Exception) { null to "" }
+            }
+            AiMode.THINKING -> {
+                try {
+                    val res = siputzxApi.askDeepseekR1(prompt = prompt, system = system)
+                    if (res.isSuccessful && res.body()?.status == true) {
+                        parseThinkBlock(extractRawText(res.body()) ?: "")
+                    } else null to ""
+                } catch (_: Exception) { null to "" }
+            }
+        }
+    }
+
+    private fun extractRawText(body: AIResponse?): String? {
+        if (body == null) return null
+        return when (val d = body.data) {
+            is String -> d
+            is Map<*, *> -> (d["response"] ?: d["text"] ?: d["result"] ?: d["message"])?.toString()
+            null -> body.result ?: body.message
+            else -> d.toString()
+        }
+    }
+
+    private fun parseThinkBlock(raw: String): Pair<String?, String> {
+        val match = Regex("<think>(.*?)</think>", RegexOption.DOT_MATCHES_ALL).find(raw)
+        val think = match?.groupValues?.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
+        val answer = raw.replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "").trim()
+        return think to answer
+    }
+
+    private fun handleSendFailure(userMsg: Message, errorMessage: String, mode: AiMode) {
         val currentMessages = when (val state = _uiState.value) {
             is AssistantUiState.Success -> state.messages
             else -> emptyList()
@@ -350,8 +286,7 @@ Jayra AI (jawab lengkap & kontekstual):"""
         val finalMessages = currentMessages.map { if (it.id == userMsg.id) failedMsg else it }
         inMemoryMessages.clear()
         inMemoryMessages.addAll(finalMessages)
-
-        _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false)
+        _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false, mode = mode)
         _toastEvents.tryEmit(errorMessage)
     }
 
@@ -376,56 +311,27 @@ Jayra AI (jawab lengkap & kontekstual):"""
                     "text" to EncryptionHelper.encryptString(aiMsg.text),
                     "timeFormatted" to aiMsg.timestamp,
                     "timestamp" to (baseTime + 1L),
-                    "status" to aiMsg.status.name
+                    "status" to aiMsg.status.name,
+                    "thinkText" to (aiMsg.thinkText ?: "")
                 )
                 val col = firestore.collection("assistant_chats")
                     .document(currentUserId)
                     .collection("messages")
                 col.document(userMsg.id).set(userData).await()
                 col.document(aiMsg.id).set(aiData).await()
-            } catch (_: Exception) {}
-        }
-    }
-
-    private fun saveMessageToFirestore(message: Message) {
-        if (firestore == null) return
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // AES256-GCM encryption before saving to Firestore
-                val encryptedText = EncryptionHelper.encryptString(message.text)
-                val docData = hashMapOf(
-                    "id" to message.id,
-                    "senderId" to message.senderId,
-                    "senderName" to message.senderName,
-                    "text" to encryptedText,
-                    "timeFormatted" to message.timestamp,
-                    "timestamp" to System.currentTimeMillis(),
-                    "status" to message.status.name
-                )
-
-                firestore.collection("assistant_chats")
-                    .document(currentUserId)
-                    .collection("messages")
-                    .document(message.id)
-                    .set(docData)
-            } catch (_: Exception) {
-                // Keep local state intact even if Firestore remote sync is delayed
-            }
+            } catch (_: Exception) { }
         }
     }
 
     fun onRetry() {
         val prompt = lastFailedPrompt
-        if (!prompt.isNullOrBlank()) {
-            sendMessage(prompt)
-        }
+        if (!prompt.isNullOrBlank()) sendMessage(prompt)
     }
 
     fun onClearHistory() {
         inMemoryMessages.clear()
         _uiState.value = AssistantUiState.Empty
         lastFailedPrompt = null
-
         if (firestore != null) {
             try {
                 firestore.collection("assistant_chats")
@@ -433,13 +339,9 @@ Jayra AI (jawab lengkap & kontekstual):"""
                     .collection("messages")
                     .get()
                     .addOnSuccessListener { snapshot ->
-                        snapshot?.documents?.forEach { doc ->
-                            doc.reference.delete()
-                        }
+                        snapshot?.documents?.forEach { doc -> doc.reference.delete() }
                     }
-            } catch (_: Exception) {
-                // Handled gracefully
-            }
+            } catch (_: Exception) { }
         }
     }
 

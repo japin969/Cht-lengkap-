@@ -46,13 +46,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.SmartToy
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -74,14 +78,15 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jayra.app.model.AiMode
 import com.jayra.app.model.AssistantUiState
 import com.jayra.app.model.Message
 import com.jayra.app.model.MessageStatus
@@ -99,7 +104,6 @@ import com.jayra.app.ui.theme.JayraLightChatBg
 import com.jayra.app.ui.theme.JayraLightTopBar
 import com.jayra.app.ui.theme.JayraStatusOnline
 import com.jayra.app.ui.theme.JayraSubtext
-import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.util.EmojiParser
 
 @Composable
@@ -118,22 +122,28 @@ fun AssistantScreen(
         }
     }
 
+    val currentMode = (uiState as? AssistantUiState.Success)?.mode ?: AiMode.NORMAL
+
     AssistantScreenContent(
         uiState = uiState,
+        currentMode = currentMode,
         onBack = onBack,
         onSendMessage = { text -> viewModel.sendMessage(text) },
         onRetry = { viewModel.onRetry() },
-        onClearHistory = { viewModel.onClearHistory() }
+        onClearHistory = { viewModel.onClearHistory() },
+        onModeChange = { viewModel.setMode(it) }
     )
 }
 
 @Composable
 fun AssistantScreenContent(
     uiState: AssistantUiState,
+    currentMode: AiMode,
     onBack: () -> Unit,
     onSendMessage: (String) -> Unit,
     onRetry: () -> Unit,
-    onClearHistory: () -> Unit
+    onClearHistory: () -> Unit,
+    onModeChange: (AiMode) -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
     val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
@@ -143,7 +153,6 @@ fun AssistantScreenContent(
 
     Scaffold(
         topBar = {
-            // 1.1 TopAppBar (Height 56dp)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -152,12 +161,9 @@ fun AssistantScreenContent(
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button 24dp, tap target 48dp
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .testTag("assistant_back_button")
+                    modifier = Modifier.size(48.dp).testTag("assistant_back_button")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -167,7 +173,6 @@ fun AssistantScreenContent(
                     )
                 }
 
-                // AI Avatar 36dp CircleShape, margin start 8dp
                 Box(
                     modifier = Modifier
                         .padding(start = 8.dp)
@@ -177,7 +182,7 @@ fun AssistantScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.SmartToy,
+                        imageVector = if (currentMode == AiMode.THINKING) Icons.Rounded.Psychology else Icons.Rounded.SmartToy,
                         contentDescription = "Avatar Jayra AI",
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)
@@ -186,7 +191,6 @@ fun AssistantScreenContent(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Name and Online status
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Jayra AI",
@@ -197,20 +201,47 @@ fun AssistantScreenContent(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Online",
+                        text = if (currentMode == AiMode.THINKING) "Berpikir mendalam..." else "Online",
                         fontSize = 13.sp,
                         color = JayraStatusOnline,
                         maxLines = 1
                     )
                 }
 
-                // MoreVert icon 24dp, tap target 48dp
+                // Chip mode di top bar
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (currentMode == AiMode.THINKING) JayraBlue else Color.White.copy(alpha = 0.15f))
+                        .clickable {
+                            val next = if (currentMode == AiMode.THINKING) AiMode.NORMAL else AiMode.THINKING
+                            onModeChange(next)
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .testTag("assistant_mode_chip"),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (currentMode == AiMode.THINKING) Icons.Rounded.Psychology else Icons.Rounded.SmartToy,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (currentMode == AiMode.THINKING) "Berpikir" else "Biasa",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
                 Box {
                     IconButton(
                         onClick = { showMenu = true },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("assistant_menu_button")
+                        modifier = Modifier.size(48.dp).testTag("assistant_menu_button")
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.MoreVert,
@@ -220,23 +251,45 @@ fun AssistantScreenContent(
                         )
                     }
 
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.SmartToy, null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Mode Biasa (GPT-OSS)")
+                                    if (currentMode == AiMode.NORMAL) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("✓", color = JayraBlue, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            },
+                            onClick = { showMenu = false; onModeChange(AiMode.NORMAL) }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.Psychology, null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Mode Berpikir (DeepSeek R1)")
+                                    if (currentMode == AiMode.THINKING) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("✓", color = JayraBlue, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            },
+                            onClick = { showMenu = false; onModeChange(AiMode.THINKING) }
+                        )
+                        HorizontalDivider()
                         DropdownMenuItem(
                             text = { Text("Hapus Riwayat") },
-                            onClick = {
-                                showMenu = false
-                                onClearHistory()
-                            }
+                            onClick = { showMenu = false; onClearHistory() }
                         )
                     }
                 }
             }
         },
         bottomBar = {
-            // 1.5 Input Bar
             AssistantInputBar(
                 text = inputText,
                 onTextChange = { inputText = it },
@@ -256,46 +309,27 @@ fun AssistantScreenContent(
                 .padding(innerPadding)
         ) {
             when (uiState) {
-                is AssistantUiState.Loading -> {
-                    // 1.6 Loading State (Shimmer 5 bubble)
-                    AssistantShimmerLoading()
-                }
-
-                is AssistantUiState.Empty -> {
-                    // 1.6 Empty State
-                    AssistantEmptyState(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-
-                is AssistantUiState.Error -> {
-                    // 1.6 Error State
-                    AssistantErrorState(
-                        errorMessage = uiState.message,
-                        onRetry = onRetry,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-
+                is AssistantUiState.Loading -> AssistantShimmerLoading()
+                is AssistantUiState.Empty -> AssistantEmptyState(modifier = Modifier.align(Alignment.Center))
+                is AssistantUiState.Error -> AssistantErrorState(
+                    errorMessage = uiState.message,
+                    onRetry = onRetry,
+                    modifier = Modifier.align(Alignment.Center)
+                )
                 is AssistantUiState.Success -> {
                     if (uiState.messages.isEmpty() && !uiState.isLoading) {
-                        AssistantEmptyState(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                        AssistantEmptyState(modifier = Modifier.align(Alignment.Center))
                     } else {
                         val listState = rememberLazyListState()
-
                         LaunchedEffect(uiState.messages.size, uiState.isLoading) {
                             val totalCount = uiState.messages.size + if (uiState.isLoading) 1 else 0
                             if (totalCount > 0) {
-                                // Double scroll: sekali sekarang, sekali setelah layout settle
                                 listState.animateScrollToItem(totalCount - 1)
                                 kotlinx.coroutines.delay(80)
                                 listState.animateScrollToItem(totalCount - 1)
                             }
                         }
 
-                        // 1.2 Background LazyColumn padding horizontal 8dp, vertikal 16dp
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
@@ -343,31 +377,17 @@ fun AssistantScreenContent(
     }
 }
 
-// 1.3 User Bubble (Pesan Kita)
 @Composable
-private fun UserMessageBubble(
-    message: Message,
-    modifier: Modifier = Modifier
-) {
+private fun UserMessageBubble(message: Message, modifier: Modifier = Modifier) {
     val isDark = isSystemInDarkTheme()
     val bubbleBg = if (isDark) JayraBubbleOutDark else JayraBubbleOutLight
     val textColor = if (isDark) Color.White else Color.Black
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End
-    ) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Column(
             modifier = Modifier
                 .widthIn(max = 280.dp)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 12.dp,
-                        topEnd = 12.dp,
-                        bottomStart = 12.dp,
-                        bottomEnd = 0.dp
-                    )
-                )
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 0.dp))
                 .background(bubbleBg)
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
@@ -377,26 +397,14 @@ private fun UserMessageBubble(
                 lineHeight = 22.sp,
                 color = textColor
             )
-
             Row(
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = 2.dp),
+                modifier = Modifier.align(Alignment.End).padding(top = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = message.timestamp,
-                    fontSize = 12.sp,
-                    color = JayraSubtext
-                )
-
+                Text(text = message.timestamp, fontSize = 12.sp, color = JayraSubtext)
                 if (message.status == MessageStatus.SENDING) {
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "•",
-                        fontSize = 12.sp,
-                        color = JayraSubtext
-                    )
+                    Text(text = "•", fontSize = 12.sp, color = JayraSubtext)
                 } else if (message.status == MessageStatus.FAILED) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
@@ -411,32 +419,29 @@ private fun UserMessageBubble(
     }
 }
 
-// 1.3 AI Bubble (Pesan Lawan)
 @Composable
-private fun AiMessageBubble(
-    message: Message,
-    modifier: Modifier = Modifier
-) {
+private fun AiMessageBubble(message: Message, modifier: Modifier = Modifier) {
     val isDark = isSystemInDarkTheme()
     val bubbleBg = if (isDark) JayraBubbleInDark else JayraBubbleInLight
     val textColor = if (isDark) Color.White else Color.Black
+    var thinkExpanded by remember(message.id) { mutableStateOf(false) }
+    val hasThink = !message.thinkText.isNullOrBlank()
 
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.Bottom
     ) {
-        // Avatar AI 32dp CircleShape margin end 8dp
         Box(
             modifier = Modifier
                 .padding(end = 8.dp)
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(JayraBlue),
+                .background(if (hasThink) JayraBlue else JayraBlue),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Rounded.SmartToy,
+                imageVector = if (hasThink) Icons.Rounded.Psychology else Icons.Rounded.SmartToy,
                 contentDescription = "Jayra AI",
                 tint = Color.White,
                 modifier = Modifier.size(18.dp)
@@ -446,18 +451,10 @@ private fun AiMessageBubble(
         Column(
             modifier = Modifier
                 .widthIn(max = 280.dp)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 12.dp,
-                        topEnd = 12.dp,
-                        bottomStart = 0.dp,
-                        bottomEnd = 12.dp
-                    )
-                )
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp, bottomStart = 0.dp, bottomEnd = 12.dp))
                 .background(bubbleBg)
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            // Nama Pengirim: "Jayra AI" 14sp FontWeight.Bold JayraBlue, margin bottom 2dp
             Text(
                 text = "Jayra AI",
                 fontSize = 14.sp,
@@ -465,6 +462,53 @@ private fun AiMessageBubble(
                 color = JayraBlue,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
+
+            if (hasThink) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(JayraSubtext.copy(alpha = 0.12f))
+                        .clickable { thinkExpanded = !thinkExpanded }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .animateContentSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Psychology,
+                        contentDescription = null,
+                        tint = JayraSubtext,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (thinkExpanded) "Sembunyikan proses berpikir" else "Lihat proses berpikir",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = JayraSubtext,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        imageVector = if (thinkExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                        contentDescription = null,
+                        tint = JayraSubtext,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                AnimatedVisibility(visible = thinkExpanded) {
+                    Text(
+                        text = message.thinkText ?: "",
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        fontStyle = FontStyle.Italic,
+                        color = JayraSubtext,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+            }
 
             Text(
                 text = remember(message.text) { EmojiParser.parse(message.text) },
@@ -477,19 +521,14 @@ private fun AiMessageBubble(
                 text = message.timestamp,
                 fontSize = 12.sp,
                 color = JayraSubtext,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = 2.dp)
+                modifier = Modifier.align(Alignment.End).padding(top = 2.dp)
             )
         }
     }
 }
 
-// 1.4 Typing Indicator
 @Composable
-private fun TypingIndicatorBubble(
-    modifier: Modifier = Modifier
-) {
+private fun TypingIndicatorBubble(modifier: Modifier = Modifier) {
     val isDark = isSystemInDarkTheme()
     val bubbleBg = if (isDark) JayraBubbleInDark else JayraBubbleInLight
 
@@ -516,81 +555,39 @@ private fun TypingIndicatorBubble(
 
         Box(
             modifier = Modifier
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 12.dp,
-                        topEnd = 12.dp,
-                        bottomStart = 0.dp,
-                        bottomEnd = 12.dp
-                    )
-                )
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp, bottomStart = 0.dp, bottomEnd = 12.dp))
                 .background(bubbleBg)
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             val infiniteTransition = rememberInfiniteTransition(label = "dots_bounce")
-
             val dot1Offset by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = -5f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
+                0f, -5f,
+                infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
                 label = "dot1"
             )
-
             val dot2Offset by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = -5f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = 300, delayMillis = 150, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
+                0f, -5f,
+                infiniteRepeatable(tween(300, delayMillis = 150, easing = FastOutSlowInEasing), RepeatMode.Reverse),
                 label = "dot2"
             )
-
             val dot3Offset by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = -5f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = 300, delayMillis = 300, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
+                0f, -5f,
+                infiniteRepeatable(tween(300, delayMillis = 300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
                 label = "dot3"
             )
 
-            // 3 dot 6dp JayraSubtext, spacing 3dp
             Row(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .offset(y = dot1Offset.dp)
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(JayraSubtext)
-                )
-                Box(
-                    modifier = Modifier
-                        .offset(y = dot2Offset.dp)
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(JayraSubtext)
-                )
-                Box(
-                    modifier = Modifier
-                        .offset(y = dot3Offset.dp)
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(JayraSubtext)
-                )
+                Box(modifier = Modifier.offset(y = dot1Offset.dp).size(6.dp).clip(CircleShape).background(JayraSubtext))
+                Box(modifier = Modifier.offset(y = dot2Offset.dp).size(6.dp).clip(CircleShape).background(JayraSubtext))
+                Box(modifier = Modifier.offset(y = dot3Offset.dp).size(6.dp).clip(CircleShape).background(JayraSubtext))
             }
         }
     }
 }
 
-// 1.5 Input Bar
 @Composable
 private fun AssistantInputBar(
     text: String,
@@ -612,11 +609,7 @@ private fun AssistantInputBar(
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Attach (Icons.Rounded.AttachFile) 24dp JayraSubtext
-        IconButton(
-            onClick = {},
-            modifier = Modifier.size(40.dp)
-        ) {
+        IconButton(onClick = {}, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = Icons.Rounded.AttachFile,
                 contentDescription = "Lampirkan file",
@@ -625,41 +618,25 @@ private fun AssistantInputBar(
             )
         }
 
-        // TextField "Tanya sesuatu..." 16sp maxLines 5
         Box(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 4.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             if (text.isEmpty()) {
-                Text(
-                    text = "Tanya sesuatu...",
-                    fontSize = 16.sp,
-                    color = JayraSubtext
-                )
+                Text(text = "Tanya sesuatu...", fontSize = 16.sp, color = JayraSubtext)
             }
             BasicTextField(
                 value = text,
                 onValueChange = onTextChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("assistant_text_input"),
-                textStyle = TextStyle(
-                    fontSize = 16.sp,
-                    color = textColor
-                ),
+                modifier = Modifier.fillMaxWidth().testTag("assistant_text_input"),
+                textStyle = TextStyle(fontSize = 16.sp, color = textColor),
                 cursorBrush = SolidColor(JayraBlue),
                 maxLines = 5,
                 keyboardOptions = KeyboardOptions(autoCorrectEnabled = true)
             )
         }
 
-        // Emoji (Icons.Rounded.EmojiEmotions) 24dp JayraSubtext
-        IconButton(
-            onClick = {},
-            modifier = Modifier.size(40.dp)
-        ) {
+        IconButton(onClick = {}, modifier = Modifier.size(40.dp)) {
             Icon(
                 imageVector = Icons.Rounded.EmojiEmotions,
                 contentDescription = "Pilih emoji",
@@ -668,7 +645,6 @@ private fun AssistantInputBar(
             )
         }
 
-        // Send (Icons.AutoMirrored.Filled.Send) 24dp JayraBlue, scaleIn 150ms
         AnimatedVisibility(
             visible = text.isNotBlank(),
             enter = scaleIn(animationSpec = tween(durationMillis = 150)),
@@ -676,9 +652,7 @@ private fun AssistantInputBar(
         ) {
             IconButton(
                 onClick = onSend,
-                modifier = Modifier
-                    .size(40.dp)
-                    .testTag("assistant_send_button")
+                modifier = Modifier.size(40.dp).testTag("assistant_send_button")
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
@@ -691,15 +665,10 @@ private fun AssistantInputBar(
     }
 }
 
-// 1.6 Empty State
 @Composable
-private fun AssistantEmptyState(
-    modifier: Modifier = Modifier
-) {
+private fun AssistantEmptyState(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(32.dp),
+        modifier = modifier.fillMaxWidth().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -727,7 +696,6 @@ private fun AssistantEmptyState(
     }
 }
 
-// 1.6 Error State
 @Composable
 private fun AssistantErrorState(
     errorMessage: String,
@@ -735,9 +703,7 @@ private fun AssistantErrorState(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(24.dp),
+        modifier = modifier.fillMaxWidth().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -761,33 +727,21 @@ private fun AssistantErrorState(
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier.testTag("assistant_retry_button")
         ) {
-            Text(
-                text = "Coba Lagi",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White
-            )
+            Text(text = "Coba Lagi", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color.White)
         }
     }
 }
 
-// 1.6 Shimmer Loading (5 bubbles, Brush.linearGradient 1000ms infinite)
 @Composable
-private fun AssistantShimmerLoading(
-    modifier: Modifier = Modifier
-) {
+private fun AssistantShimmerLoading(modifier: Modifier = Modifier) {
     val isDark = isSystemInDarkTheme()
     val baseColor = if (isDark) Color(0xFF233040) else Color(0xFFD8DFE5)
     val highlightColor = if (isDark) Color(0xFF324357) else Color(0xFFE8EEF3)
 
-    val transition = rememberInfiniteTransition(label = "shimmer_transition")
+    val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
+        0f, 1000f,
+        infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart),
         label = "shimmer_anim"
     )
 
@@ -798,9 +752,7 @@ private fun AssistantShimmerLoading(
     )
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         repeat(5) { index ->
@@ -817,78 +769,6 @@ private fun AssistantShimmerLoading(
                         .background(brush)
                 )
             }
-        }
-    }
-}
-
-@Preview(name = "Assistant Screen Light", showBackground = true)
-@Composable
-private fun AssistantScreenLightPreview() {
-    JayraTheme(darkTheme = false) {
-        Surface {
-            AssistantScreenContent(
-                uiState = AssistantUiState.Success(
-                    messages = listOf(
-                        Message(
-                            id = "1",
-                            senderId = "jayra_ai",
-                            senderName = "Jayra AI",
-                            text = "Halo! Saya Jayra AI. Ada yang bisa saya bantu hari ini?",
-                            timestamp = "10:00 AM",
-                            status = MessageStatus.READ
-                        ),
-                        Message(
-                            id = "2",
-                            senderId = "user_me",
-                            senderName = "User",
-                            text = "Bagaimana arsitektur keamanan Jayra?",
-                            timestamp = "10:01 AM",
-                            status = MessageStatus.READ
-                        ),
-                        Message(
-                            id = "3",
-                            senderId = "jayra_ai",
-                            senderName = "Jayra AI",
-                            text = "Jayra dilengkapi enkripsi AES-256-GCM, proteksi FLAG_SECURE, sanitasi anti-injeksi, dan pembatasan frekuensi pengiriman.",
-                            timestamp = "10:01 AM",
-                            status = MessageStatus.READ
-                        )
-                    ),
-                    isLoading = false
-                ),
-                onBack = {},
-                onSendMessage = {},
-                onRetry = {},
-                onClearHistory = {}
-            )
-        }
-    }
-}
-
-@Preview(name = "Assistant Screen Dark", showBackground = true)
-@Composable
-private fun AssistantScreenDarkPreview() {
-    JayraTheme(darkTheme = true) {
-        Surface {
-            AssistantScreenContent(
-                uiState = AssistantUiState.Success(
-                    messages = listOf(
-                        Message(
-                            id = "1",
-                            senderId = "jayra_ai",
-                            senderName = "Jayra AI",
-                            text = "Halo! Saya Jayra AI siap membantu Anda.",
-                            timestamp = "10:00 AM",
-                            status = MessageStatus.READ
-                        )
-                    ),
-                    isLoading = true
-                ),
-                onBack = {},
-                onSendMessage = {},
-                onRetry = {},
-                onClearHistory = {}
-            )
         }
     }
 }
