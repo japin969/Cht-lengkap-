@@ -13,6 +13,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -198,8 +199,9 @@ fun MessageBubble(
         horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
     ) {
         AnimatedVisibility(
+            visible = true,
             enter = fadeIn(animationSpec = tween(150)) +
-                androidx.compose.animation.scaleIn(
+                scaleIn(
                     animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
                     initialScale = 0.94f
                 ),

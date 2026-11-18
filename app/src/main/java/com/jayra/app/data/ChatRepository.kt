@@ -810,7 +810,7 @@ class ChatRepository(
         scope.launch { 
             try { 
                 chatDao.resetUnreadCount(chatId)
-                messageDao.markAllMessagesStatus(chatId, uid, MessageStatus.READ.name)
+                chatDao.markAllMessagesStatus(chatId, uid, MessageStatus.READ.name)
             } catch (_: Exception) {} 
         }
     }
