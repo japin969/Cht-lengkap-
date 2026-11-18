@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
+    <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar">
+        <!-- Background solid, jangan hitam/transparan, supaya tidak ada flash hitam
+             saat activity start maupun saat transisi antar layar. -->
+        <item name="android:windowBackground">@color/jayra_window_background</item>
+        <item name="android:colorBackground">@color/jayra_window_background</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowDisablePreview">false</item>
+    </style>
 </resources>

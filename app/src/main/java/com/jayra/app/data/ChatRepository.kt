@@ -20,6 +20,7 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.firstOrNull
@@ -593,6 +594,7 @@ class ChatRepository(
     fun observeRealtimeMessages(chatId: String): Flow<List<Message>> = callbackFlow {
         if (firestore == null || chatId.isBlank()) {
             trySend(emptyList())
+            awaitClose { }
             return@callbackFlow
         }
         val listener = firestore.collection("chats")
@@ -626,6 +628,7 @@ class ChatRepository(
                 }
                 trySend(msgs)
             }
+        awaitClose { listener.remove() }
     }
 
     // -------------------------------------------------------------------------
@@ -870,9 +873,11 @@ class ChatRepository(
 
     fun observeTyping(chatId: String): Flow<List<String>> = callbackFlow {
         trySend(emptyList())
+        awaitClose { }
     }
 
     fun getAllMessages(): Flow<List<Message>> = callbackFlow {
         trySend(emptyList())
+        awaitClose { }
     }
 }

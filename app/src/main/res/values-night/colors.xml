@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sama dengan JayraDarkChatBg (0xFF0E1621) agar transisi tidak berkedip hitam. -->
+    <color name="jayra_window_background">#0E1621</color>
+</resources>

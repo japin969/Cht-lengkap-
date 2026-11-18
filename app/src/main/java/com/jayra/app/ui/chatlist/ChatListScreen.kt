@@ -263,7 +263,7 @@ fun ChatListScreen(
                         ) {
                             DropdownMenuItem(
                                 text = { AppText("Jayra AI") },
-                                onClick = { showMenu = false },
+                                onClick = { showMenu = false; onAiClick() },
                                 modifier = Modifier.height(44.dp)
                             )
                             DropdownMenuItem(

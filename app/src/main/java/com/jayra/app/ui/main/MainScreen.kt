@@ -5,6 +5,7 @@ package com.jayra.app.ui.main
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -229,6 +230,7 @@ class MainViewModel(
             ROUTE_CHAT_LIST,
             ROUTE_CALLS,
             ROUTE_MUSIC_HOME,
+            ROUTE_DRAMA_HOME,
             ROUTE_SETTINGS
         )
     }
@@ -337,7 +339,7 @@ fun MainScreen(
                             "chat_list" -> 0
                             "calls" -> 1
                             "music_home" -> 2
-                            "vidhub" -> 3
+                            "drama_home", "vidhub" -> 3
                             "settings" -> 4
                             else -> 0
                         },
@@ -346,7 +348,7 @@ fun MainScreen(
                                 0 -> "chat_list"
                                 1 -> "calls"
                                 2 -> "music_home"
-                                3 -> "vidhub"
+                                3 -> "drama_home"
                                 4 -> "settings"
                                 else -> "chat_list"
                             }
@@ -539,9 +541,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.EnterTransition.None
             } else {
                 slideInHorizontally(
-                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
-                    initialOffsetX = { fullWidth -> fullWidth / 3 }
-                ) + fadeIn(animationSpec = tween(150))
+                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+                    initialOffsetX = { fullWidth -> fullWidth / 4 }
+                ) + fadeIn(animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing))
             }
         },
         exitTransition = {
@@ -551,9 +553,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.ExitTransition.None
             } else {
                 slideOutHorizontally(
-                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
-                    targetOffsetX = { fullWidth -> -fullWidth / 3 }
-                ) + fadeOut(animationSpec = tween(150))
+                    animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+                    targetOffsetX = { fullWidth -> -fullWidth / 4 }
+                ) + fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing))
             }
         },
         popEnterTransition = {
@@ -563,9 +565,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.EnterTransition.None
             } else {
                 slideInHorizontally(
-                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
-                    initialOffsetX = { fullWidth -> -fullWidth / 3 }
-                ) + fadeIn(animationSpec = tween(150))
+                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+                    initialOffsetX = { fullWidth -> -fullWidth / 4 }
+                ) + fadeIn(animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing))
             }
         },
         popExitTransition = {
@@ -575,9 +577,9 @@ private fun MainNavigationGraph(
                 androidx.compose.animation.ExitTransition.None
             } else {
                 slideOutHorizontally(
-                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 400f),
-                    targetOffsetX = { fullWidth -> fullWidth / 3 }
-                ) + fadeOut(animationSpec = tween(150))
+                    animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+                    targetOffsetX = { fullWidth -> fullWidth / 4 }
+                ) + fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing))
             }
         }
     ) {
@@ -635,7 +637,11 @@ private fun MainNavigationGraph(
                 ChatListScreen(
                     onArchivedClick = { navController.navigate("archived_chats") },
                     onChatClick = { chatId ->
-                        navController.navigate("chat/$chatId")
+                        if (chatId.isNotBlank()) {
+                            navController.navigate("chat/$chatId") {
+                                launchSingleTop = true
+                            }
+                        }
                     },
                     onContactInfoClick = { targetId ->
                         navigateToInfo(targetId)
@@ -798,8 +804,11 @@ private fun MainNavigationGraph(
             com.jayra.app.ui.creategroup.CreateGroupScreen(
                 onBack = { navController.popBackStack() },
                 onGroupCreated = { groupId ->
-                    navController.navigate("chat/$groupId") {
-                        popUpTo("creategroup") { inclusive = true }
+                    if (groupId.isNotBlank()) {
+                        navController.navigate("chat/$groupId") {
+                            popUpTo("creategroup") { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 }
             )
