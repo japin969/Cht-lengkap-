@@ -200,98 +200,27 @@ class AssistantViewModel @JvmOverloads constructor(
             try {
                 val aiText = withContext(Dispatchers.IO) {
                     val historyBlock = historySnapshot.dropLast(1).takeLast(10).joinToString("\n") { m ->
-                        val role = if (m.senderId == "jayra_ai") "Jayra AI" else "User"
-                        "$role: ${m.text.take(500)}"
+                        val role = if (m.senderId == "jayra_ai") "AI" else "User"
+                        "$role: ${m.text}"
                     }
-                    val prompt = """Kamu adalah Jayra AI — asisten pribadi serbaguna seperti Meta AI.
+                    val systemPrompt = "Kamu adalah Jayra AI. Jawab lengkap, kontekstual, dalam bahasa user. Jangan tampilkan reasoning."
+                    val prompt = if (historyBlock.isBlank()) sanitized else "$historyBlock\nUser: $sanitized"
 
-GAYA JAWABAN (WAJIB):
-1. Jawab LENGKAP dan KONTEKSTUAL. Jangan one-liner kecuali memang pertanyaan sepele.
-2. Jika pertanyaan butuh langkah/rencana, berikan poin-poin terstruktur (list/heading).
-3. Sambungkan ke riwayat percakapan — jika user merujuk "di atas", "yang tadi", pahami konteksnya.
-4. Jangan mengulang sapaan "Halo/Hai" atau "Saya Jayra AI" setelah pesan pertama.
-5. Jangan pernah menampilkan token kontrol seperti <|start|>, <|end|>, <|im_start|>, <|assistant|> — output hanya teks bersih.
-6. WAJIB jawab dalam BAHASA USER. Jika user pakai Bahasa Indonesia → jawab BAHASA INDONESIA murni (jangan English). Jika user pakai English → jawab English. Jangan campur.
-7. Jika tidak yakin, katakan tidak tahu. Jangan halusinasi.
-8. Gunakan markdown untuk struktur (heading, bullet, bold, code block) bila membantu.
-9. JANGAN tampilkan proses berpikir / reasoning. Jangan tulis "Let me think", "Okay, the user asked...", "First, ...". LANGSUNG berikan JAWABAN FINAL saja.
-
-Riwayat percakapan:
-$historyBlock
-
-User: $sanitized
-
-Jayra AI (jawab lengkap & kontekstual):"""
-
-                    // Fallback berlapis: 11 endpoint AI (prioritas Siputzx karena cepat + stabil)
+                    // Routing Biasa: nexadev gpt4 dulu, gagal -> siputzx gptoss120b
                     var localAiText: String? = null
-                    
-                    // 1. Siputzx gptoss120b (utama, paling cepat + pintar)
                     try {
-                        val res = siputzxApi.askGptOss(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                        if (res.isSuccessful && res.body()?.status == true) {
-                            localAiText = res.body()?.getExtractedText()
+                        val res = nexadevAiApi.askGpt4(query = prompt)
+                        if (res.isSuccessful && res.body() != null) {
+                            localAiText = res.body()?.extractText()
                         }
                     } catch (_: Exception) {}
-
-                    // 2. Siputzx glm47flash
                     if (localAiText.isNullOrBlank()) {
                         try {
-                            val res = siputzxApi.askGlm47Flash(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
+                            val res = siputzxApi.askGptOss(prompt = prompt, system = systemPrompt)
                             if (res.isSuccessful && res.body()?.status == true) {
                                 localAiText = res.body()?.getExtractedText()
                             }
                         } catch (_: Exception) {}
-                    }
-
-                    // 3. Siputzx qwq32b
-                    if (localAiText.isNullOrBlank()) {
-                        try {
-                            val res = siputzxApi.askQwq32b(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                            if (res.isSuccessful && res.body()?.status == true) {
-                                localAiText = res.body()?.getExtractedText()
-                            }
-                        } catch (_: Exception) {}
-                    }
-
-                    // 4. Siputzx phi2
-                    if (localAiText.isNullOrBlank()) {
-                        try {
-                            val res = siputzxApi.askPhi2(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                            if (res.isSuccessful && res.body()?.status == true) {
-                                localAiText = res.body()?.getExtractedText()
-                            }
-                        } catch (_: Exception) {}
-                    }
-
-                    // 6. Siputzx deepseekr1 (paling pintar, tapi lambat ~15-30s)
-                    if (localAiText.isNullOrBlank()) {
-                        try {
-                            val res = siputzxApi.askDeepseekR1(prompt = prompt, system = "You are Jayra AI, helpful assistant.")
-                            if (res.isSuccessful && res.body()?.status == true) {
-                                localAiText = res.body()?.getExtractedText()
-                            }
-                        } catch (_: Exception) {}
-                    }
-
-                    // 7-11. Nexadev fallback (kadang error, taruh terakhir)
-                    if (localAiText.isNullOrBlank()) {
-                        val nexadevEndpoints = listOf<suspend () -> Response<NexadevAiResponse>>(
-                            { nexadevAiApi.askGpt4(query = prompt) },
-                            { nexadevAiApi.askChatGptPro(query = prompt) },
-                            { nexadevAiApi.askFelo(query = prompt) },
-                            { nexadevAiApi.askLlama(query = prompt) },
-                            { nexadevAiApi.askDeepseek(text = prompt) }
-                        )
-                        for (call in nexadevEndpoints) {
-                            try {
-                                val res = call()
-                                if (res.isSuccessful && res.body() != null) {
-                                    localAiText = res.body()?.extractText()
-                                    if (!localAiText.isNullOrBlank()) break
-                                }
-                            } catch (_: Exception) {}
-                        }
                     }
 
                     localAiText?.let { raw ->
