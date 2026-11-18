@@ -910,7 +910,7 @@ fun ShimmerChatList() {
                     Spacer(Modifier.height(6.dp))
                     Box(
                         modifier = Modifier
-                            .width(40.percent)
+                            .width(40f.dp)
                             .height(14.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(shimmerBg)
