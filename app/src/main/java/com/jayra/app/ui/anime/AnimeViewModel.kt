@@ -78,6 +78,15 @@ class AnimeViewModel : ViewModel() {
                         attrs?.startDate?.let { put("Mulai", it) }
                         attrs?.episodeCount?.let { put("Episode", "$it") }
                     }
+                    
+                    // Fetch episodes from Kitsu API
+                    val episodesResponse = api.episodes(data.id)
+                    val episodesList = if (episodesResponse.isSuccessful) {
+                        episodesResponse.body()?.data?.map { ep -> ep.toEpisode() }.orEmpty()
+                    } else {
+                        emptyList()
+                    }
+                    
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         detail = AnimeDetailData(
@@ -88,10 +97,9 @@ class AnimeViewModel : ViewModel() {
                             rating = attrs?.averageRating?.toDoubleOrNull(),
                             totalEpisodes = attrs?.episodeCount,
                             genres = null,
-                            info = info,
-                            episodes = emptyList()
+                            info = info
                         ),
-                        episodes = emptyList()
+                        episodes = episodesList
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
@@ -120,5 +128,11 @@ class AnimeViewModel : ViewModel() {
             ?: attributes?.coverImage?.best(),
         latestEpisode = attributes?.episodeCount?.let { "$it eps" } ?: attributes?.status,
         type = attributes?.subtype
+    )
+
+    private fun KitsuEpisode.toEpisode(): AnimeEpisode = AnimeEpisode(
+        episode = attributes?.sequence ?: 0,
+        title = attributes?.canonicalTitle,
+        episodeUrl = attributes?.streamUrl?.takeIf { it.isNotBlank() }
     )
 }

@@ -315,7 +315,77 @@ fun MainScreen(
     Scaffold(
         contentWindowInsets = if (showBottomBar) WindowInsets.safeDrawing else WindowInsets(0, 0, 0, 0),
         containerColor = screenBg,
-        bottomBar = { }
+        bottomBar = {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .background(
+                        if (isDark) Color(0xB3000000) else Color(0xCCFFFFFF)
+                    )
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 6.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    val navItems = listOf(
+                        JayraNavItem("Chat", R.drawable.ic_chat),
+                        JayraNavItem("Calls", R.drawable.ic_panggilan),
+                        JayraNavItem("Music", R.drawable.ic_music),
+                        JayraNavItem("Hub", R.drawable.ic_hub),
+                        JayraNavItem("Settings", R.drawable.ic_setting)
+                    )
+                    
+                    navItems.forEachIndexed { i, item ->
+                        val selected = i == when (currentRoute) {
+                            "chat_list" -> 0
+                            "calls" -> 1
+                            "music_home" -> 2
+                            "drama_home", "vidhub" -> 3
+                            "settings" -> 4
+                            else -> 0
+                        }
+                        
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (selected) (if (isDark) Color(0xFF30D158) else Color(0xFF007AFF)).copy(alpha = 0.12f) else Color.Transparent)
+                                .clickable { 
+                                    val route = when (i) {
+                                        0 -> "chat_list"
+                                        1 -> "calls"
+                                        2 -> "music_home"
+                                        3 -> "drama_home"
+                                        4 -> "settings"
+                                        else -> "chat_list"
+                                    }
+                                    navController.navigate(route) {
+                                        popUpTo(MainViewModel.ROUTE_CHAT_LIST) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(item.iconRes),
+                                contentDescription = item.label,
+                                tint = if (selected) (if (isDark) Color(0xFF30D158) else Color(0xFF007AFF)) else (if (isDark) Color(0xFF8E8E93) else Color(0xFF8A8A8E)),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().background(screenBg)) {
             MainNavigationGraph(
@@ -540,52 +610,34 @@ private fun MainNavigationGraph(
             if (isSystemInDarkTheme()) JayraDarkChatBg else JayraLightChatBg
         ),
         enterTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.EnterTransition.None
-            } else {
-                slideInHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    initialOffsetX = { fullWidth -> fullWidth / 4 }
-                ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
-            }
+            // Always use smooth transitions for all routes, including bottom bar routes
+            slideInHorizontally(
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                initialOffsetX = { fullWidth -> (if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
+                                                               targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES) fullWidth / 4 else -fullWidth / 4) }
+            ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
         },
         exitTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.ExitTransition.None
-            } else {
-                slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    targetOffsetX = { fullWidth -> -fullWidth / 4 }
-                )
-            }
+            // Always use smooth transitions for all routes, including bottom bar routes
+            slideOutHorizontally(
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                targetOffsetX = { fullWidth -> (if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
+                                                               targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES) fullWidth / 4 else -fullWidth / 4) }
+            )
         },
         popEnterTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.EnterTransition.None
-            } else {
-                slideInHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    initialOffsetX = { fullWidth -> -fullWidth / 4 }
-                ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
-            }
+            // Always use smooth transitions for all routes, including bottom bar routes
+            slideInHorizontally(
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                initialOffsetX = { fullWidth -> -fullWidth / 4 }
+            ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
         },
         popExitTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.ExitTransition.None
-            } else {
-                slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    targetOffsetX = { fullWidth -> fullWidth / 4 }
-                )
-            }
+            // Always use smooth transitions for all routes, including bottom bar routes
+            slideOutHorizontally(
+                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                targetOffsetX = { fullWidth -> fullWidth / 4 }
+            )
         }
     ) {
         composable(MainViewModel.ROUTE_SPLASH) {

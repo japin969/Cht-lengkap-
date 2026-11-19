@@ -131,6 +131,9 @@ class MusicViewModel @JvmOverloads constructor(
         _uiState.value = MusicUiState.Loading
         try {
             // Sumber data baru: Deezer (API lama api.nexadev.my.id sudah mati / 403).
+            // Note: Deezer API only provides preview URLs (30 seconds).
+            // For full songs, you need to use other APIs like Spotify, YouTube, etc.
+            // This is a known limitation of the Deezer API.
             val response = withContext(Dispatchers.IO) { deezerApi.search(query) }
             val tracks = response.body()?.data.orEmpty()
             val songs = tracks.map { it.toSong() }
@@ -171,6 +174,10 @@ class MusicViewModel @JvmOverloads constructor(
         audioUrl = preview ?: "",
         source = "deezer"
     )
+
+    // Note: Deezer API only provides preview URLs (30 seconds).
+    // For full songs, you need to use other APIs like Spotify, YouTube, etc.
+    // This is a known limitation of the Deezer API.
 
     private fun formatDuration(totalSeconds: Int): String {
         val minutes = totalSeconds / 60

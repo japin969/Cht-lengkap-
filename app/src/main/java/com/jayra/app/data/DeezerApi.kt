@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
  */
 interface DeezerApi {
 
-    @GET("search")
+    @GET("track/search")
     suspend fun search(
         @Query("q") query: String,
         @Query("limit") limit: Int = 25

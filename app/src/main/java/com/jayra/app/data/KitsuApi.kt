@@ -35,6 +35,9 @@ interface KitsuApi {
     @GET("anime/{id}")
     suspend fun detail(@Path("id") id: String): Response<KitsuSingleResponse>
 
+    @GET("anime/{id}/episodes")
+    suspend fun episodes(@Path("id") id: String): Response<KitsuEpisodeResponse>
+
     companion object {
         private const val BASE_URL = "https://kitsu.io/api/edge/"
 
@@ -68,9 +71,25 @@ data class KitsuListResponse(val data: List<KitsuAnime>? = null)
 data class KitsuSingleResponse(val data: KitsuAnime? = null)
 
 @JsonClass(generateAdapter = true)
+data class KitsuEpisodeResponse(val data: List<KitsuEpisode>? = null)
+
+@JsonClass(generateAdapter = true)
 data class KitsuAnime(
     val id: String? = null,
     val attributes: KitsuAttributes? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class KitsuEpisode(
+    val id: String? = null,
+    val attributes: KitsuEpisodeAttributes? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class KitsuEpisodeAttributes(
+    @Json(name = "sequence") val sequence: Int? = null,
+    @Json(name = "canonicalTitle") val canonicalTitle: String? = null,
+    @Json(name = "streamUrl") val streamUrl: String? = null
 )
 
 @JsonClass(generateAdapter = true)
