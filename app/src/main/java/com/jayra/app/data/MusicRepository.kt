@@ -17,19 +17,6 @@ class MusicRepository(
     private val siputzxApi: SiputzxApi = SiputzxApi.create()
 ) {
 
-    private suspend fun <T : Any> callApi(block: suspend () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
-        try {
-            val response = block()
-            if (response.isSuccessful) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("HTTP ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
     /**
      * Cari lagu dari 3 sumber paralel.
      * Return: List<Song> yang sudah digabung & di-deduplicate by title+artist.
@@ -37,30 +24,27 @@ class MusicRepository(
     suspend fun searchAll(query: String): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
             coroutineScope {
-                val spotifyDeferred = async { callApi<SpotifyResponse> { nexadevApi.searchSpotify(query) } }
-                val appleDeferred = async { callApi<AppleMusicResponse> { siputzxApi.searchAppleMusic(query) } }
-                val ytDeferred = async { callApi<YouTubeResponse> { nexadevApi.searchYouTube(query) } }
+                val spotifyDeferred = async { nexadevApi.searchSpotify(query) }
+                val appleDeferred = async { siputzxApi.searchAppleMusic(query) }
+                val ytDeferred = async { nexadevApi.searchYouTube(query) }
 
                 val (spotifyResult, appleResult, ytResult) = awaitAll(spotifyDeferred, appleDeferred, ytDeferred)
 
                 val allSongs = mutableListOf<Song>()
 
                 // SpotifyPlay
-                if (spotifyResult.isSuccess) {
-                    val response = spotifyResult.getOrNull() as? SpotifyResponse
-                    response?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
+                if (spotifyResult.isSuccessful) {
+                    spotifyResult.body()?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // AppleMusic
-                if (appleResult.isSuccess) {
-                    val response = appleResult.getOrNull() as? AppleMusicResponse
-                    response?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
+                if (appleResult.isSuccessful) {
+                    appleResult.body()?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // YTPlay
-                if (ytResult.isSuccess) {
-                    val response = ytResult.getOrNull() as? YouTubeResponse
-                    response?.toSong()?.let { allSongs.add(it) }
+                if (ytResult.isSuccessful) {
+                    ytResult.body()?.toSong()?.let { allSongs.add(it) }
                 }
 
                 // Deduplicate by title + artist (case insensitive)
@@ -77,16 +61,14 @@ class MusicRepository(
     suspend fun getPopularChart(): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
             // Try SpotifyPlay first
-            val spotifyResult = callApi<SpotifyResponse> { nexadevApi.searchSpotify("top hits") }
-            if (spotifyResult.isSuccess) {
-                val response = spotifyResult.getOrNull() as? SpotifyResponse
-                response?.data?.map { it.toSong() } ?: emptyList()
+            val spotifyResult = nexadevApi.searchSpotify("top hits")
+            if (spotifyResult.isSuccessful) {
+                spotifyResult.body()?.data?.map { it.toSong() } ?: emptyList()
             } else {
                 // Fallback to YTPlay
-                val ytResult = callApi<YouTubeResponse> { nexadevApi.searchYouTube("top hits") }
-                if (ytResult.isSuccess) {
-                    val response = ytResult.getOrNull() as? YouTubeResponse
-                    response?.toSong()?.let { listOf(it) } ?: emptyList()
+                val ytResult = nexadevApi.searchYouTube("top hits")
+                if (ytResult.isSuccessful) {
+                    ytResult.body()?.toSong()?.let { listOf(it) } ?: emptyList()
                 } else {
                     emptyList()
                 }
