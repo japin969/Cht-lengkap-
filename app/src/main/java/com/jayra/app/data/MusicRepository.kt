@@ -46,17 +46,20 @@ class MusicRepository(
                 val allSongs = mutableListOf<Song>()
 
                 // SpotifyPlay
-                spotifyResult.onSuccess { (response: SpotifyResponse) ->
+                if (spotifyResult.isSuccess) {
+                    val response = spotifyResult.getOrNull() as SpotifyResponse
                     response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // AppleMusic
-                appleResult.onSuccess { (response: AppleMusicResponse) ->
+                if (appleResult.isSuccess) {
+                    val response = appleResult.getOrNull() as AppleMusicResponse
                     response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // YTPlay
-                ytResult.onSuccess { (response: YouTubeResponse) ->
+                if (ytResult.isSuccess) {
+                    val response = ytResult.getOrNull() as YouTubeResponse
                     response.toSong()?.let { allSongs.add(it) }
                 }
 
