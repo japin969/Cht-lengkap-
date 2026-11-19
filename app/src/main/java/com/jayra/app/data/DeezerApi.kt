@@ -8,6 +8,7 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 
@@ -22,6 +23,18 @@ interface DeezerApi {
         @Query("q") query: String,
         @Query("limit") limit: Int = 25
     ): Response<DeezerSearchResponse>
+
+    /** Daftar lagu populer — dipakai sebagai isi awal layar Musik. */
+    @GET("chart/0/tracks")
+    suspend fun chart(
+        @Query("limit") limit: Int = 25
+    ): Response<DeezerSearchResponse>
+
+    /** Detail satu track, dipakai untuk mengambil URL preview kalau kosong. */
+    @GET("track/{id}")
+    suspend fun track(
+        @Path("id") id: Long
+    ): Response<DeezerTrack>
 
     companion object {
         private const val BASE_URL = "https://api.deezer.com/"

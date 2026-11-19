@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.jayra.app.util.glassSurfaceV2
@@ -539,54 +538,46 @@ private fun MainNavigationGraph(
         modifier = modifier.background(
             if (isSystemInDarkTheme()) JayraDarkChatBg else JayraLightChatBg
         ),
+        /*
+         * Transisi ala WhatsApp — TANPA layar hitam.
+         *
+         * Aturan penting: exitTransition/popExitTransition sengaja "None".
+         * Artinya layar LAMA tetap tampil penuh (opaque) selama animasi, sehingga
+         * background kosong (yang dulu terlihat sebagai jeda hitam) tidak pernah
+         * terekspos. Layar BARU slide + fade di atasnya, lalu layar lama dibuang
+         * setelah animasi selesai. Hasilnya: nyambung, tidak berkedip.
+         */
         enterTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.EnterTransition.None
+            val fromTab = initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
+            val toTab = targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
+            if (fromTab && toTab) {
+                // Ganti tab: fade + geser tipis, cepat dan halus.
+                fadeIn(
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)
+                ) + slideInHorizontally(
+                    animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+                    initialOffsetX = { fullWidth -> fullWidth / 14 }
+                )
             } else {
-                slideInHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                // Masuk ke halaman baru: slide 1/4 lebar + fade.
+                fadeIn(
+                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                ) + slideInHorizontally(
+                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
                     initialOffsetX = { fullWidth -> fullWidth / 4 }
-                ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
-            }
-        },
-        exitTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.ExitTransition.None
-            } else {
-                slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    targetOffsetX = { fullWidth -> -fullWidth / 4 }
                 )
             }
         },
+        exitTransition = { androidx.compose.animation.ExitTransition.None },
         popEnterTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.EnterTransition.None
-            } else {
-                slideInHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    initialOffsetX = { fullWidth -> -fullWidth / 4 }
-                ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
-            }
+            fadeIn(
+                animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
+            ) + slideInHorizontally(
+                animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+                initialOffsetX = { fullWidth -> -fullWidth / 4 }
+            )
         },
-        popExitTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.ExitTransition.None
-            } else {
-                slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    targetOffsetX = { fullWidth -> fullWidth / 4 }
-                )
-            }
-        }
+        popExitTransition = { androidx.compose.animation.ExitTransition.None }
     ) {
         composable(MainViewModel.ROUTE_SPLASH) {
             SplashScreen(
@@ -742,6 +733,7 @@ private fun MainNavigationGraph(
             val decoded = java.net.URLDecoder.decode(url, "UTF-8")
             com.jayra.app.ui.anime.AnimeDetailScreen(
                 animeUrl = decoded,
+                onBack = { navController.popBackStack() },
                 onPlayEpisode = { epUrl ->
                     val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                     navController.navigate("anime_player?url=$epEncoded")
@@ -784,6 +776,7 @@ private fun MainNavigationGraph(
             val slug = backStackEntry.arguments?.getString("slug") ?: ""
             com.jayra.app.ui.komik.KomikDetailScreen(
                 slug = slug,
+                onBack = { navController.popBackStack() },
                 onChapterClick = { chapterSlug ->
                     navController.navigate("komik_reader?slug=$chapterSlug")
                 }
@@ -795,7 +788,10 @@ private fun MainNavigationGraph(
             arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
         ) { backStackEntry ->
             val slug = backStackEntry.arguments?.getString("slug") ?: ""
-            com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
+            com.jayra.app.ui.komik.KomikReaderScreen(
+                slug = slug,
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable("archived_chats") {

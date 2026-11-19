@@ -3,6 +3,8 @@ package com.jayra.app.ui.music
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -80,6 +83,8 @@ fun MusicPlayerScreen(
     val duration by viewModel.duration.collectAsStateWithLifecycle()
     val isShuffle by viewModel.isShuffle.collectAsStateWithLifecycle()
     val isRepeat by viewModel.isRepeat.collectAsStateWithLifecycle()
+    val isBuffering by viewModel.isBuffering.collectAsStateWithLifecycle()
+    val playbackError by viewModel.playbackError.collectAsStateWithLifecycle()
 
     MusicPlayerContent(
         song = currentSong,
@@ -88,6 +93,8 @@ fun MusicPlayerScreen(
         duration = duration,
         isShuffle = isShuffle,
         isRepeat = isRepeat,
+        isBuffering = isBuffering,
+        playbackError = playbackError,
         onBack = onBack,
         onPlayPauseClick = viewModel::onPlayPauseClick,
         onSeekTo = viewModel::onSeekTo,
@@ -106,6 +113,8 @@ fun MusicPlayerContent(
     duration: Long,
     isShuffle: Boolean,
     isRepeat: Boolean,
+    isBuffering: Boolean = false,
+    playbackError: String? = null,
     onBack: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onSeekTo: (Long) -> Unit,
@@ -134,6 +143,7 @@ fun MusicPlayerContent(
         modifier = Modifier
             .fillMaxSize()
             .background(gradientBackground)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -247,6 +257,21 @@ fun MusicPlayerContent(
             overflow = TextOverflow.Ellipsis
         )
 
+        if (playbackError != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = playbackError,
+                fontSize = 13.sp,
+                color = Color(0xFFFFB4AB),
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0x33FF3B30))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(28.dp))
 
         // 2.4 Progress Bar
@@ -341,12 +366,20 @@ fun MusicPlayerContent(
                         .size(64.dp)
                         .testTag("player_play_pause_button")
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        contentDescription = if (isPlaying) "Jeda" else "Putar",
-                        tint = JayraBlue,
-                        modifier = Modifier.size(36.dp)
-                    )
+                    if (isBuffering) {
+                        CircularProgressIndicator(
+                            color = JayraBlue,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(34.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = if (isPlaying) "Jeda" else "Putar",
+                            tint = JayraBlue,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
             }
 

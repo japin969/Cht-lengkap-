@@ -1,5 +1,10 @@
 package com.jayra.app.ui.anime
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -34,9 +39,7 @@ fun AnimeHomeScreen(
     ) {
         when {
             state.isLoading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                AnimeSkeleton()
             }
 
             state.error != null && state.popular.isEmpty() && state.ongoing.isEmpty() && state.completed.isEmpty() -> {
@@ -87,6 +90,12 @@ fun AnimeHomeScreen(
 
             else -> {
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+                    if (state.isFallback) item {
+                        FallbackBanner(
+                            message = state.error ?: "Menampilkan data contoh",
+                            onRetry = { viewModel.retry() }
+                        )
+                    }
                     if (state.ongoing.isNotEmpty()) item {
                         Text("Sedang Tayang", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -118,16 +127,110 @@ fun AnimeHomeScreen(
 }
 
 @Composable
+private fun FallbackBanner(message: String, onRetry: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f)
+        )
+        TextButton(onClick = onRetry) { Text("Coba Lagi") }
+    }
+}
+
+@Composable
 fun AnimePosterCard(anime: AnimeSearchItem, onClick: (String) -> Unit) {
-    Column(Modifier.width(120.dp).clickable { onClick(anime.link ?: "") }) {
+    val link = anime.link.orEmpty()
+    Column(
+        Modifier
+            .width(120.dp)
+            .clickable(enabled = link.isNotBlank()) { onClick(link) }
+    ) {
         AsyncImage(
             model = anime.image,
             contentDescription = anime.title,
-            modifier = Modifier.width(120.dp).height(180.dp).clip(RoundedCornerShape(8.dp)),
+            modifier = Modifier
+                .width(120.dp)
+                .height(180.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
             contentScale = ContentScale.Crop
         )
         Spacer(Modifier.height(4.dp))
         Text(anime.title ?: "Unknown", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 2)
         Text(anime.latestEpisode ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * Skeleton loading (bukan spinner fullscreen) supaya layar tidak terasa "nyangkut".
+ */
+@Composable
+private fun AnimeSkeleton() {
+    val transition = rememberInfiniteTransition(label = "anime_skeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.30f,
+        targetValue = 0.70f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "anime_skeleton_alpha"
+    )
+    val bone = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.18f)
+
+    Column(Modifier.fillMaxSize()) {
+        repeat(3) { section ->
+            Box(
+                Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .width(120.dp)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(bone)
+            )
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                repeat(if (section == 2) 2 else 3) {
+                    Column(Modifier.width(120.dp)) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(bone)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Box(
+                            Modifier
+                                .fillMaxWidth(0.85f)
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(bone)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            Modifier
+                                .fillMaxWidth(0.5f)
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(bone)
+                        )
+                    }
+                }
+            }
+        }
     }
 }

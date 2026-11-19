@@ -37,7 +37,7 @@ class MusicViewModel @JvmOverloads constructor(
     private val deezerApi: DeezerApi = DeezerApi.create()
 ) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Empty)
+    private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Loading)
     val uiState: StateFlow<MusicUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
@@ -60,6 +60,14 @@ class MusicViewModel @JvmOverloads constructor(
 
     private val _isRepeat = MutableStateFlow(false)
     val isRepeat: StateFlow<Boolean> = _isRepeat.asStateFlow()
+
+    /** true saat MediaPlayer sedang menyiapkan stream / resolusi preview. */
+    private val _isBuffering = MutableStateFlow(false)
+    val isBuffering: StateFlow<Boolean> = _isBuffering.asStateFlow()
+
+    /** Pesan error pemutaran (mis. preview tidak tersedia / koneksi gagal). */
+    private val _playbackError = MutableStateFlow<String?>(null)
+    val playbackError: StateFlow<String?> = _playbackError.asStateFlow()
 
     private var mediaPlayer: MediaPlayer? = null
     private var progressUpdateJob: Job? = null
@@ -123,24 +131,38 @@ class MusicViewModel @JvmOverloads constructor(
     }
 
     private suspend fun executeSearch(query: String) {
-        if (query.isBlank()) {
-            _uiState.value = MusicUiState.Success(emptyList())
-            return
-        }
-        lastQuery = query
+        val q = query.trim()
+        lastQuery = q
         _uiState.value = MusicUiState.Loading
         try {
-            // Sumber data baru: Deezer (API lama api.nexadev.my.id sudah mati / 403).
-            val response = withContext(Dispatchers.IO) { deezerApi.search(query) }
+            // Sumber data: Deezer (api.nexadev.my.id sudah mati / 403).
+            // Query kosong = tampilkan chart/populer, bukan layar kosong.
+            val response = withContext(Dispatchers.IO) {
+                if (q.isEmpty()) {
+                    deezerApi.chart(limit = 25)
+                } else {
+                    deezerApi.search(q, limit = 25)
+                }
+            }
+
+            if (!response.isSuccessful) {
+                _uiState.value = MusicUiState.Error(
+                    "Gagal memuat musik (HTTP ${response.code()}). Coba lagi."
+                )
+                return
+            }
+
             val tracks = response.body()?.data.orEmpty()
-            val songs = tracks.map { it.toSong() }
+            val songs = tracks
+                .map { it.toSong() }
+                .filter { it.title.isNotBlank() }
             if (songs.isNotEmpty()) {
                 _uiState.value = MusicUiState.Success(songs)
-                addHistory(query)
+                if (q.isNotEmpty()) addHistory(q)
             } else {
-                val fallback = curatedSongs.filter {
-                    it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true)
+                val fallback = if (q.isEmpty()) curatedSongs else curatedSongs.filter {
+                    it.title.contains(q, ignoreCase = true) ||
+                        it.artist.contains(q, ignoreCase = true)
                 }
                 _uiState.value = if (fallback.isNotEmpty()) {
                     MusicUiState.Success(fallback)
@@ -149,16 +171,25 @@ class MusicViewModel @JvmOverloads constructor(
                 }
             }
         } catch (e: Exception) {
-            val fallback = curatedSongs.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                    it.artist.contains(query, ignoreCase = true)
+            val fallback = if (q.isEmpty()) curatedSongs else curatedSongs.filter {
+                it.title.contains(q, ignoreCase = true) ||
+                    it.artist.contains(q, ignoreCase = true)
             }
             _uiState.value = if (fallback.isNotEmpty()) {
                 MusicUiState.Success(fallback)
             } else {
-                MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
+                MusicUiState.Error(e.userMessage("Gagal mencari lagu"))
             }
         }
+    }
+
+    /** Terjemahkan error teknis jadi pesan yang bisa dipahami user HP. */
+    private fun Throwable.userMessage(default: String): String = when (this) {
+        is java.net.UnknownHostException -> "Tidak ada koneksi internet"
+        is java.net.SocketTimeoutException -> "Koneksi lambat / timeout. Coba lagi."
+        is javax.net.ssl.SSLException -> "Koneksi aman ke server gagal"
+        is java.io.IOException -> localizedMessage ?: "Koneksi bermasalah"
+        else -> localizedMessage ?: default
     }
 
     private fun DeezerTrack.toSong(): Song = Song(
@@ -222,12 +253,57 @@ class MusicViewModel @JvmOverloads constructor(
 
     private fun playSong(song: Song) {
         releasePlayer()
+        _playbackError.value = null
 
         if (song.audioUrl.isBlank()) {
-            _isPlaying.value = false
+            // Sebagian hasil Deezer tidak membawa preview langsung.
+            // Resolve dulu (track/{id} lalu search judul) supaya tombol play tetap jalan.
+            resolvePreviewAndPlay(song)
             return
         }
 
+        startPlayer(song, song.audioUrl)
+    }
+
+    private fun resolvePreviewAndPlay(song: Song) {
+        _isBuffering.value = true
+        viewModelScope.launch {
+            val preview = withContext(Dispatchers.IO) {
+                val directId = song.id.removePrefix("dz_").toLongOrNull()
+                val fromTrackId = if (directId != null) {
+                    runCatching {
+                        deezerApi.track(directId).body()?.preview?.takeIf { it.isNotBlank() }
+                    }.getOrNull()
+                } else null
+
+                fromTrackId ?: runCatching {
+                    deezerApi.search("${song.title} ${song.artist}", limit = 10)
+                        .body()
+                        ?.data
+                        .orEmpty()
+                        .firstOrNull { !it.preview.isNullOrBlank() }
+                        ?.preview
+                }.getOrNull()
+            }
+
+            // User sudah ganti lagu sementara resolusi berjalan → abaikan hasil lama.
+            if (_currentSong.value?.id != song.id) return@launch
+
+            _isBuffering.value = false
+            if (preview.isNullOrBlank()) {
+                _isPlaying.value = false
+                _playbackError.value =
+                    "Lagu ini tidak punya preview audio. Coba lagu lain."
+            } else {
+                val playable = song.copy(audioUrl = preview, source = song.source.ifBlank { "deezer" })
+                _currentSong.value = playable
+                startPlayer(playable, preview)
+            }
+        }
+    }
+
+    private fun startPlayer(song: Song, url: String) {
+        _isBuffering.value = true
         try {
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
@@ -236,10 +312,12 @@ class MusicViewModel @JvmOverloads constructor(
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build()
                 )
-                setDataSource(song.audioUrl)
+                setDataSource(url)
                 setOnPreparedListener { mp ->
                     mp.start()
+                    _isBuffering.value = false
                     _isPlaying.value = true
+                    _playbackError.value = null
                     _duration.value = mp.duration.toLong()
                     startProgressTracking()
                 }
@@ -252,14 +330,19 @@ class MusicViewModel @JvmOverloads constructor(
                         onNext()
                     }
                 }
-                setOnErrorListener { _, _, _ ->
+                setOnErrorListener { _, what, extra ->
+                    _isBuffering.value = false
                     _isPlaying.value = false
-                    false
+                    _playbackError.value = "Gagal memutar audio (${what}/${extra}). Coba lagi."
+                    releasePlayer()
+                    true
                 }
                 prepareAsync()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            _isBuffering.value = false
             _isPlaying.value = false
+            _playbackError.value = e.userMessage("Gagal memutar audio")
         }
     }
 
@@ -274,9 +357,15 @@ class MusicViewModel @JvmOverloads constructor(
             _isPlaying.value = false
             stopProgressTracking()
         } else {
-            player.start()
-            _isPlaying.value = true
-            startProgressTracking()
+            try {
+                player.start()
+                _isPlaying.value = true
+                _playbackError.value = null
+                startProgressTracking()
+            } catch (e: Exception) {
+                _isPlaying.value = false
+                _playbackError.value = e.userMessage("Gagal melanjutkan audio")
+            }
         }
     }
 
@@ -360,6 +449,7 @@ class MusicViewModel @JvmOverloads constructor(
         } catch (_: Exception) {}
         mediaPlayer = null
         _isPlaying.value = false
+        _isBuffering.value = false
     }
 
     override fun onCleared() {

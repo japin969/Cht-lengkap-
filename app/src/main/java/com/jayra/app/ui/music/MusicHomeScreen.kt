@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -103,6 +104,8 @@ fun MusicHomeScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val isBuffering by viewModel.isBuffering.collectAsStateWithLifecycle()
+    val playbackError by viewModel.playbackError.collectAsStateWithLifecycle()
     val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
 
     MusicHomeContent(
@@ -110,6 +113,8 @@ fun MusicHomeScreen(
         searchQuery = searchQuery,
         currentSong = currentSong,
         isPlaying = isPlaying,
+        isBuffering = isBuffering,
+        playbackError = playbackError,
         searchHistory = searchHistory,
         onHistoryClick = viewModel::onHistoryClick,
         onClearHistory = viewModel::onClearHistory,
@@ -131,6 +136,8 @@ fun MusicHomeContent(
     currentSong: Song?,
     isPlaying: Boolean,
     searchHistory: List<String> = emptyList(),
+    isBuffering: Boolean = false,
+    playbackError: String? = null,
     onHistoryClick: (String) -> Unit = {},
     onClearHistory: () -> Unit = {},
     onSearchQueryChange: (String) -> Unit,
@@ -237,6 +244,7 @@ fun MusicHomeContent(
                     MusicMiniPlayer(
                         song = currentSong,
                         isPlaying = isPlaying,
+                        isBuffering = isBuffering,
                         onPlayPauseClick = onPlayPauseClick,
                         onClick = { onSongClick(currentSong) }
                     )
@@ -301,6 +309,32 @@ fun MusicHomeContent(
                         modifier = Modifier
                             .size(16.dp)
                             .clickable { onSearchQueryChange("") }
+                    )
+                }
+            }
+
+            // Pesan error pemutaran (mis. preview tidak tersedia / koneksi putus)
+            if (playbackError != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0x33FF3B30))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = "Error",
+                        tint = Color(0xFFFFB4AB),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = playbackError,
+                        fontSize = 13.sp,
+                        color = Color.White
                     )
                 }
             }
@@ -543,6 +577,7 @@ private fun MusicSongItem(
 private fun MusicMiniPlayer(
     song: Song,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     onPlayPauseClick: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -619,12 +654,20 @@ private fun MusicMiniPlayer(
                 onClick = onPlayPauseClick,
                 modifier = Modifier.size(44.dp)
             ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color(0xFF5AC8FA),
-                    modifier = Modifier.size(28.dp)
-                )
+                if (isBuffering) {
+                    CircularProgressIndicator(
+                        color = Color(0xFF5AC8FA),
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(22.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        tint = Color(0xFF5AC8FA),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
     }

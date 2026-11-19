@@ -56,8 +56,20 @@ interface MangaDexApi {
 
         fun create(): MangaDexApi {
             val client = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .callTimeout(30, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true)
+                .addInterceptor { chain ->
+                    // MangaDex menolak request tanpa User-Agent yang jelas (HTTP 400),
+                    // dan justru menantang bot kalau UA-nya mirip browser.
+                    chain.proceed(
+                        chain.request().newBuilder()
+                            .header("User-Agent", "JayraApp/1.0 (Android; +https://jayra.app)")
+                            .header("Accept", "application/json")
+                            .build()
+                    )
+                }
                 .build()
             val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
             return Retrofit.Builder()
@@ -100,7 +112,9 @@ data class MdxManga(
             ?.firstOrNull { it.type == "cover_art" }
             ?.attributes?.fileName
             ?: return null
-        return "https://uploads.mangadex.org/covers/$id/$fileName.512.jpg"
+        // Nama file kadang mengandung spasi/karakter khusus → wajib di-encode.
+        val encoded = android.net.Uri.encode(fileName)
+        return "https://uploads.mangadex.org/covers/$id/$encoded.512.jpg"
     }
 }
 

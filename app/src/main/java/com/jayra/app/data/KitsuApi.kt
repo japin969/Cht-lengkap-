@@ -35,24 +35,38 @@ interface KitsuApi {
     @GET("anime/{id}")
     suspend fun detail(@Path("id") id: String): Response<KitsuSingleResponse>
 
-    companion object {
-        private const val BASE_URL = "https://kitsu.io/api/edge/"
+    // --- Fallback komik (dipakai KomikViewModel kalau MangaDex gagal) ---
+    @GET("manga")
+    suspend fun mangaList(
+        @Query("page[limit]") limit: Int = 20,
+        @Query("sort") sort: String = "-userCount"
+    ): Response<KitsuListResponse>
 
-        fun create(): KitsuApi {
+    @GET("manga/{id}")
+    suspend fun mangaDetail(@Path("id") id: String): Response<KitsuSingleResponse>
+
+    companion object {
+        const val BASE_URL = "https://kitsu.io/api/edge/"
+        const val BASE_URL_MIRROR = "https://kitsu.app/api/edge/"
+
+        fun create(baseUrl: String = BASE_URL): KitsuApi {
             val client = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
+                .connectTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .callTimeout(30, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true)
                 .addInterceptor { chain ->
                     chain.proceed(
                         chain.request().newBuilder()
                             .header("Accept", "application/vnd.api+json")
+                            .header("User-Agent", "JayraApp/1.0 (Android)")
                             .build()
                     )
                 }
                 .build()
             val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
             return Retrofit.Builder()
-                .baseUrl(BASE_URL)
+                .baseUrl(baseUrl)
                 .client(client)
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build()
@@ -80,6 +94,7 @@ data class KitsuAttributes(
     val synopsis: String? = null,
     val status: String? = null,
     @Json(name = "episodeCount") val episodeCount: Int? = null,
+    @Json(name = "chapterCount") val chapterCount: Int? = null,
     @Json(name = "averageRating") val averageRating: String? = null,
     @Json(name = "startDate") val startDate: String? = null,
     val subtype: String? = null,
