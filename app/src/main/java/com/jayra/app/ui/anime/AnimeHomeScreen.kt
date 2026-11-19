@@ -84,13 +84,7 @@ fun AnimeHomeScreen(
                                 Icon(Close, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                    },
-                    colors = TextFieldDefaults.textFieldColors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    )
+                    }
                 )
             }
 

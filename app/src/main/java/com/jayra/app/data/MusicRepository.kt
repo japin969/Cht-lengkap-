@@ -17,7 +17,7 @@ class MusicRepository(
     private val siputzxApi: SiputzxApi = SiputzxApi.create()
 ) {
 
-    private suspend fun <T : Any> safeApiCall(block: () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
+    private inline suspend fun <reified T : Any> safeApiCall(block: () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
         try {
             val response = block()
             if (response.isSuccessful) {
@@ -37,26 +37,26 @@ class MusicRepository(
     suspend fun searchAll(query: String): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
             coroutineScope {
-                val spotifyDeferred = async { safeApiCall { nexadevApi.searchSpotify(query) } }
-                val appleDeferred = async { safeApiCall { siputzxApi.searchAppleMusic(query) } }
-                val ytDeferred = async { safeApiCall { nexadevApi.searchYouTube(query) } }
+                val spotifyDeferred = async { safeApiCall<SpotifyResponse> { nexadevApi.searchSpotify(query) } }
+                val appleDeferred = async { safeApiCall<AppleMusicResponse> { siputzxApi.searchAppleMusic(query) } }
+                val ytDeferred = async { safeApiCall<YouTubeResponse> { nexadevApi.searchYouTube(query) } }
 
                 val (spotifyResult, appleResult, ytResult) = awaitAll(spotifyDeferred, appleDeferred, ytDeferred)
 
                 val allSongs = mutableListOf<Song>()
 
                 // SpotifyPlay
-                spotifyResult.onSuccess { response ->
+                spotifyResult.onSuccess { (response: SpotifyResponse) ->
                     response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // AppleMusic
-                appleResult.onSuccess { response ->
+                appleResult.onSuccess { (response: AppleMusicResponse) ->
                     response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // YTPlay
-                ytResult.onSuccess { response ->
+                ytResult.onSuccess { (response: YouTubeResponse) ->
                     response.toSong()?.let { allSongs.add(it) }
                 }
 
@@ -74,11 +74,11 @@ class MusicRepository(
     suspend fun getPopularChart(): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
             // Try SpotifyPlay first
-            safeApiCall { nexadevApi.searchSpotify("top hits") }.onSuccess { response ->
+            safeApiCall<SpotifyResponse> { nexadevApi.searchSpotify("top hits") }.onSuccess { (response: SpotifyResponse) ->
                 response.data?.map { it.toSong() } ?: emptyList()
             } ?: runCatching {
                 // Fallback to YTPlay
-                safeApiCall { nexadevApi.searchYouTube("top hits") }.onSuccess { response ->
+                safeApiCall<YouTubeResponse> { nexadevApi.searchYouTube("top hits") }.onSuccess { (response: YouTubeResponse) ->
                     response.toSong()?.let { listOf(it) } ?: emptyList()
                 } ?: emptyList()
             }
