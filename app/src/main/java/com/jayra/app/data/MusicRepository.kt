@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import retrofit2.Response
 
 /**
  * Repository tunggal untuk semua pencarian musik.
@@ -32,64 +33,63 @@ class MusicRepository(
                 val allSongs = mutableListOf<Song>()
 
                 // SpotifyPlay
-                if (spotifyResult.isSuccess) {
-                    val songs = spotifyResult.getOrNull()?.data?.map { it.toSong() } ?: emptyList()
-                    allSongs.addAll(songs)
+                spotifyResult.onSuccess { (response: Response<SpotifyResponse>) ->
+                    if (response.isSuccessful) {
+                        response.body()?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
+                    }
                 }
 
                 // AppleMusic
-                if (appleResult.isSuccess) {
-                    val songs = appleResult.getOrNull()?.data?.map { it.toSong() } ?: emptyList()
-                    allSongs.addAll(songs)
+                appleResult.onSuccess { (response: Response<AppleMusicResponse>) ->
+                    if (response.isSuccessful) {
+                        response.body()?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
+                    }
                 }
 
                 // YTPlay
-                if (ytResult.isSuccess) {
-                    val song = ytResult.getOrNull()?.toSong()
-                    song?.let { allSongs.add(it) }
+                ytResult.onSuccess { (response: Response<YouTubeResponse>) ->
+                    if (response.isSuccessful) {
+                        response.body()?.toSong()?.let { allSongs.add(it) }
+                    }
                 }
 
                 // Deduplicate by title + artist (case insensitive)
                 val seen = mutableSetOf<String>()
-                val uniqueSongs = allSongs.filter { song ->
+                allSongs.filter { song ->
                     val key = "${song.title.lowercase()}|${song.artist.lowercase()}"
                     if (key in seen) false else { seen.add(key); true }
                 }
-
-                uniqueSongs
             }
         }
     }
 
     // --- Individual API calls (untuk fallback / testing) ---
 
-    private suspend fun searchSpotifyPlay(query: String): Result<SpotifyResponse> =
+    private suspend fun searchSpotifyPlay(query: String): Result<Response<SpotifyResponse>> =
         withContext(Dispatchers.IO) { runCatching { nexadevApi.searchSpotify(query) } }
 
-    private suspend fun searchAppleMusic(query: String): Result<AppleMusicResponse> =
+    private suspend fun searchAppleMusic(query: String): Result<Response<AppleMusicResponse>> =
         withContext(Dispatchers.IO) { runCatching { siputzxApi.searchAppleMusic(query) } }
 
-    private suspend fun searchYtPlay(query: String): Result<YouTubeResponse> =
+    private suspend fun searchYtPlay(query: String): Result<Response<YouTubeResponse>> =
         withContext(Dispatchers.IO) { runCatching { nexadevApi.searchYouTube(query) } }
 
     // --- Chart/Popular (for empty query) ---
     suspend fun getPopularChart(): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
-            // Try Deezer chart first (more reliable for charts)
+            // Try SpotifyPlay first
             val response = nexadevApi.searchSpotify("top hits")
             if (response.isSuccessful) {
-                response.body()?.data?.let { list ->
-                    return@runCatching list.map { it.toSong() }
+                response.body()?.data?.map { it.toSong() } ?: emptyList()
+            } else {
+                // Fallback to YTPlay
+                val ytResponse = nexadevApi.searchYouTube("top hits")
+                if (ytResponse.isSuccessful) {
+                    ytResponse.body()?.toSong()?.let { listOf(it) } ?: emptyList()
+                } else {
+                    emptyList()
                 }
             }
-            // Fallback to YTPlay
-            val ytResponse = nexadevApi.searchYouTube("top hits")
-            if (ytResponse.isSuccessful) {
-                ytResponse.body()?.let { single ->
-                    return@runCatching listOf(single.toSong())
-                }
-            }
-            emptyList()
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.jayra.app.ui.anime
 
+import android.content.Context
+import android.view.ViewGroup
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -20,11 +22,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
+import kotlinx.coroutines.DisposableEffect
 
 @Composable
 fun AnimeDetailScreen(
@@ -125,13 +135,15 @@ fun AnimeDetailScreen(
                                 Text(state.detail?.synopsis ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 6)
                                 
                                 // Genres
-                                state.detail?.genres?.ifNotEmpty { genres ->
+                                val genres = state.detail?.genres
+                                if (genres != null && genres.isNotEmpty()) {
                                     Spacer(Modifier.height(8.dp))
                                     Text("Genre: ${genres.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 
                                 // Info map
-                                state.detail?.info?.ifNotEmpty { info ->
+                                val info = state.detail?.info
+                                if (info != null && info.isNotEmpty()) {
                                     Spacer(Modifier.height(8.dp))
                                     Column {
                                         info.forEach { (key, value) ->
@@ -214,32 +226,20 @@ private fun AnimeDetailSkeleton() {
 }
 
 // ==================== EXOPLAYER PLAYER SCREEN ====================
-import android.content.Context
-import android.net.Uri
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.ViewGroup
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
-
 @Composable
 fun AnimePlayerScreen(videoUrl: String) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val playerView = remember { PlayerView(context).apply {
-        layoutParams = androidx.core.view.ViewGroup.LayoutParams.LayoutParams(
-            androidx.core.view.ViewGroup.LayoutParams.LayoutParams.MATCH_PARENT,
-            androidx.core.view.ViewGroup.LayoutParams.LayoutParams.MATCH_PARENT
-        )
-        setResizeMode(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT)
-        useController = true
-        showBuffering = PlayerView.SHOW_BUFFERING_ALWAYS
-    } }
+    val context = LocalContext.current
+    val playerView = remember { 
+        PlayerView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+            useController = true
+            setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
+        } 
+    }
 
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -266,13 +266,14 @@ fun AnimePlayerScreen(videoUrl: String) {
                 Lifecycle.Event.ON_START, Lifecycle.Event.ON_RESUME -> exoPlayer.playWhenReady = true
                 Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> exoPlayer.playWhenReady = false
                 Lifecycle.Event.ON_DESTROY -> exoPlayer.release()
+                else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    AndroidView(
+    androidx.compose.ui.viewinterop.AndroidView(
         factory = { playerView },
         modifier = Modifier.fillMaxSize()
     )
