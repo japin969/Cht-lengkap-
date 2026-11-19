@@ -30,6 +30,8 @@ class MusicRepository(
         }
     }
 
+    private inline fun <reified T : Any> Result<T>.getValue(): T? = getOrNull() as? T
+
     /**
      * Cari lagu dari 3 sumber paralel.
      * Return: List<Song> yang sudah digabung & di-deduplicate by title+artist.
@@ -46,21 +48,21 @@ class MusicRepository(
                 val allSongs = mutableListOf<Song>()
 
                 // SpotifyPlay
-                if (spotifyResult.isSuccess) {
-                    val response = spotifyResult.getOrNull()
-                    (response as? SpotifyResponse)?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
+                val spotifyResponse: SpotifyResponse? = spotifyResult.getValue()
+                if (spotifyResponse != null) {
+                    spotifyResponse.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // AppleMusic
-                if (appleResult.isSuccess) {
-                    val response = appleResult.getOrNull()
-                    (response as? AppleMusicResponse)?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
+                val appleResponse: AppleMusicResponse? = appleResult.getValue()
+                if (appleResponse != null) {
+                    appleResponse.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // YTPlay
-                if (ytResult.isSuccess) {
-                    val response = ytResult.getOrNull()
-                    (response as? YouTubeResponse)?.toSong()?.let { allSongs.add(it) }
+                val ytResponse: YouTubeResponse? = ytResult.getValue()
+                if (ytResponse != null) {
+                    ytResponse.toSong()?.let { allSongs.add(it) }
                 }
 
                 // Deduplicate by title + artist (case insensitive)
@@ -79,14 +81,14 @@ class MusicRepository(
             // Try SpotifyPlay first
             val spotifyResult = callApi<SpotifyResponse> { nexadevApi.searchSpotify("top hits") }
             if (spotifyResult.isSuccess) {
-                val response = spotifyResult.getOrNull() as? SpotifyResponse
-                response?.data?.map { it.toSong() } ?: emptyList()
+                val response = spotifyResult.getValue() as SpotifyResponse
+                response.data?.map { it.toSong() } ?: emptyList()
             } else {
                 // Fallback to YTPlay
                 val ytResult = callApi<YouTubeResponse> { nexadevApi.searchYouTube("top hits") }
                 if (ytResult.isSuccess) {
-                    val response = ytResult.getOrNull() as? YouTubeResponse
-                    response?.toSong()?.let { listOf(it) } ?: emptyList()
+                    val response = ytResult.getValue() as YouTubeResponse
+                    response.toSong()?.let { listOf(it) } ?: emptyList()
                 } else {
                     emptyList()
                 }
