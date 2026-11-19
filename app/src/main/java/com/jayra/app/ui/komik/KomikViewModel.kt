@@ -179,7 +179,7 @@ class KomikViewModel : ViewModel() {
             _uiState.update {
                 it.copy(
                     isDetailLoading = false,
-                    detailError = mdx.exceptionOrNull()?.userMessage() ?: "Gagal memuat detail komik"
+                    detailError = mdx.exceptionOrNull()?.userMessage("Gagal memuat detail komik")
                 )
             }
         }
