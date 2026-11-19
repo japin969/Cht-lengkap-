@@ -46,36 +46,21 @@ class MusicRepository(
                 val allSongs = mutableListOf<Song>()
 
                 // SpotifyPlay
-                when (spotifyResult) {
-                    is Result.Success -> {
-                        val response = spotifyResult.getOrNull()
-                        if (response is SpotifyResponse) {
-                            response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
-                        }
-                    }
-                    is Result.Failure -> {}
+                if (spotifyResult.isSuccess) {
+                    val response = spotifyResult.getOrNull() as? SpotifyResponse
+                    response?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // AppleMusic
-                when (appleResult) {
-                    is Result.Success -> {
-                        val response = appleResult.getOrNull()
-                        if (response is AppleMusicResponse) {
-                            response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
-                        }
-                    }
-                    is Result.Failure -> {}
+                if (appleResult.isSuccess) {
+                    val response = appleResult.getOrNull() as? AppleMusicResponse
+                    response?.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // YTPlay
-                when (ytResult) {
-                    is Result.Success -> {
-                        val response = ytResult.getOrNull()
-                        if (response is YouTubeResponse) {
-                            response.toSong()?.let { allSongs.add(it) }
-                        }
-                    }
-                    is Result.Failure -> {}
+                if (ytResult.isSuccess) {
+                    val response = ytResult.getOrNull() as? YouTubeResponse
+                    response?.toSong()?.let { allSongs.add(it) }
                 }
 
                 // Deduplicate by title + artist (case insensitive)
@@ -94,18 +79,14 @@ class MusicRepository(
             // Try SpotifyPlay first
             val spotifyResult = callApi<SpotifyResponse> { nexadevApi.searchSpotify("top hits") }
             if (spotifyResult.isSuccess) {
-                val response = spotifyResult.getOrNull()
-                if (response is SpotifyResponse) {
-                    response.data?.map { it.toSong() } ?: emptyList()
-                } else emptyList()
+                val response = spotifyResult.getOrNull() as? SpotifyResponse
+                response?.data?.map { it.toSong() } ?: emptyList()
             } else {
                 // Fallback to YTPlay
                 val ytResult = callApi<YouTubeResponse> { nexadevApi.searchYouTube("top hits") }
                 if (ytResult.isSuccess) {
-                    val response = ytResult.getOrNull()
-                    if (response is YouTubeResponse) {
-                        response.toSong()?.let { listOf(it) } ?: emptyList()
-                    } else emptyList()
+                    val response = ytResult.getOrNull() as? YouTubeResponse
+                    response?.toSong()?.let { listOf(it) } ?: emptyList()
                 } else {
                     emptyList()
                 }
