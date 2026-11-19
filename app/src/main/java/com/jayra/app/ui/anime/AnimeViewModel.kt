@@ -152,28 +152,28 @@ class AnimeViewModel : ViewModel() {
     private suspend fun loadOngoing(page: Int): List<AnimeSearchItem> {
         val response = repository.getOngoing(page)
         return if (response.isSuccess) {
-            response.getOrNull()?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+            response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
         } else emptyList()
     }
 
     private suspend fun loadCompleted(page: Int): List<AnimeSearchItem> {
         val response = repository.getCompleted(page)
         return if (response.isSuccess) {
-            response.getOrNull()?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+            response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
         } else emptyList()
     }
 
     private suspend fun loadPopular(page: Int): List<AnimeSearchItem> {
         val response = repository.getPopular(page)
         return if (response.isSuccess) {
-            response.getOrNull()?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+            response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
         } else emptyList()
     }
 
     private suspend fun loadSchedule(): Map<String, List<AnimeSearchItem>> {
         val response = repository.getSchedule()
         return if (response.isSuccess) {
-            response.getOrNull()?.schedule?.mapValues { (_, list) ->
+            response.getOrNull()?.data?.schedule?.mapValues { (_, list) ->
                 list.map { it.toAnimeSearchItem() }
             } ?: emptyMap()
         } else emptyMap()
@@ -186,7 +186,7 @@ class AnimeViewModel : ViewModel() {
             val nextPage = current.ongoingPage + 1
             val response = repository.getOngoing(nextPage)
             if (response.isSuccess) {
-                val newItems = response.getOrNull()?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+                val newItems = response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
                 if (newItems.isNotEmpty()) {
                     _uiState.update {
                         it.copy(
@@ -209,7 +209,7 @@ class AnimeViewModel : ViewModel() {
             val nextPage = current.completedPage + 1
             val response = repository.getCompleted(nextPage)
             if (response.isSuccess) {
-                val newItems = response.getOrNull()?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+                val newItems = response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
                 if (newItems.isNotEmpty()) {
                     _uiState.update {
                         it.copy(
@@ -232,7 +232,7 @@ class AnimeViewModel : ViewModel() {
             val nextPage = current.popularPage + 1
             val response = repository.getPopular(nextPage)
             if (response.isSuccess) {
-                val newItems = response.getOrNull()?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+                val newItems = response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
                 if (newItems.isNotEmpty()) {
                     _uiState.update {
                         it.copy(
@@ -256,7 +256,7 @@ class AnimeViewModel : ViewModel() {
             _uiState.update { it.copy(isSearchLoading = true, searchError = null) }
             val response = repository.search(query, 1)
             if (response.isSuccess) {
-                val results = response.getOrNull()?.results?.map { it.toAnimeSearchItem() } ?: emptyList()
+                val results = response.getOrNull()?.data?.results?.map { it.toAnimeSearchItem() } ?: emptyList()
                 _uiState.update { it.copy(isSearchLoading = false, searchResults = results, searchError = null) }
             } else {
                 _uiState.update { 
@@ -287,7 +287,7 @@ class AnimeViewModel : ViewModel() {
 
             val response = repository.getDetail(detailUrl)
             if (response.isSuccess) {
-                val detailData = response.getOrNull()?.toAnimeDetailData()
+                val detailData = response.getOrNull()?.data?.toAnimeDetailData()
                 if (detailData != null) {
                     _uiState.update {
                         it.copy(
@@ -323,7 +323,7 @@ class AnimeViewModel : ViewModel() {
 
             val response = repository.getStream(episodeUrl)
             if (response.isSuccess) {
-                val streamUrl = response.getOrNull()?.getBestStreamUrl()
+                val streamUrl = response.getOrNull()?.data?.getBestStreamUrl()
                 if (streamUrl != null && streamUrl.isNotBlank()) {
                     _uiState.update {
                         it.copy(isStreamLoading = false, streamUrl = streamUrl, streamError = null)

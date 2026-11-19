@@ -10,52 +10,31 @@ import retrofit2.Response
  */
 class AnimasuRepository(private val api: AnimasuApi = AnimasuApi.create()) {
 
-    // --- SEARCH ---
-    suspend fun search(query: String, page: Int = 1): Result<AnimasuSearchResponse> = withContext(Dispatchers.IO) {
-        runCatching { api.search(query, page) }.flatMap { (response: Response<AnimasuSearchResponse>) ->
-            if (response.isSuccessful) Result.success(response.body()!!) else Result.failure(Exception("HTTP ${response.code()}"))
-        }
+    private suspend fun <T : Any> callApi(block: () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
+        runCatching { block() }.getOrElse { Result.failure(it) }
+            .filter { it.isSuccessful }
+            .map { it.body()!! }
+            .recover { Result.failure(Exception("HTTP ${it.code()}")) }
     }
+
+    // --- SEARCH ---
+    suspend fun search(query: String, page: Int = 1): Result<AnimasuSearchResponse> = callApi { api.search(query, page) }
 
     // --- DETAIL ---
-    suspend fun getDetail(detailUrl: String): Result<AnimasuDetailResponse> = withContext(Dispatchers.IO) {
-        runCatching { api.detail(detailUrl) }.flatMap { (response: Response<AnimasuDetailResponse>) ->
-            if (response.isSuccessful) Result.success(response.body()!!) else Result.failure(Exception("HTTP ${response.code()}"))
-        }
-    }
+    suspend fun getDetail(detailUrl: String): Result<AnimasuDetailResponse> = callApi { api.detail(detailUrl) }
 
     // --- STREAM / PLAY ---
-    suspend fun getStream(streamUrl: String): Result<AnimasuStreamResponse> = withContext(Dispatchers.IO) {
-        runCatching { api.stream(streamUrl) }.flatMap { (response: Response<AnimasuStreamResponse>) ->
-            if (response.isSuccessful) Result.success(response.body()!!) else Result.failure(Exception("HTTP ${response.code()}"))
-        }
-    }
+    suspend fun getStream(streamUrl: String): Result<AnimasuStreamResponse> = callApi { api.stream(streamUrl) }
 
     // --- ONGOING ---
-    suspend fun getOngoing(page: Int = 1): Result<AnimasuListResponse> = withContext(Dispatchers.IO) {
-        runCatching { api.ongoing(1, page) }.flatMap { (response: Response<AnimasuListResponse>) ->
-            if (response.isSuccessful) Result.success(response.body()!!) else Result.failure(Exception("HTTP ${response.code()}"))
-        }
-    }
+    suspend fun getOngoing(page: Int = 1): Result<AnimasuListResponse> = callApi { api.ongoing(1, page) }
 
     // --- COMPLETED ---
-    suspend fun getCompleted(page: Int = 1): Result<AnimasuListResponse> = withContext(Dispatchers.IO) {
-        runCatching { api.completed(1, page) }.flatMap { (response: Response<AnimasuListResponse>) ->
-            if (response.isSuccessful) Result.success(response.body()!!) else Result.failure(Exception("HTTP ${response.code()}"))
-        }
-    }
+    suspend fun getCompleted(page: Int = 1): Result<AnimasuListResponse> = callApi { api.completed(1, page) }
 
     // --- POPULAR ---
-    suspend fun getPopular(page: Int = 1): Result<AnimasuListResponse> = withContext(Dispatchers.IO) {
-        runCatching { api.popular(1, page) }.flatMap { (response: Response<AnimasuListResponse>) ->
-            if (response.isSuccessful) Result.success(response.body()!!) else Result.failure(Exception("HTTP ${response.code()}"))
-        }
-    }
+    suspend fun getPopular(page: Int = 1): Result<AnimasuListResponse> = callApi { api.popular(1, page) }
 
     // --- SCHEDULE ---
-    suspend fun getSchedule(): Result<AnimasuScheduleResponse> = withContext(Dispatchers.IO) {
-        runCatching { api.schedule(1) }.flatMap { (response: Response<AnimasuScheduleResponse>) ->
-            if (response.isSuccessful) Result.success(response.body()!!) else Result.failure(Exception("HTTP ${response.code()}"))
-        }
-    }
+    suspend fun getSchedule(): Result<AnimasuScheduleResponse> = callApi { api.schedule(1) }
 }

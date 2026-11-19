@@ -29,6 +29,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.DisposableEffect
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
@@ -125,12 +127,6 @@ fun AnimeDetailScreen(
                                 Spacer(Modifier.height(8.dp))
                                 Text("Rating: ${state.detail?.rating ?: "-"}", style = MaterialTheme.typography.bodySmall)
                                 Text("Total: ${state.detail?.totalEpisodes ?: 0} Episode", style = MaterialTheme.typography.bodySmall)
-                                state.detail?.status?.let {
-                                    Text("Status: $it", style = MaterialTheme.typography.bodySmall)
-                                }
-                                state.detail?.type?.let {
-                                    Text("Tipe: $it", style = MaterialTheme.typography.bodySmall)
-                                }
                                 Spacer(Modifier.height(8.dp))
                                 Text(state.detail?.synopsis ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 6)
                                 
