@@ -1,16 +1,13 @@
 package com.jayra.app.data
 
 import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
 
-@JsonClass(generateAdapter = true)
 data class SpotifyResponse(
     @Json(name = "status") val status: Boolean? = true,
     @Json(name = "data") val data: SpotifyData? = null,
     @Json(name = "result") val result: SpotifyData? = null
 )
 
-@JsonClass(generateAdapter = true)
 data class SpotifyData(
     @Json(name = "title") val title: String? = null,
     @Json(name = "artist") val artist: String? = null,

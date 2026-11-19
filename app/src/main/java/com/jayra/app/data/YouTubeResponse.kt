@@ -1,9 +1,7 @@
 package com.jayra.app.data
 
 import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
 
-@JsonClass(generateAdapter = true)
 data class YouTubeResponse(
     @Json(name = "status") val status: Boolean? = true,
     @Json(name = "title") val title: String? = null,
@@ -24,7 +22,6 @@ data class YouTubeResponse(
     }
 }
 
-@JsonClass(generateAdapter = true)
 data class YouTubeData(
     @Json(name = "url") val url: String? = null
 )
