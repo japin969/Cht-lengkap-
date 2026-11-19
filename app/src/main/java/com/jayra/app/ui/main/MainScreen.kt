@@ -745,7 +745,8 @@ private fun MainNavigationGraph(
                 onPlayEpisode = { epUrl ->
                     val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                     navController.navigate("anime_player?url=$epEncoded")
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -759,12 +760,30 @@ private fun MainNavigationGraph(
             val state by vm.uiState.collectAsState()
             LaunchedEffect(decoded) { vm.loadStream(decoded) }
             val stream = state.streamUrl
-            if (stream.isNullOrBlank()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when {
+                state.isLoadingStream || (stream == null && state.error == null) -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else {
-                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream ?: "")
+                stream.isNullOrBlank() -> {
+                    Column(
+                        Modifier.fillMaxSize().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = state.error ?: "Video tidak tersedia",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = { vm.loadStream(decoded) }) { Text("Coba Lagi") }
+                    }
+                }
+                else -> {
+                    com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream)
+                }
             }
         }
 

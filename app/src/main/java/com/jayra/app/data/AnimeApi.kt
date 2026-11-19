@@ -33,7 +33,7 @@ interface AnimeApi {
     suspend fun schedule(@Query("schedule") on: Int = 1): Response<AnimeListResponse>
 
     companion object {
-        private const val BASE_URL = "https://apii.nexadev.my.id/"
+        private const val BASE_URL = "https://api.nexadev.my.id/"
 
         fun create(): AnimeApi {
             val client = OkHttpClient.Builder()

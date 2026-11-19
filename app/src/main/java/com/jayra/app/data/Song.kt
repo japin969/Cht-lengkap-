@@ -13,5 +13,6 @@ data class Song(
     val duration: String = "0:00",
     val coverUrl: String = "",
     val audioUrl: String = "",
-    val source: String = ""   // "spotify" | "youtube"
+    val pageUrl: String = "",
+    val source: String = ""   // "applemusic" | "spotify" | "youtube"
 )

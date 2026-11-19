@@ -5,14 +5,13 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.jayra.app.data.NexadevApi
-import com.jayra.app.data.DeezerApi
-import com.jayra.app.data.DeezerTrack
+import com.jayra.app.data.AppleMusicApi
+import com.jayra.app.data.AppleMusicItem
+import com.jayra.app.data.AppleMusicPreviewResolver
 import com.jayra.app.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,11 +29,15 @@ sealed interface MusicUiState {
     data class Error(val message: String) : MusicUiState
 }
 
+/**
+ * Music search: https://api.siputzx.my.id/api/s/applemusic?query=...&region=id
+ * Semua hasil diparse ke [Song] lalu dirender dengan UI kita sendiri (bukan WebView).
+ * Audio preview di-resolve dari halaman album Apple Music (HTTP + parsing, bukan WebView).
+ */
 @OptIn(FlowPreview::class)
 class MusicViewModel @JvmOverloads constructor(
     application: Application,
-    private val nexadevApi: NexadevApi = NexadevApi.create(),
-    private val deezerApi: DeezerApi = DeezerApi.create()
+    private val appleMusicApi: AppleMusicApi = AppleMusicApi.create()
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Empty)
@@ -48,6 +51,9 @@ class MusicViewModel @JvmOverloads constructor(
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
+    private val _isPreparing = MutableStateFlow(false)
+    val isPreparing: StateFlow<Boolean> = _isPreparing.asStateFlow()
 
     private val _currentPosition = MutableStateFlow(0L)
     val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
@@ -63,17 +69,8 @@ class MusicViewModel @JvmOverloads constructor(
 
     private var mediaPlayer: MediaPlayer? = null
     private var progressUpdateJob: Job? = null
+    private var metaJob: Job? = null
     private var lastQuery: String = ""
-
-    private val curatedSongs = listOf(
-        Song(
-            id = "seed_1",
-            title = "Starboy",
-            artist = "The Weeknd, Daft Punk",
-            album = "Starboy",
-            duration = "3:50",
-        )
-    )
 
     // History
     private val prefs = application.getSharedPreferences("jayra_music_prefs", android.content.Context.MODE_PRIVATE)
@@ -83,7 +80,6 @@ class MusicViewModel @JvmOverloads constructor(
     init {
         loadHistory()
 
-        // Observe search query with 300ms debounce
         viewModelScope.launch {
             _searchQuery
                 .debounce(300L)
@@ -130,84 +126,80 @@ class MusicViewModel @JvmOverloads constructor(
         lastQuery = query
         _uiState.value = MusicUiState.Loading
         try {
-            // Sumber data baru: Deezer (API lama api.nexadev.my.id sudah mati / 403).
-            val response = withContext(Dispatchers.IO) { deezerApi.search(query) }
-            val tracks = response.body()?.data.orEmpty()
-            val songs = tracks.map { it.toSong() }
+            val response = withContext(Dispatchers.IO) { appleMusicApi.search(query) }
+            val items = response.body()?.data.orEmpty()
+            val songs = items.mapIndexed { index, item -> item.toSong(index) }
             if (songs.isNotEmpty()) {
                 _uiState.value = MusicUiState.Success(songs)
                 addHistory(query)
+                prefetchMeta(songs)
             } else {
-                val fallback = curatedSongs.filter {
-                    it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true)
-                }
-                _uiState.value = if (fallback.isNotEmpty()) {
-                    MusicUiState.Success(fallback)
-                } else {
-                    MusicUiState.Empty
-                }
+                _uiState.value = MusicUiState.Empty
             }
         } catch (e: Exception) {
-            val fallback = curatedSongs.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                    it.artist.contains(query, ignoreCase = true)
-            }
-            _uiState.value = if (fallback.isNotEmpty()) {
-                MusicUiState.Success(fallback)
-            } else {
-                MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
+            _uiState.value = MusicUiState.Error(humanError(e))
+        }
+    }
+
+    /** Ambil preview + durasi per album (1 request per album, bukan per lagu). */
+    private fun prefetchMeta(songs: List<Song>) {
+        metaJob?.cancel()
+        metaJob = viewModelScope.launch {
+            val groups = songs
+                .filter { it.audioUrl.isBlank() && it.pageUrl.isNotBlank() }
+                .groupBy { AppleMusicPreviewResolver.albumKey(it.pageUrl) }
+            groups.forEach { (_, group) ->
+                val link = group.firstOrNull()?.pageUrl ?: return@forEach
+                val meta = AppleMusicPreviewResolver.resolveAlbum(link)
+                if (meta.isNotEmpty()) {
+                    applyMeta(meta)
+                    delay(120)
+                }
             }
         }
     }
 
-    private fun DeezerTrack.toSong(): Song = Song(
-        id = "dz_${id ?: System.currentTimeMillis()}",
-        title = title ?: "Tanpa Judul",
-        artist = artist?.name ?: "Unknown",
-        album = album?.title ?: "",
-        duration = formatDuration(duration ?: 0),
-        coverUrl = album?.coverBig ?: album?.coverMedium ?: "",
-        audioUrl = preview ?: "",
-        source = "deezer"
-    )
-
-    private fun formatDuration(totalSeconds: Int): String {
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "%d:%02d".format(minutes, seconds)
+    private fun applyMeta(meta: Map<String, AppleMusicPreviewResolver.TrackMeta>) {
+        val state = _uiState.value as? MusicUiState.Success ?: return
+        val updated = state.songs.map { song ->
+            val id = AppleMusicPreviewResolver.songId(song.pageUrl)
+            val m = if (id != null) meta[id] else null
+            if (m != null) {
+                song.copy(
+                    audioUrl = song.audioUrl.ifBlank { m.audioUrl.orEmpty() },
+                    duration = song.duration.ifBlank {
+                        m.durationMs?.let { formatDurationMs(it) } ?: ""
+                    }
+                )
+            } else song
+        }
+        _uiState.value = MusicUiState.Success(updated)
+        _currentSong.value?.let { current ->
+            updated.firstOrNull { it.id == current.id }?.let { _currentSong.value = it }
+        }
     }
 
-    private suspend fun searchYouTubeFallback(query: String) {
-        try {
-            val ytResponse = withContext(Dispatchers.IO) {
-                nexadevApi.searchYouTube(query)
-            }
-
-            if (ytResponse.isSuccessful && ytResponse.body() != null) {
-                val song = ytResponse.body()!!.toSong()
-                _uiState.value = MusicUiState.Success(listOf(song))
-            } else {
-                // If API fails, filter curated songs
-                val filtered = curatedSongs.filter {
-                    it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
-                }
-                _uiState.value = if (filtered.isNotEmpty()) {
-                    MusicUiState.Success(filtered)
-                } else {
-                    MusicUiState.Empty
-                }
-            }
-        } catch (e: Exception) {
-            val filtered = curatedSongs.filter {
-                it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
-            }
-            if (filtered.isNotEmpty()) {
-                _uiState.value = MusicUiState.Success(filtered)
-            } else {
-                _uiState.value = MusicUiState.Error("Gagal memuat musik: ${e.localizedMessage ?: "Koneksi bermasalah"}")
-            }
-        }
+    private fun AppleMusicItem.toSong(index: Int): Song {
+        val artistName = artist.orEmpty()
+            .substringAfter(" · ", artist.orEmpty())
+            .trim()
+        val albumName = link.orEmpty()
+            .substringAfter("/album/", "")
+            .substringBefore("/")
+            .replace('-', ' ')
+            .ifBlank { "" }
+        val idPart = AppleMusicPreviewResolver.songId(link) ?: "am_${link.hashCode()}_$index"
+        return Song(
+            id = "am_$idPart",
+            title = title?.trim().orEmpty().ifBlank { "Tanpa Judul" },
+            artist = artistName.ifBlank { "Unknown Artist" },
+            album = albumName,
+            duration = "",
+            coverUrl = image.orEmpty(),
+            audioUrl = "",
+            pageUrl = link.orEmpty(),
+            source = "applemusic"
+        )
     }
 
     fun onSongClick(song: Song) {
@@ -215,19 +207,49 @@ class MusicViewModel @JvmOverloads constructor(
             onPlayPauseClick()
             return
         }
-
         _currentSong.value = song
         playSong(song)
     }
 
     private fun playSong(song: Song) {
         releasePlayer()
-
-        if (song.audioUrl.isBlank()) {
-            _isPlaying.value = false
-            return
+        viewModelScope.launch {
+            var url = song.audioUrl
+            if (url.isBlank()) {
+                _isPreparing.value = true
+                val meta = try {
+                    AppleMusicPreviewResolver.resolveTrack(song.pageUrl)
+                } catch (_: Exception) {
+                    null
+                }
+                _isPreparing.value = false
+                url = meta?.audioUrl.orEmpty()
+                if (url.isNotBlank() || meta?.durationMs != null) {
+                    val enriched = song.copy(
+                        audioUrl = url,
+                        duration = song.duration.ifBlank {
+                            meta?.durationMs?.let { formatDurationMs(it) } ?: ""
+                        }
+                    )
+                    _currentSong.value = enriched
+                    applySingleUpdate(enriched)
+                }
+            }
+            if (url.isBlank()) {
+                _isPlaying.value = false
+                return@launch
+            }
+            startMediaPlayer(url)
         }
+    }
 
+    private fun applySingleUpdate(song: Song) {
+        val state = _uiState.value as? MusicUiState.Success ?: return
+        val updated = state.songs.map { if (it.id == song.id) song else it }
+        _uiState.value = MusicUiState.Success(updated)
+    }
+
+    private fun startMediaPlayer(url: String) {
         try {
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
@@ -236,7 +258,7 @@ class MusicViewModel @JvmOverloads constructor(
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build()
                 )
-                setDataSource(song.audioUrl)
+                setDataSource(url)
                 setOnPreparedListener { mp ->
                     mp.start()
                     _isPlaying.value = true
@@ -268,7 +290,6 @@ class MusicViewModel @JvmOverloads constructor(
             _currentSong.value?.let { playSong(it) }
             return
         }
-
         if (player.isPlaying) {
             player.pause()
             _isPlaying.value = false
@@ -290,17 +311,15 @@ class MusicViewModel @JvmOverloads constructor(
     fun onNext() {
         val currentList = when (val state = _uiState.value) {
             is MusicUiState.Success -> state.songs
-            else -> curatedSongs
+            else -> emptyList()
         }
         if (currentList.isEmpty()) return
-
         val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
         val nextIndex = if (_isShuffle.value) {
             (0 until currentList.size).random()
         } else {
             if (currentIndex == -1 || currentIndex >= currentList.size - 1) 0 else currentIndex + 1
         }
-
         val nextSong = currentList[nextIndex]
         _currentSong.value = nextSong
         playSong(nextSong)
@@ -309,13 +328,11 @@ class MusicViewModel @JvmOverloads constructor(
     fun onPrev() {
         val currentList = when (val state = _uiState.value) {
             is MusicUiState.Success -> state.songs
-            else -> curatedSongs
+            else -> emptyList()
         }
         if (currentList.isEmpty()) return
-
         val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
         val prevIndex = if (currentIndex <= 0) currentList.size - 1 else currentIndex - 1
-
         val prevSong = currentList[prevIndex]
         _currentSong.value = prevSong
         playSong(prevSong)
@@ -362,8 +379,27 @@ class MusicViewModel @JvmOverloads constructor(
         _isPlaying.value = false
     }
 
+    private fun formatDurationMs(ms: Long): String {
+        val totalSeconds = (ms / 1000).toInt()
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "%d:%02d".format(minutes, seconds)
+    }
+
+    private fun humanError(e: Exception): String {
+        val raw = e.localizedMessage.orEmpty()
+        return when {
+            raw.contains("UnknownHost", true) || raw.contains("resolve", true) ->
+                "Tidak ada koneksi internet. Coba lagi."
+            raw.contains("timeout", true) || raw.contains("timed out", true) ->
+                "Server musik terlalu lama merespons. Coba lagi."
+            else -> "Gagal mencari lagu. Coba lagi."
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         releasePlayer()
+        metaJob?.cancel()
     }
 }
