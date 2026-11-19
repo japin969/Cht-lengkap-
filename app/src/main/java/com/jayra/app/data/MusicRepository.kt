@@ -30,7 +30,7 @@ class MusicRepository(
         }
     }
 
-    private inline fun <reified T : Any> Result<T>.getOrNullTyped(): T? = getOrNull() as? T
+    private fun <T : Any> Result<T>.getValueOrNull(): T? = getOrNull() as? T
 
     /**
      * Cari lagu dari 3 sumber paralel.
@@ -48,19 +48,19 @@ class MusicRepository(
                 val allSongs = mutableListOf<Song>()
 
                 // SpotifyPlay
-                val spotifyResponse: SpotifyResponse? = spotifyResult.getOrNullTyped()
+                val spotifyResponse: SpotifyResponse? = spotifyResult.getValueOrNull()
                 if (spotifyResponse != null) {
                     spotifyResponse.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // AppleMusic
-                val appleResponse: AppleMusicResponse? = appleResult.getOrNullTyped()
+                val appleResponse: AppleMusicResponse? = appleResult.getValueOrNull()
                 if (appleResponse != null) {
                     appleResponse.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
                 }
 
                 // YTPlay
-                val ytResponse: YouTubeResponse? = ytResult.getOrNullTyped()
+                val ytResponse: YouTubeResponse? = ytResult.getValueOrNull()
                 if (ytResponse != null) {
                     ytResponse.toSong()?.let { allSongs.add(it) }
                 }
@@ -81,13 +81,13 @@ class MusicRepository(
             // Try SpotifyPlay first
             val spotifyResult = safeApiCall<SpotifyResponse> { nexadevApi.searchSpotify("top hits") }
             if (spotifyResult.isSuccess) {
-                val response: SpotifyResponse? = spotifyResult.getOrNullTyped()
+                val response: SpotifyResponse? = spotifyResult.getValueOrNull()
                 response?.data?.map { it.toSong() } ?: emptyList()
             } else {
                 // Fallback to YTPlay
                 val ytResult = safeApiCall<YouTubeResponse> { nexadevApi.searchYouTube("top hits") }
                 if (ytResult.isSuccess) {
-                    val response: YouTubeResponse? = ytResult.getOrNullTyped()
+                    val response: YouTubeResponse? = ytResult.getValueOrNull()
                     response?.toSong()?.let { listOf(it) } ?: emptyList()
                 } else {
                     emptyList()
