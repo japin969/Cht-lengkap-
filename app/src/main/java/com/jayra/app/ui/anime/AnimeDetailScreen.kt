@@ -25,11 +25,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.webkit.WebChromeClient
-import android.os.Message
-import androidx.compose.ui.viewinterop.AndroidView
 
 @Composable
 fun AnimeDetailScreen(
@@ -120,8 +115,30 @@ fun AnimeDetailScreen(
                                 Spacer(Modifier.height(8.dp))
                                 Text("Rating: ${state.detail?.rating ?: "-"}", style = MaterialTheme.typography.bodySmall)
                                 Text("Total: ${state.detail?.totalEpisodes ?: 0} Episode", style = MaterialTheme.typography.bodySmall)
+                                state.detail?.status?.let {
+                                    Text("Status: $it", style = MaterialTheme.typography.bodySmall)
+                                }
+                                state.detail?.type?.let {
+                                    Text("Tipe: $it", style = MaterialTheme.typography.bodySmall)
+                                }
                                 Spacer(Modifier.height(8.dp))
                                 Text(state.detail?.synopsis ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 6)
+                                
+                                // Genres
+                                state.detail?.genres?.ifNotEmpty { genres ->
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("Genre: ${genres.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                
+                                // Info map
+                                state.detail?.info?.ifNotEmpty { info ->
+                                    Spacer(Modifier.height(8.dp))
+                                    Column {
+                                        info.forEach { (key, value) ->
+                                            Text("$key: $value", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -130,17 +147,17 @@ fun AnimeDetailScreen(
                         ListItem(
                             headlineContent = { Text(ep.title ?: "Episode ${ep.episode}") },
                             leadingContent = { Icon(Icons.Rounded.PlayArrow, null) },
-                            modifier = Modifier.clickable {
-                                ep.episodeUrl?.let { onPlayEpisode(it) }
-                            }
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { ep.episodeUrl?.let { onPlayEpisode(it) } }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                         HorizontalDivider()
                     }
                     if (state.episodes.isEmpty()) {
                         item {
                             Text(
-                                text = "Daftar episode belum tersedia dari sumber data ini. " +
-                                    "Info anime tetap bisa dilihat di atas. Coba Lagi kalau koneksi bermasalah.",
+                                text = "Daftar episode belum tersedia. Info anime tetap bisa dilihat di atas.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(16.dp)
@@ -196,45 +213,67 @@ private fun AnimeDetailSkeleton() {
     }
 }
 
+// ==================== EXOPLAYER PLAYER SCREEN ====================
+import android.content.Context
+import android.net.Uri
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+
 @Composable
 fun AnimePlayerScreen(videoUrl: String) {
-    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val playerView = remember { PlayerView(context).apply {
+        layoutParams = androidx.core.view.ViewGroup.LayoutParams.LayoutParams(
+            androidx.core.view.ViewGroup.LayoutParams.LayoutParams.MATCH_PARENT,
+            androidx.core.view.ViewGroup.LayoutParams.LayoutParams.MATCH_PARENT
+        )
+        setResizeMode(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT)
+        useController = true
+        showBuffering = PlayerView.SHOW_BUFFERING_ALWAYS
+    } }
+
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(videoUrl))
+            prepare()
+            playWhenReady = true
+        }
+    }
+
+    // Attach player to PlayerView
+    DisposableEffect(exoPlayer, playerView) {
+        playerView.player = exoPlayer
+        onDispose {
+            playerView.player = null
+            exoPlayer.release()
+        }
+    }
+
+    // Handle lifecycle
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, exoPlayer) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START, Lifecycle.Event.ON_RESUME -> exoPlayer.playWhenReady = true
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> exoPlayer.playWhenReady = false
+                Lifecycle.Event.ON_DESTROY -> exoPlayer.release()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     AndroidView(
-        factory = { ctx ->
-            WebView(ctx).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-
-                // Blokir popup window baru
-                webChromeClient = object : WebChromeClient() {
-                    override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message?): Boolean {
-                        return false // Blokir popup
-                    }
-                }
-
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        // Inject adblocker JS setelah halaman selesai dimuat
-                        val js = """
-                            var ads = document.querySelectorAll('[class*="ads"], [id*="ads"], [class*="banner"], [class*="popup"], .overlay, .ad-container, iframe[src*="ads"]');
-                            ads.forEach(function(el) { el.style.display = 'none'; });
-                            document.querySelectorAll('a').forEach(function(a) {
-                                if (a.href.includes('ads') || a.href.includes('click')) {
-                                    a.style.display = 'none';
-                                }
-                            });
-                        """.trimIndent()
-                        view?.evaluateJavascript(js, null)
-                    }
-                }
-                loadUrl(videoUrl)
-                webViewRef = this
-            }
-        },
+        factory = { playerView },
         modifier = Modifier.fillMaxSize()
     )
 }

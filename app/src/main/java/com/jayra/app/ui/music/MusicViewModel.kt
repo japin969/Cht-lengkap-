@@ -5,14 +5,11 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.jayra.app.data.NexadevApi
-import com.jayra.app.data.DeezerApi
-import com.jayra.app.data.DeezerTrack
+import com.jayra.app.data.MusicRepository
 import com.jayra.app.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,8 +30,7 @@ sealed interface MusicUiState {
 @OptIn(FlowPreview::class)
 class MusicViewModel @JvmOverloads constructor(
     application: Application,
-    private val nexadevApi: NexadevApi = NexadevApi.create(),
-    private val deezerApi: DeezerApi = DeezerApi.create()
+    private val musicRepository: MusicRepository = MusicRepository()
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Loading)
@@ -73,16 +69,6 @@ class MusicViewModel @JvmOverloads constructor(
     private var progressUpdateJob: Job? = null
     private var lastQuery: String = ""
 
-    private val curatedSongs = listOf(
-        Song(
-            id = "seed_1",
-            title = "Starboy",
-            artist = "The Weeknd, Daft Punk",
-            album = "Starboy",
-            duration = "3:50",
-        )
-    )
-
     // History
     private val prefs = application.getSharedPreferences("jayra_music_prefs", android.content.Context.MODE_PRIVATE)
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
@@ -91,10 +77,10 @@ class MusicViewModel @JvmOverloads constructor(
     init {
         loadHistory()
 
-        // Observe search query with 300ms debounce
+        // Observe search query with 500ms debounce
         viewModelScope.launch {
             _searchQuery
-                .debounce(300L)
+                .debounce(500L)
                 .distinctUntilChanged()
                 .collect { query ->
                     executeSearch(query)
@@ -135,51 +121,30 @@ class MusicViewModel @JvmOverloads constructor(
         lastQuery = q
         _uiState.value = MusicUiState.Loading
         try {
-            // Sumber data: Deezer (api.nexadev.my.id sudah mati / 403).
-            // Query kosong = tampilkan chart/populer, bukan layar kosong.
-            val response = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 if (q.isEmpty()) {
-                    deezerApi.chart(limit = 25)
+                    musicRepository.getPopularChart()
                 } else {
-                    deezerApi.search(q, limit = 25)
+                    musicRepository.searchAll(q)
                 }
             }
 
-            if (!response.isSuccessful) {
-                _uiState.value = MusicUiState.Error(
-                    "Gagal memuat musik (HTTP ${response.code()}). Coba lagi."
-                )
-                return
-            }
-
-            val tracks = response.body()?.data.orEmpty()
-            val songs = tracks
-                .map { it.toSong() }
-                .filter { it.title.isNotBlank() }
-            if (songs.isNotEmpty()) {
-                _uiState.value = MusicUiState.Success(songs)
-                if (q.isNotEmpty()) addHistory(q)
+            if (result.isSuccess) {
+                val songs = result.getOrNull() ?: emptyList()
+                val filteredSongs = songs.filter { it.title.isNotBlank() && it.audioUrl.isNotBlank() }
+                if (filteredSongs.isNotEmpty()) {
+                    _uiState.value = MusicUiState.Success(filteredSongs)
+                    if (q.isNotEmpty()) addHistory(q)
+                } else {
+                    _uiState.value = MusicUiState.Empty
+                }
             } else {
-                val fallback = if (q.isEmpty()) curatedSongs else curatedSongs.filter {
-                    it.title.contains(q, ignoreCase = true) ||
-                        it.artist.contains(q, ignoreCase = true)
-                }
-                _uiState.value = if (fallback.isNotEmpty()) {
-                    MusicUiState.Success(fallback)
-                } else {
-                    MusicUiState.Empty
-                }
+                _uiState.value = MusicUiState.Error(
+                    "Gagal memuat musik. Coba lagi."
+                )
             }
         } catch (e: Exception) {
-            val fallback = if (q.isEmpty()) curatedSongs else curatedSongs.filter {
-                it.title.contains(q, ignoreCase = true) ||
-                    it.artist.contains(q, ignoreCase = true)
-            }
-            _uiState.value = if (fallback.isNotEmpty()) {
-                MusicUiState.Success(fallback)
-            } else {
-                MusicUiState.Error(e.userMessage("Gagal mencari lagu"))
-            }
+            _uiState.value = MusicUiState.Error(e.userMessage("Gagal mencari lagu"))
         }
     }
 
@@ -190,55 +155,6 @@ class MusicViewModel @JvmOverloads constructor(
         is javax.net.ssl.SSLException -> "Koneksi aman ke server gagal"
         is java.io.IOException -> localizedMessage ?: "Koneksi bermasalah"
         else -> localizedMessage ?: default
-    }
-
-    private fun DeezerTrack.toSong(): Song = Song(
-        id = "dz_${id ?: System.currentTimeMillis()}",
-        title = title ?: "Tanpa Judul",
-        artist = artist?.name ?: "Unknown",
-        album = album?.title ?: "",
-        duration = formatDuration(duration ?: 0),
-        coverUrl = album?.coverBig ?: album?.coverMedium ?: "",
-        audioUrl = preview ?: "",
-        source = "deezer"
-    )
-
-    private fun formatDuration(totalSeconds: Int): String {
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "%d:%02d".format(minutes, seconds)
-    }
-
-    private suspend fun searchYouTubeFallback(query: String) {
-        try {
-            val ytResponse = withContext(Dispatchers.IO) {
-                nexadevApi.searchYouTube(query)
-            }
-
-            if (ytResponse.isSuccessful && ytResponse.body() != null) {
-                val song = ytResponse.body()!!.toSong()
-                _uiState.value = MusicUiState.Success(listOf(song))
-            } else {
-                // If API fails, filter curated songs
-                val filtered = curatedSongs.filter {
-                    it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
-                }
-                _uiState.value = if (filtered.isNotEmpty()) {
-                    MusicUiState.Success(filtered)
-                } else {
-                    MusicUiState.Empty
-                }
-            }
-        } catch (e: Exception) {
-            val filtered = curatedSongs.filter {
-                it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
-            }
-            if (filtered.isNotEmpty()) {
-                _uiState.value = MusicUiState.Success(filtered)
-            } else {
-                _uiState.value = MusicUiState.Error("Gagal memuat musik: ${e.localizedMessage ?: "Koneksi bermasalah"}")
-            }
-        }
     }
 
     fun onSongClick(song: Song) {
@@ -256,50 +172,12 @@ class MusicViewModel @JvmOverloads constructor(
         _playbackError.value = null
 
         if (song.audioUrl.isBlank()) {
-            // Sebagian hasil Deezer tidak membawa preview langsung.
-            // Resolve dulu (track/{id} lalu search judul) supaya tombol play tetap jalan.
-            resolvePreviewAndPlay(song)
+            _isPlaying.value = false
+            _playbackError.value = "Lagu ini tidak punya audio URL. Coba lagu lain."
             return
         }
 
         startPlayer(song, song.audioUrl)
-    }
-
-    private fun resolvePreviewAndPlay(song: Song) {
-        _isBuffering.value = true
-        viewModelScope.launch {
-            val preview = withContext(Dispatchers.IO) {
-                val directId = song.id.removePrefix("dz_").toLongOrNull()
-                val fromTrackId = if (directId != null) {
-                    runCatching {
-                        deezerApi.track(directId).body()?.preview?.takeIf { it.isNotBlank() }
-                    }.getOrNull()
-                } else null
-
-                fromTrackId ?: runCatching {
-                    deezerApi.search("${song.title} ${song.artist}", limit = 10)
-                        .body()
-                        ?.data
-                        .orEmpty()
-                        .firstOrNull { !it.preview.isNullOrBlank() }
-                        ?.preview
-                }.getOrNull()
-            }
-
-            // User sudah ganti lagu sementara resolusi berjalan → abaikan hasil lama.
-            if (_currentSong.value?.id != song.id) return@launch
-
-            _isBuffering.value = false
-            if (preview.isNullOrBlank()) {
-                _isPlaying.value = false
-                _playbackError.value =
-                    "Lagu ini tidak punya preview audio. Coba lagu lain."
-            } else {
-                val playable = song.copy(audioUrl = preview, source = song.source.ifBlank { "deezer" })
-                _currentSong.value = playable
-                startPlayer(playable, preview)
-            }
-        }
     }
 
     private fun startPlayer(song: Song, url: String) {
@@ -379,7 +257,7 @@ class MusicViewModel @JvmOverloads constructor(
     fun onNext() {
         val currentList = when (val state = _uiState.value) {
             is MusicUiState.Success -> state.songs
-            else -> curatedSongs
+            else -> emptyList()
         }
         if (currentList.isEmpty()) return
 
@@ -398,7 +276,7 @@ class MusicViewModel @JvmOverloads constructor(
     fun onPrev() {
         val currentList = when (val state = _uiState.value) {
             is MusicUiState.Success -> state.songs
-            else -> curatedSongs
+            else -> emptyList()
         }
         if (currentList.isEmpty()) return
 

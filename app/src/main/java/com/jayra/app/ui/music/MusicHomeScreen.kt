@@ -147,16 +147,14 @@ fun MusicHomeContent(
     onBack: (() -> Unit)? = null
 ) {
     val isDark = isSystemInDarkTheme()
-    val loginGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
-        colors = listOf(Color(0xFF1E3A5F), Color(0xFF4A2E6B))
-    )
-    val topBarBg = Color.Transparent
-    val screenBg = Color.Transparent
-    val searchBg = Color(0x33FFFFFF)
-    val textColor = Color.White
+    val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
+    val topBarBg = if (isDark) JayraDarkTopBar else JayraLightTopBar
+    val searchBg = if (isDark) JayraSearchDark else JayraSearchLight
+    val textColor = if (isDark) Color.White else Color.Black
     var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = screenBg,
         topBar = {
             // 1.1 TopAppBar (Tinggi 56dp)
             Row(
@@ -255,7 +253,6 @@ fun MusicHomeContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(loginGradient)
                 .padding(innerPadding)
         ) {
             // 1.2 Search Bar
@@ -271,7 +268,7 @@ fun MusicHomeContent(
                 Icon(
                     imageVector = Icons.Rounded.Search,
                     contentDescription = "Search",
-                    tint = Color(0x99FFFFFF),
+                    tint = if (isDark) Color(0x99FFFFFF) else Color(0x99000000),
                     modifier = Modifier.size(16.dp)
                 )
 
@@ -282,7 +279,7 @@ fun MusicHomeContent(
                         Text(
                             text = "Cari lagu atau artis",
                             fontSize = 15.sp,
-                            color = Color(0x99FFFFFF)
+                            color = if (isDark) Color(0x99FFFFFF) else Color(0x99000000)
                         )
                     }
                     BasicTextField(
@@ -339,6 +336,9 @@ fun MusicHomeContent(
                 }
             }
 
+            val historyTextColor = if (isDark) Color(0x99FFFFFF) else Color(0x99000000)
+            val historyBgColor = if (isDark) Color(0x33FFFFFF) else Color(0x33000000)
+
             // History (muncul saat search kosong)
             if (searchQuery.isBlank() && searchHistory.isNotEmpty()) {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -351,7 +351,7 @@ fun MusicHomeContent(
                             text = "Pencarian terakhir",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0x99FFFFFF)
+                            color = historyTextColor
                         )
                         Text(
                             text = "Hapus",
@@ -368,14 +368,14 @@ fun MusicHomeContent(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(Color(0x33FFFFFF))
+                                    .background(historyBgColor)
                                     .clickable { onHistoryClick(q) }
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Text(
                                     text = q,
                                     fontSize = 13.sp,
-                                    color = Color.White,
+                                    color = if (isDark) Color.White else Color.Black,
                                     maxLines = 1
                                 )
                             }
@@ -449,15 +449,18 @@ private fun MusicSongItem(
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
-    val separatorColor = Color(0x33FFFFFF)
-    val titleColor = if (isCurrentSong) Color(0xFF5AC8FA) else Color.White
-    val searchBg = Color(0x1AFFFFFF)
-    val subtitleColor = Color(0x99FFFFFF)
+    val isDark = isSystemInDarkTheme()
+    val separatorColor = if (isDark) Color(0x33FFFFFF) else Color(0x33000000)
+    val titleColor = if (isCurrentSong) Color(0xFF5AC8FA) else (if (isDark) Color.White else Color.Black)
+    val itemBgColor = if (isDark) Color(0x1AFFFFFF) else Color(0x1A000000)
+    val searchBg = if (isDark) Color(0x1AFFFFFF) else Color(0x1A000000)
+    val subtitleColor = if (isDark) Color(0x99FFFFFF) else Color(0x99000000)
+    val coverPlaceholderTint = if (isDark) Color(0x99FFFFFF) else Color(0x99000000)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0x1AFFFFFF))
+            .background(itemBgColor)
             .clickable(onClick = onClick)
             .testTag("song_item_${song.id}")
     ) {
@@ -490,7 +493,7 @@ private fun MusicSongItem(
                     Icon(
                         imageVector = Icons.Rounded.MusicNote,
                         contentDescription = "Cover",
-                        tint = Color(0x99FFFFFF),
+                        tint = coverPlaceholderTint,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -510,24 +513,6 @@ private fun MusicSongItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (song.source.isNotBlank()) {
-                        Spacer(Modifier.width(6.dp))
-                        val badge = if (song.source == "youtube") "YouJay" else "SpoJay"
-                        val badgeColor = if (song.source == "youtube") Color(0xFFFF3B30) else Color(0xFF34C759)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(badgeColor.copy(alpha = 0.85f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = badge,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -678,6 +663,11 @@ private fun MusicMiniPlayer(
 private fun MusicEmptyState(
     modifier: Modifier = Modifier
 ) {
+    val isDark = isSystemInDarkTheme()
+    val iconTint = if (isDark) Color(0x99FFFFFF) else Color(0x99000000)
+    val titleColor = if (isDark) Color(0xCCFFFFFF) else Color(0xCC000000)
+    val subtitleColor = if (isDark) Color(0x99FFFFFF) else Color(0x99000000)
+    
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -688,7 +678,7 @@ private fun MusicEmptyState(
         Icon(
             imageVector = Icons.Rounded.MusicNote,
             contentDescription = "Music",
-            tint = Color(0x99FFFFFF),
+            tint = iconTint,
             modifier = Modifier.size(64.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -696,14 +686,14 @@ private fun MusicEmptyState(
             text = "Cari lagu favoritmu",
             fontSize = 17.sp,
             fontWeight = FontWeight.Medium,
-            color = Color(0xCCFFFFFF),
+            color = titleColor,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "Ketik judul lagu atau nama artis",
             fontSize = 15.sp,
-            color = Color(0x99FFFFFF),
+            color = subtitleColor,
             textAlign = TextAlign.Center
         )
     }
@@ -716,6 +706,9 @@ private fun MusicErrorState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark = isSystemInDarkTheme()
+    val titleColor = if (isDark) Color(0xCCFFFFFF) else Color(0xCC000000)
+    
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -733,7 +726,7 @@ private fun MusicErrorState(
         Text(
             text = if (message.isNotBlank()) message else "Gagal memuat musik",
             fontSize = 17.sp,
-            color = Color(0xCCFFFFFF),
+            color = titleColor,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -756,8 +749,8 @@ private fun MusicErrorState(
 @Composable
 private fun MusicShimmerLoading() {
     val isDark = isSystemInDarkTheme()
-    val baseColor = Color(0x1AFFFFFF)
-    val highlightColor = Color(0x33FFFFFF)
+    val baseColor = if (isDark) Color(0x1AFFFFFF) else Color(0x1A000000)
+    val highlightColor = if (isDark) Color(0x33FFFFFF) else Color(0x33000000)
 
     val transition = rememberInfiniteTransition(label = "shimmer_transition")
     val translateAnim by transition.animateFloat(

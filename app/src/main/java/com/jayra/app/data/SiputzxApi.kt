@@ -1,5 +1,7 @@
 package com.jayra.app.data
 
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
@@ -16,6 +18,12 @@ interface SiputzxApi {
     suspend fun searchPinterest(
         @Query("query") query: String
     ): Response<PinterestResponse>
+
+    @GET("api/s/applemusic")
+    suspend fun searchAppleMusic(
+        @Query("query") query: String,
+        @Query("region") region: String = "id"
+    ): Response<AppleMusicResponse>
 
     @GET("api/ai/gptoss120b")
     suspend fun askGptOss(
@@ -61,5 +69,36 @@ interface SiputzxApi {
                 .build()
                 .create(SiputzxApi::class.java)
         }
+    }
+}
+
+// Apple Music API Response
+@JsonClass(generateAdapter = true)
+data class AppleMusicResponse(
+    @Json(name = "status") val status: Boolean? = null,
+    @Json(name = "data") val data: List<AppleMusicTrack>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AppleMusicTrack(
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "artist") val artist: String? = null,
+    @Json(name = "album") val album: String? = null,
+    @Json(name = "duration") val duration: String? = null,
+    @Json(name = "artwork") val artwork: String? = null,
+    @Json(name = "preview") val preview: String? = null,
+    @Json(name = "url") val url: String? = null
+) {
+    fun toSong(fallbackId: String = System.currentTimeMillis().toString()): Song {
+        return Song(
+            id = fallbackId,
+            title = title ?: "Lagu Tanpa Judul",
+            artist = artist ?: "Artis Tidak Diketahui",
+            album = album ?: "Single",
+            duration = duration ?: "3:30",
+            coverUrl = artwork ?: "",
+            audioUrl = preview ?: url ?: "",
+            source = "" // No source label - hidden from UI
+        )
     }
 }

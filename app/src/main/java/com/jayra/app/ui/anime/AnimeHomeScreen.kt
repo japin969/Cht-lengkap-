@@ -6,21 +6,25 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.jayra.app.data.AnimeSearchItem
@@ -31,99 +35,224 @@ fun AnimeHomeScreen(
     onAnimeClick: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val lazyListState = rememberLazyListState()
+    var showSearchResults by remember { mutableStateOf(false) }
+
+    // Trigger load more when near end of list
+    LaunchedEffect(lazyListState, state.ongoingPage, state.completedPage, state.popularPage) {
+        val scrollPosition = lazyListState.firstVisibleItemIndex
+        val totalItems = state.ongoing.size + state.completed.size + state.popular.size + state.schedule.values.flatten().size
+        if (scrollPosition > totalItems - 5) {
+            viewModel.loadMoreOngoing()
+            viewModel.loadMoreCompleted()
+            viewModel.loadMorePopular()
+        }
+    }
 
     Box(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when {
-            state.isLoading -> {
-                AnimeSkeleton()
+        Column(Modifier.fillMaxSize()) {
+            // Search Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                androidx.compose.material3.TextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.onSearchQueryChange(it) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(24.dp))
+                        .padding(horizontal = 16.dp),
+                    singleLine = true,
+                    placeholder = { Text("Cari anime...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    textStyle = TextStyle(fontSize = 16.sp),
+                    leadingIcon = { Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                                Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    },
+                    colors = TextFieldDefaults.textFieldColors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
             }
 
-            state.error != null && state.popular.isEmpty() && state.ongoing.isEmpty() && state.completed.isEmpty() -> {
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Gagal memuat anime",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = state.error ?: "Koneksi bermasalah",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Button(onClick = { viewModel.retry() }) { Text("Coba Lagi") }
+            // Content
+            if (searchQuery.isNotBlank()) {
+                // Search results view
+                when {
+                    state.isSearchLoading -> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    state.searchError != null && state.searchResults.isEmpty() -> {
+                        Column(
+                            Modifier.fillMaxSize().padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("Gagal mencari anime", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(6.dp))
+                            Text(state.searchError ?: "Koneksi bermasalah", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            Spacer(Modifier.height(14.dp))
+                            Button(onClick = { viewModel.retrySearch() }) { Text("Coba Lagi") }
+                        }
+                    }
+                    state.searchResults.isEmpty() -> {
+                        Column(
+                            Modifier.fillMaxSize().padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("Tidak ditemukan", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(6.dp))
+                            Text("Coba kata kunci lain", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                        }
+                    }
+                    else -> {
+                        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, bottom = 16.dp)) {
+                            items(state.searchResults) { anime ->
+                                AnimePosterCard(anime) { onAnimeClick(it) }
+                            }
+                        }
+                    }
                 }
-            }
-
-            state.popular.isEmpty() && state.ongoing.isEmpty() && state.completed.isEmpty() -> {
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+            } else {
+                // Home view with sections
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    Text("Belum ada anime", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "Daftar anime sedang kosong. Coba muat ulang.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Button(onClick = { viewModel.retry() }) { Text("Coba Lagi") }
-                }
-            }
-
-            else -> {
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
                     if (state.isFallback) item {
                         FallbackBanner(
                             message = state.error ?: "Menampilkan data contoh",
                             onRetry = { viewModel.retry() }
                         )
                     }
+
+                    // --- SCHEDULE (Hari ini) ---
+                    if (state.schedule.isNotEmpty()) {
+                        val todaySchedule = getTodaySchedule(state.schedule)
+                        if (todaySchedule.isNotEmpty()) item {
+                            Text("Jadwal Hari Ini", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(todaySchedule) { anime ->
+                                    AnimePosterCard(anime) { onAnimeClick(it) }
+                                }
+                            }
+                        }
+                    }
+
+                    // --- ONGOING ---
                     if (state.ongoing.isNotEmpty()) item {
-                        Text("Sedang Tayang", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Sedang Tayang", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            if (state.hasMoreOngoing) {
+                                TextButton(onClick = { viewModel.loadMoreOngoing() }) {
+                                    Text("Lainnya")
+                                }
+                            }
+                        }
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(state.ongoing) { anime ->
                                 AnimePosterCard(anime) { onAnimeClick(it) }
                             }
+                            if (state.hasMoreOngoing && !state.isLoading) {
+                                item { LoadMoreTrigger(onTrigger = { viewModel.loadMoreOngoing() }) }
+                            }
                         }
                     }
+
+                    // --- POPULAR ---
                     if (state.popular.isNotEmpty()) item {
-                        Text("Populer", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Populer", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            if (state.hasMorePopular) {
+                                TextButton(onClick = { viewModel.loadMorePopular() }) {
+                                    Text("Lainnya")
+                                }
+                            }
+                        }
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(state.popular) { anime ->
                                 AnimePosterCard(anime) { onAnimeClick(it) }
                             }
+                            if (state.hasMorePopular && !state.isLoading) {
+                                item { LoadMoreTrigger(onTrigger = { viewModel.loadMorePopular() }) }
+                            }
                         }
                     }
+
+                    // --- COMPLETED ---
                     if (state.completed.isNotEmpty()) item {
-                        Text("Selesai", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Selesai", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            if (state.hasMoreCompleted) {
+                                TextButton(onClick = { viewModel.loadMoreCompleted() }) {
+                                    Text("Lainnya")
+                                }
+                            }
+                        }
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(state.completed) { anime ->
                                 AnimePosterCard(anime) { onAnimeClick(it) }
                             }
+                            if (state.hasMoreCompleted && !state.isLoading) {
+                                item { LoadMoreTrigger(onTrigger = { viewModel.loadMoreCompleted() }) }
+                            }
+                        }
+                    }
+
+                    // --- FULL SCHEDULE (All days) ---
+                    if (state.schedule.size > 1) item {
+                        Text("Jadwal Lengkap", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        ScheduleSection(schedule = state.schedule) { url ->
+                            onAnimeClick(url)
                         }
                     }
                 }
             }
         }
     }
+}
+
+private fun getTodaySchedule(schedule: Map<String, List<AnimeSearchItem>>): List<AnimeSearchItem> {
+    val days = listOf("Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu")
+    val today = days[java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) - 1]
+    return schedule[today] ?: schedule.values.firstOrNull() ?: emptyList()
 }
 
 @Composable
@@ -143,6 +272,20 @@ private fun FallbackBanner(message: String, onRetry: () -> Unit) {
             modifier = Modifier.weight(1f)
         )
         TextButton(onClick = onRetry) { Text("Coba Lagi") }
+    }
+}
+
+@Composable
+private fun LoadMoreTrigger(onTrigger: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        contentAlignment = Alignment.Center
+    ) {
+        LaunchedEffect(Unit) { onTrigger() }
+        CircularProgressIndicator()
     }
 }
 
@@ -167,6 +310,24 @@ fun AnimePosterCard(anime: AnimeSearchItem, onClick: (String) -> Unit) {
         Spacer(Modifier.height(4.dp))
         Text(anime.title ?: "Unknown", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 2)
         Text(anime.latestEpisode ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun ScheduleSection(schedule: Map<String, List<AnimeSearchItem>>, onClick: (String) -> Unit) {
+    val daysOrder = listOf("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        daysOrder.forEach { day ->
+            val items = schedule[day] ?: emptyList()
+            if (items.isNotEmpty()) {
+                Text(day, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                LazyRow(contentPadding = PaddingValues(horizontal = 0.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(items) { anime ->
+                        AnimePosterCard(anime) { onClick(it) }
+                    }
+                }
+            }
+        }
     }
 }
 

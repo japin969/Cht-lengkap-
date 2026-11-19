@@ -5,8 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeSearchItem
-import com.jayra.app.data.KitsuAnime
-import com.jayra.app.data.KitsuApi
+import com.jayra.app.data.AnimasuRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,14 +14,26 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class AnimeUiState(
-    // --- Home ---
+    // --- Home (Tab-based) ---
     val isLoading: Boolean = false,
     val ongoing: List<AnimeSearchItem> = emptyList(),
-    val popular: List<AnimeSearchItem> = emptyList(),
     val completed: List<AnimeSearchItem> = emptyList(),
-    /** true = sedang menampilkan data contoh karena semua server gagal. */
+    val popular: List<AnimeSearchItem> = emptyList(),
+    val schedule: Map<String, List<AnimeSearchItem>> = emptyMap(),
+    val ongoingPage: Int = 1,
+    val completedPage: Int = 1,
+    val popularPage: Int = 1,
+    val hasMoreOngoing: Boolean = true,
+    val hasMoreCompleted: Boolean = true,
+    val hasMorePopular: Boolean = true,
+    /** true = sedang menampilkan data contoh karena server gagal. */
     val isFallback: Boolean = false,
     val error: String? = null,
+
+    // --- Search ---
+    val isSearchLoading: Boolean = false,
+    val searchResults: List<AnimeSearchItem> = emptyList(),
+    val searchError: String? = null,
 
     // --- Detail ---
     val isDetailLoading: Boolean = false,
@@ -30,140 +41,296 @@ data class AnimeUiState(
     val episodes: List<AnimeEpisode> = emptyList(),
     val detailError: String? = null,
 
-    val streamUrl: String? = null
+    // --- Stream ---
+    val streamUrl: String? = null,
+    val isStreamLoading: Boolean = false,
+    val streamError: String? = null
 )
 
 class AnimeViewModel : ViewModel() {
 
-    // Sumber utama: Kitsu. Mirror kitsu.app dipakai kalau kitsu.io diblokir / down.
-    private val sources: List<KitsuApi> = listOf(
-        KitsuApi.create(KitsuApi.BASE_URL),
-        KitsuApi.create(KitsuApi.BASE_URL_MIRROR)
-    )
-
+    private val repository = AnimasuRepository()
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
-    init { loadHome() }
+    // Search query flow
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    private var searchJob: kotlinx.coroutines.Job? = null
+
+    init { 
+        loadHome()
+        observeSearchQuery()
+    }
+
+    private fun observeSearchQuery() {
+        viewModelScope.launch {
+            _searchQuery
+                .debounce(500) // 500ms debounce
+                .distinctUntilChanged()
+                .collect { query ->
+                    if (query.isNotBlank()) {
+                        executeSearch(query)
+                    } else {
+                        _uiState.update { it.copy(searchResults = emptyList(), searchError = null, isSearchLoading = false) }
+                    }
+                }
+        }
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+    }
 
     fun loadHome() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, isFallback = false) }
-            var lastError: String? = null
-
-            for (api in sources) {
-                val result = runCatching { fetchHome(api) }
-                val data = result.getOrNull()
-                if (data != null) {
-                    val (popular, ongoing, completed) = data
-                    if (popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()) {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                popular = popular,
-                                ongoing = ongoing,
-                                completed = completed,
-                                isFallback = false,
-                                error = null
-                            )
-                        }
-                        return@launch
-                    }
-                } else {
-                    lastError = result.exceptionOrNull()?.userMessage() ?: "Koneksi bermasalah"
+            val result = runCatching { loadAllSections() }
+            val data = result.getOrNull()
+            if (data != null) {
+                val (ongoing, completed, popular, schedule) = data
+                val hasData = ongoing.isNotEmpty() || completed.isNotEmpty() || popular.isNotEmpty() || schedule.isNotEmpty()
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        ongoing = ongoing,
+                        completed = completed,
+                        popular = popular,
+                        schedule = schedule,
+                        ongoingPage = 1,
+                        completedPage = 1,
+                        popularPage = 1,
+                        hasMoreOngoing = ongoing.size >= 20,
+                        hasMoreCompleted = completed.size >= 20,
+                        hasMorePopular = popular.size >= 20,
+                        isFallback = false,
+                        error = null
+                    )
                 }
+                return@launch
             }
 
-            // Semua sumber gagal → jangan biarkan layar kosong/loading terus.
-            // Tampilkan data contoh + pesan jelas + tombol Coba Lagi.
+            // Fallback data
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    popular = fallbackAnime,
-                    ongoing = emptyList(),
+                    ongoing = fallbackAnime,
                     completed = emptyList(),
+                    popular = emptyList(),
+                    schedule = emptyMap(),
                     isFallback = true,
-                    error = lastError ?: "Server anime tidak merespons. Menampilkan data contoh."
+                    error = result.exceptionOrNull()?.userMessage() ?: "Server anime tidak merespons. Menampilkan data contoh."
                 )
             }
         }
     }
 
-    private suspend fun fetchHome(api: KitsuApi): Triple<List<AnimeSearchItem>, List<AnimeSearchItem>, List<AnimeSearchItem>> =
+    private suspend fun loadAllSections(): Quadruple<List<AnimeSearchItem>, List<AnimeSearchItem>, List<AnimeSearchItem>, Map<String, List<AnimeSearchItem>>> =
         coroutineScope {
-            val popularDeferred = async {
-                api.list(limit = 20, sort = "-userCount").body()?.data.orEmpty()
-            }
-            val ongoingDeferred = async {
-                api.list(limit = 20, sort = "-userCount", status = "current").body()?.data.orEmpty()
-            }
-            val completedDeferred = async {
-                api.list(limit = 20, sort = "-averageRating", status = "finished").body()?.data.orEmpty()
-            }
-            val popular = runCatching { popularDeferred.await() }.getOrDefault(emptyList())
+            val ongoingDeferred = async { loadOngoing(1) }
+            val completedDeferred = async { loadCompleted(1) }
+            val popularDeferred = async { loadPopular(1) }
+            val scheduleDeferred = async { loadSchedule() }
+
             val ongoing = runCatching { ongoingDeferred.await() }.getOrDefault(emptyList())
             val completed = runCatching { completedDeferred.await() }.getOrDefault(emptyList())
-            Triple(
-                popular.map { it.toItem() },
-                ongoing.map { it.toItem() },
-                completed.map { it.toItem() }
-            )
+            val popular = runCatching { popularDeferred.await() }.getOrDefault(emptyList())
+            val schedule = runCatching { scheduleDeferred.await() }.getOrDefault(emptyMap())
+
+            Quadruple(ongoing, completed, popular, schedule)
         }
+
+    private suspend fun loadOngoing(page: Int): List<AnimeSearchItem> {
+        val response = repository.getOngoing(page)
+        return if (response.isSuccess) {
+            response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+        } else emptyList()
+    }
+
+    private suspend fun loadCompleted(page: Int): List<AnimeSearchItem> {
+        val response = repository.getCompleted(page)
+        return if (response.isSuccess) {
+            response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+        } else emptyList()
+    }
+
+    private suspend fun loadPopular(page: Int): List<AnimeSearchItem> {
+        val response = repository.getPopular(page)
+        return if (response.isSuccess) {
+            response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+        } else emptyList()
+    }
+
+    private suspend fun loadSchedule(): Map<String, List<AnimeSearchItem>> {
+        val response = repository.getSchedule()
+        return if (response.isSuccess) {
+            response.getOrNull()?.data?.schedule?.mapValues { (_, list) ->
+                list.map { it.toAnimeSearchItem() }
+            } ?: emptyMap()
+        } else emptyMap()
+    }
+
+    fun loadMoreOngoing() {
+        viewModelScope.launch {
+            val current = _uiState.value
+            if (current.isLoading || !current.hasMoreOngoing) return@launch
+            val nextPage = current.ongoingPage + 1
+            val response = repository.getOngoing(nextPage)
+            if (response.isSuccess) {
+                val newItems = response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+                if (newItems.isNotEmpty()) {
+                    _uiState.update {
+                        it.copy(
+                            ongoing = it.ongoing + newItems,
+                            ongoingPage = nextPage,
+                            hasMoreOngoing = newItems.size >= 20
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(hasMoreOngoing = false) }
+                }
+            }
+        }
+    }
+
+    fun loadMoreCompleted() {
+        viewModelScope.launch {
+            val current = _uiState.value
+            if (current.isLoading || !current.hasMoreCompleted) return@launch
+            val nextPage = current.completedPage + 1
+            val response = repository.getCompleted(nextPage)
+            if (response.isSuccess) {
+                val newItems = response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+                if (newItems.isNotEmpty()) {
+                    _uiState.update {
+                        it.copy(
+                            completed = it.completed + newItems,
+                            completedPage = nextPage,
+                            hasMoreCompleted = newItems.size >= 20
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(hasMoreCompleted = false) }
+                }
+            }
+        }
+    }
+
+    fun loadMorePopular() {
+        viewModelScope.launch {
+            val current = _uiState.value
+            if (current.isLoading || !current.hasMorePopular) return@launch
+            val nextPage = current.popularPage + 1
+            val response = repository.getPopular(nextPage)
+            if (response.isSuccess) {
+                val newItems = response.getOrNull()?.data?.animeList?.map { it.toAnimeSearchItem() } ?: emptyList()
+                if (newItems.isNotEmpty()) {
+                    _uiState.update {
+                        it.copy(
+                            popular = it.popular + newItems,
+                            popularPage = nextPage,
+                            hasMorePopular = newItems.size >= 20
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(hasMorePopular = false) }
+                }
+            }
+        }
+    }
 
     fun retry() = loadHome()
 
-    /** Terima id Kitsu ("7442") atau URL penuh ("https://kitsu.io/anime/attack-on-titan"). */
-    fun loadDetail(url: String) {
-        val id = url.trim().substringAfterLast('/')
+    private fun executeSearch(query: String) {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            _uiState.update { it.copy(isSearchLoading = true, searchError = null) }
+            val response = repository.search(query, 1)
+            if (response.isSuccess) {
+                val results = response.getOrNull()?.data?.results?.map { it.toAnimeSearchItem() } ?: emptyList()
+                _uiState.update { it.copy(isSearchLoading = false, searchResults = results, searchError = null) }
+            } else {
+                _uiState.update { 
+                    it.copy(
+                        isSearchLoading = false, 
+                        searchError = response.exceptionOrNull()?.userMessage() ?: "Gagal mencari anime (HTTP ${response.getOrNull()?.code()})"
+                    ) 
+                }
+            }
+        }
+    }
+
+    fun retrySearch() {
+        val query = _searchQuery.value
+        if (query.isNotBlank()) executeSearch(query)
+    }
+
+    /** Terima URL detail dari Animasu (contoh: https://v1.animasu.work/anime/jujutsu-kaisen-subtitle-indo/) */
+    fun loadDetail(detailUrl: String) {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(isDetailLoading = true, detailError = null, detail = null, episodes = emptyList())
             }
-            if (id.isBlank()) {
-                _uiState.update {
-                    it.copy(isDetailLoading = false, detailError = "Anime tidak ditemukan")
-                }
+            if (detailUrl.isBlank()) {
+                _uiState.update { it.copy(isDetailLoading = false, detailError = "Anime tidak ditemukan") }
                 return@launch
             }
 
-            var lastError: String? = null
-            for (api in sources) {
-                val result = runCatching { api.detail(id) }
-                val res = result.getOrNull()
-                val data = res?.body()?.data
-                if (res != null && res.isSuccessful && data != null) {
+            val response = repository.getDetail(detailUrl)
+            if (response.isSuccess) {
+                val detailData = response.getOrNull()?.data?.toAnimeDetailData()
+                if (detailData != null) {
                     _uiState.update {
                         it.copy(
                             isDetailLoading = false,
-                            detail = data.toDetail(),
-                            episodes = emptyList(),
+                            detail = detailData,
+                            episodes = detailData.episodes,
                             detailError = null
                         )
                     }
                     return@launch
-                }
-                lastError = when {
-                    result.exceptionOrNull() != null ->
-                        result.exceptionOrNull()?.userMessage() ?: "Koneksi bermasalah"
-                    res != null -> "Server anime mengembalikan HTTP ${res.code()}"
-                    else -> "Gagal memuat detail anime"
                 }
             }
 
             _uiState.update {
                 it.copy(
                     isDetailLoading = false,
-                    detailError = lastError ?: "Gagal memuat detail anime"
+                    detailError = response.exceptionOrNull()?.userMessage() ?: "Gagal memuat detail anime (HTTP ${response.getOrNull()?.code()})"
                 )
             }
         }
     }
 
-    fun retryDetail(url: String) = loadDetail(url)
+    fun retryDetail(detailUrl: String) = loadDetail(detailUrl)
 
-    fun loadStream(url: String) {
-        // Kitsu tidak menyediakan streaming; detail tetap bisa dibuka.
-        _uiState.update { it.copy(streamUrl = null) }
+    /** Terima URL episode dari Animasu (contoh: https://v1.animasu.work/nonton-jujutsu-kaisen-tv-episode-10-indo/) */
+    fun loadStream(episodeUrl: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isStreamLoading = true, streamError = null, streamUrl = null) }
+            if (episodeUrl.isBlank()) {
+                _uiState.update { it.copy(isStreamLoading = false, streamError = "URL episode kosong") }
+                return@launch
+            }
+
+            val response = repository.getStream(episodeUrl)
+            if (response.isSuccess) {
+                val streamUrl = response.getOrNull()?.data?.getBestStreamUrl()
+                if (streamUrl != null && streamUrl.isNotBlank()) {
+                    _uiState.update {
+                        it.copy(isStreamLoading = false, streamUrl = streamUrl, streamError = null)
+                    }
+                    return@launch
+                }
+            }
+
+            _uiState.update {
+                it.copy(
+                    isStreamLoading = false,
+                    streamError = response.exceptionOrNull()?.userMessage() ?: "Gagal memuat stream video (HTTP ${response.getOrNull()?.code()})"
+                )
+            }
+        }
     }
 
     private fun Throwable.userMessage(): String = when (this) {
@@ -174,58 +341,25 @@ class AnimeViewModel : ViewModel() {
         else -> localizedMessage ?: "Koneksi bermasalah"
     }
 
-    private fun KitsuAnime.toItem(): AnimeSearchItem = AnimeSearchItem(
-        title = attributes?.displayTitle(),
-        link = id,
-        image = attributes?.posterImage?.best()?.takeIf { it.isNotBlank() }
-            ?: attributes?.coverImage?.best(),
-        latestEpisode = attributes?.episodeCount?.let { "$it eps" } ?: attributes?.status,
-        type = attributes?.subtype
-    )
-
-    private fun KitsuAnime.toDetail(): AnimeDetailData {
-        val attrs = attributes
-        val info = buildMap {
-            attrs?.status?.let { put("Status", it) }
-            attrs?.startDate?.let { put("Mulai", it) }
-            attrs?.episodeCount?.let { put("Episode", "$it") }
-            attrs?.averageRating?.let { put("Rating", it) }
-        }
-        return AnimeDetailData(
-            title = attrs?.displayTitle(),
-            image = attrs?.posterImage?.best()?.takeIf { it.isNotBlank() } ?: attrs?.coverImage?.best(),
-            synopsis = attrs?.synopsis,
-            rating = attrs?.averageRating?.toDoubleOrNull(),
-            totalEpisodes = attrs?.episodeCount,
-            genres = null,
-            info = info,
-            episodes = emptyList()
-        )
-    }
-
     companion object {
         /**
-         * Data contoh terakhir kalau Kitsu utama + mirror sama-sama tidak bisa dihubungi.
-         * Poster memakai CDN Kitsu; kalau CDN juga terblokir, kartu tetap tampil (tanpa gambar)
-         * dan tombol Coba Lagi tetap tersedia.
+         * Data contoh terakhir kalau server Animasu tidak bisa dihubungi.
          */
         private val fallbackAnime: List<AnimeSearchItem> = listOf(
-            fallback("Attack on Titan", "7442"),
-            fallback("Boku no Hero Academia", "11469"),
-            fallback("Boku no Hero Academia 2", "12268"),
-            fallback("One Punch Man", "10740"),
-            fallback("Boku no Hero Academia 3", "13881"),
-            fallback("Death Note", "1376"),
-            fallback("Fullmetal Alchemist: Brotherhood", "3936"),
-            fallback("Kimi no Na wa.", "11614"),
-            fallback("Hunter x Hunter (2011)", "6448"),
-            fallback("Kimetsu no Yaiba", "41370")
+            fallback("Attack on Titan", "https://v1.animasu.work/anime/attack-on-titan-subtitle-indo/", "https://media.kitsu.io/anime/poster_images/7442/large.jpg"),
+            fallback("Jujutsu Kaisen", "https://v1.animasu.work/anime/jujutsu-kaisen-subtitle-indo/", "https://media.kitsu.io/anime/poster_images/41370/large.jpg"),
+            fallback("Demon Slayer", "https://v1.animasu.work/anime/kimetsu-no-yaiba-subtitle-indo/", "https://media.kitsu.io/anime/poster_images/40028/large.jpg"),
+            fallback("One Piece", "https://v1.animasu.work/anime/one-piece-subtitle-indo/", "https://media.kitsu.io/anime/poster_images/19/large.jpg"),
+            fallback("Naruto", "https://v1.animasu.work/anime/naruto-subtitle-indo/", "https://media.kitsu.io/anime/poster_images/11/large.jpg"),
+            fallback("Spy x Family", "https://v1.animasu.work/anime/spy-x-family-subtitle-indo/", "https://media.kitsu.io/anime/poster_images/44511/large.jpg"),
+            fallback("Chainsaw Man", "https://v1.animasu.work/anime/chainsaw-man-subtitle-indo/", "https://media.kitsu.io/anime/poster_images/47819/large.jpg"),
+            fallback("Blue Lock", "https://v1.animasu.work/anime/blue-lock-subtitle-indo/", "https://media.kitsu.io/anime/poster_images/47778/large.jpg")
         )
 
-        private fun fallback(title: String, id: String) = AnimeSearchItem(
+        private fun fallback(title: String, link: String, image: String) = AnimeSearchItem(
             title = title,
-            link = id,
-            image = "https://media.kitsu.app/anime/poster_images/$id/large.jpg",
+            link = link,
+            image = image,
             latestEpisode = "Contoh",
             type = "TV"
         )
