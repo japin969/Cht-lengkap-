@@ -45,23 +45,29 @@ class MusicRepository(
 
                 val allSongs = mutableListOf<Song>()
 
-                // SpotifyPlay
-                if (spotifyResult.isSuccess) {
-                    val response = spotifyResult.getOrNull() as SpotifyResponse
-                    response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
-                }
+                // SpotifyPlay - use fold to handle Result properly
+                spotifyResult.fold(
+                    onSuccess = { (response: SpotifyResponse) ->
+                        response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
+                    },
+                    onFailure = { }
+                )
 
                 // AppleMusic
-                if (appleResult.isSuccess) {
-                    val response = appleResult.getOrNull() as AppleMusicResponse
-                    response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
-                }
+                appleResult.fold(
+                    onSuccess = { (response: AppleMusicResponse) ->
+                        response.data?.map { it.toSong() }?.let { allSongs.addAll(it) }
+                    },
+                    onFailure = { }
+                )
 
                 // YTPlay
-                if (ytResult.isSuccess) {
-                    val response = ytResult.getOrNull() as YouTubeResponse
-                    response.toSong()?.let { allSongs.add(it) }
-                }
+                ytResult.fold(
+                    onSuccess = { (response: YouTubeResponse) ->
+                        response.toSong()?.let { allSongs.add(it) }
+                    },
+                    onFailure = { }
+                )
 
                 // Deduplicate by title + artist (case insensitive)
                 val seen = mutableSetOf<String>()
