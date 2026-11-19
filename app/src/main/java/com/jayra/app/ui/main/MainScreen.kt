@@ -405,22 +405,66 @@ fun JayraBottomNavigationBar(
                     .clipToBounds()
                     .glassSurfaceV2(navBgSpec.surface, solidColor = navBgSolid, cornerRadius = 0.dp)
             ) {
-                items.forEach { item ->
-                    val isSelected = currentRoute == item.route
-                    val animatedTint by animateColorAsState(
-                        targetValue = if (isSelected) JayraBlue else JayraSubtext,
-                        animationSpec = tween(durationMillis = 200),
-                        label = "nav_item_tint_${item.route}"
-                    )
-                    val animatedIndicatorBg by animateColorAsState(
-                        targetValue = if (isSelected) {
-                            JayraBlue.copy(alpha = 0.1f)
-                        } else {
-                            Color.Transparent
-                        },
-                        animationSpec = tween(durationMillis = 200),
-                        label = "nav_item_indicator_${item.route}"
-                    )
+                // Background video effect for iOS-style navigation bar
+                // Using a subtle video texture that complements the glass effect
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Subtle video-like gradient overlay for iOS aesthetic
+                    val videoBgGradient = if (isDark) {
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0x1A000000),  // Dark overlay start
+                                Color(0x08000000),  // Dark overlay middle
+                                Color.Transparent    // Fade to transparent
+                            )
+                        )
+                    } else {
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0x0BFFFFFF),  // Light overlay start
+                                Color(0x04FFFFFF),  // Light overlay middle
+                                Color.Transparent    // Fade to transparent
+                            )
+                        )
+                    }
+                    
+                    // Apply video texture overlay
+                    Box(modifier = Modifier.fillMaxSize().drawBehind {
+                        drawRect(videoBgGradient)
+                    }) {
+                        // Optional: Add subtle video pattern overlay
+                        // This simulates video texture without actual video playback
+                        // for performance while maintaining the iOS aesthetic
+                        repeat(3) { index ->
+                            Box(modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .padding(horizontal = 20.dp)
+                                .background(
+                                    if (isDark) Color(0x08FFFFFF) else Color(0x0A000000)
+                                )
+                                .align(Alignment.Top)
+                            ) {
+                                // Subtle video frame simulation lines
+                            }
+                        }
+                    }
+            )
+            items.forEach { item ->
+                val isSelected = currentRoute == item.route
+                val animatedTint by animateColorAsState(
+                    targetValue = if (isSelected) JayraBlue else JayraSubtext,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "nav_item_tint_${item.route}"
+                )
+                val animatedIndicatorBg by animateColorAsState(
+                    targetValue = if (isSelected) {
+                        JayraBlue.copy(alpha = 0.1f)
+                    } else {
+                        Color.Transparent
+                    },
+                    animationSpec = tween(durationMillis = 200),
+                    label = "nav_item_indicator_${item.route}"
+                )
 
                     NavigationBarItem(
                         selected = isSelected,
@@ -539,54 +583,10 @@ private fun MainNavigationGraph(
         modifier = modifier.background(
             if (isSystemInDarkTheme()) JayraDarkChatBg else JayraLightChatBg
         ),
-        enterTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.EnterTransition.None
-            } else {
-                slideInHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    initialOffsetX = { fullWidth -> fullWidth / 4 }
-                ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
-            }
-        },
-        exitTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.ExitTransition.None
-            } else {
-                slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    targetOffsetX = { fullWidth -> -fullWidth / 4 }
-                )
-            }
-        },
-        popEnterTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.EnterTransition.None
-            } else {
-                slideInHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    initialOffsetX = { fullWidth -> -fullWidth / 4 }
-                ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
-            }
-        },
-        popExitTransition = {
-            if (initialState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES &&
-                targetState.destination.route in MainViewModel.BOTTOM_BAR_ROUTES
-            ) {
-                androidx.compose.animation.ExitTransition.None
-            } else {
-                slideOutHorizontally(
-                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                    targetOffsetX = { fullWidth -> fullWidth / 4 }
-                )
-            }
-        }
+        enterTransition = { null }, // Disable all transitions to prevent black screen
+        exitTransition = { null }, // Disable all transitions to prevent black screen
+        popEnterTransition = { null }, // Disable all transitions to prevent black screen
+        popExitTransition = { null }  // Disable all transitions to prevent black screen
     ) {
         composable(MainViewModel.ROUTE_SPLASH) {
             SplashScreen(

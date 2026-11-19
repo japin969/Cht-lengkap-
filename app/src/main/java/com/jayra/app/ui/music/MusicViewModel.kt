@@ -6,9 +6,9 @@ import android.media.MediaPlayer
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.NexadevApi
-import com.jayra.app.data.DeezerApi
-import com.jayra.app.data.DeezerTrack
 import com.jayra.app.data.Song
+import com.jayra.app.data.SpotifyResponse
+import com.jayra.app.data.YouTubeResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -33,8 +33,7 @@ sealed interface MusicUiState {
 @OptIn(FlowPreview::class)
 class MusicViewModel @JvmOverloads constructor(
     application: Application,
-    private val nexadevApi: NexadevApi = NexadevApi.create(),
-    private val deezerApi: DeezerApi = DeezerApi.create()
+    private val nexadevApi: NexadevApi = NexadevApi.create()
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Empty)
@@ -72,6 +71,29 @@ class MusicViewModel @JvmOverloads constructor(
             artist = "The Weeknd, Daft Punk",
             album = "Starboy",
             duration = "3:50",
+            coverUrl = "",
+            audioUrl = "",
+            source = "spotify"
+        ),
+        Song(
+            id = "seed_2",
+            title = "Blinding Lights",
+            artist = "The Weeknd",
+            album = "After Hours",
+            duration = "3:20",
+            coverUrl = "",
+            audioUrl = "",
+            source = "youtube"
+        ),
+        Song(
+            id = "seed_3",
+            title = "Save Your Tears",
+            artist = "The Weeknd",
+            album = "After Hours",
+            duration = "3:35",
+            coverUrl = "",
+            audioUrl = "",
+            source = "spotify"
         )
     )
 
@@ -129,85 +151,77 @@ class MusicViewModel @JvmOverloads constructor(
         }
         lastQuery = query
         _uiState.value = MusicUiState.Loading
+        
+        // First try YouTube API
         try {
-            // Sumber data baru: Deezer (API lama api.nexadev.my.id sudah mati / 403).
-            val response = withContext(Dispatchers.IO) { deezerApi.search(query) }
-            val tracks = response.body()?.data.orEmpty()
-            val songs = tracks.map { it.toSong() }
-            if (songs.isNotEmpty()) {
-                _uiState.value = MusicUiState.Success(songs)
-                addHistory(query)
-            } else {
-                val fallback = curatedSongs.filter {
-                    it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true)
-                }
-                _uiState.value = if (fallback.isNotEmpty()) {
-                    MusicUiState.Success(fallback)
-                } else {
-                    MusicUiState.Empty
-                }
-            }
-        } catch (e: Exception) {
-            val fallback = curatedSongs.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                    it.artist.contains(query, ignoreCase = true)
-            }
-            _uiState.value = if (fallback.isNotEmpty()) {
-                MusicUiState.Success(fallback)
-            } else {
-                MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
-            }
-        }
-    }
-
-    private fun DeezerTrack.toSong(): Song = Song(
-        id = "dz_${id ?: System.currentTimeMillis()}",
-        title = title ?: "Tanpa Judul",
-        artist = artist?.name ?: "Unknown",
-        album = album?.title ?: "",
-        duration = formatDuration(duration ?: 0),
-        coverUrl = album?.coverBig ?: album?.coverMedium ?: "",
-        audioUrl = preview ?: "",
-        source = "deezer"
-    )
-
-    private fun formatDuration(totalSeconds: Int): String {
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "%d:%02d".format(minutes, seconds)
-    }
-
-    private suspend fun searchYouTubeFallback(query: String) {
-        try {
-            val ytResponse = withContext(Dispatchers.IO) {
-                nexadevApi.searchYouTube(query)
-            }
-
+            val ytResponse = withContext(Dispatchers.IO) { nexadevApi.searchYouTube(query) }
             if (ytResponse.isSuccessful && ytResponse.body() != null) {
-                val song = ytResponse.body()!!.toSong()
-                _uiState.value = MusicUiState.Success(listOf(song))
-            } else {
-                // If API fails, filter curated songs
-                val filtered = curatedSongs.filter {
-                    it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
-                }
-                _uiState.value = if (filtered.isNotEmpty()) {
-                    MusicUiState.Success(filtered)
-                } else {
-                    MusicUiState.Empty
+                val songs = ytResponse.body()!!.toSongs()
+                if (songs.isNotEmpty()) {
+                    _uiState.value = MusicUiState.Success(songs)
+                    addHistory(query)
+                    return
                 }
             }
         } catch (e: Exception) {
-            val filtered = curatedSongs.filter {
-                it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
-            }
-            if (filtered.isNotEmpty()) {
-                _uiState.value = MusicUiState.Success(filtered)
-            } else {
-                _uiState.value = MusicUiState.Error("Gagal memuat musik: ${e.localizedMessage ?: "Koneksi bermasalah"}")
-            }
+            // YouTube API failed, try Spotify
         }
+        
+        // Then try Spotify API
+        try {
+            val spotifyResponse = withContext(Dispatchers.IO) { nexadevApi.searchSpotify(query) }
+            if (spotifyResponse.isSuccessful && spotifyResponse.body() != null) {
+                val songs = spotifyResponse.body()!!.toSongs()
+                if (songs.isNotEmpty()) {
+                    _uiState.value = MusicUiState.Success(songs)
+                    addHistory(query)
+                    return
+                }
+            }
+        } catch (e: Exception) {
+            // Spotify API failed, use curated songs as fallback
+        }
+        
+        // If both APIs fail or return no results, use curated songs
+        val fallback = curatedSongs.filter {
+            it.title.contains(query, ignoreCase = true) ||
+                it.artist.contains(query, ignoreCase = true)
+        }
+        if (fallback.isNotEmpty()) {
+            _uiState.value = MusicUiState.Success(fallback)
+        } else {
+            _uiState.value = MusicUiState.Empty
+        }
+    }
+
+    private fun YouTubeResponse.toSongs(): List<Song> {
+        return listOf(
+            Song(
+                id = "yt_${System.currentTimeMillis()}",
+                title = title ?: "Lagu YouTube",
+                artist = "YouTube Music",
+                album = "YouTube Stream",
+                duration = duration ?: "3:45",
+                coverUrl = thumbnail ?: "",
+                audioUrl = data?.url ?: "",
+                source = "youtube"
+            )
+        )
+    }
+
+    private fun SpotifyResponse.toSongs(): List<Song> {
+        return listOf(
+            Song(
+                id = "sp_${System.currentTimeMillis()}",
+                title = title ?: "Lagu Tanpa Judul",
+                artist = artist ?: "Artis Tidak Diketahui",
+                album = album ?: "Single",
+                duration = duration ?: "3:30",
+                coverUrl = cover ?: "",
+                audioUrl = mp3Url ?: url ?: preview ?: "",
+                source = "spotify"
+            )
+        )
     }
 
     fun onSongClick(song: Song) {

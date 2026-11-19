@@ -7,6 +7,7 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 
@@ -21,6 +22,18 @@ interface NexadevApi {
     @GET("api/spotify")
     suspend fun getSpotifyByUrl(@Query("url") url: String): Response<SpotifyResponse>
 
+    // Anime endpoints
+    @GET("api/anime")
+    suspend fun getAnimeList(@Query("page") page: Int = 1, @Query("limit") limit: Int = 20, @Query("sort") sort: String = "-userCount"): Response<NexadevAnimeListResponse>
+
+    @GET("api/anime")
+    suspend fun searchAnime(@Query("q") query: String): Response<NexadevAnimeListResponse>
+
+    @GET("api/anime/{id}")
+    suspend fun getAnimeDetail(@Path("id") id: String): Response<NexadevAnimeDetailResponse>
+
+    @GET("api/anime/{id}/stream")
+    suspend fun getAnimeStream(@Path("id") id: String): Response<NexadevAnimeListResponse>
 
     @GET("api/dramabox/home")
     suspend fun getDramaHome(): Response<DramaHomeResponse>

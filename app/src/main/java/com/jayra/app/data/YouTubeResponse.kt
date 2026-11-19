@@ -11,15 +11,18 @@ data class YouTubeResponse(
     @Json(name = "duration") val duration: String? = null,
     @Json(name = "data") val data: YouTubeData? = null
 ) {
-    fun toSong(fallbackId: String = System.currentTimeMillis().toString()): Song {
-        return Song(
-            id = fallbackId,
-            title = title ?: "Lagu YouTube",
-            artist = "YouTube Music",
-            album = "YouTube Stream",
-            duration = duration ?: "3:45",
-            coverUrl = thumbnail ?: "",
-            audioUrl = data?.url ?: ""
+    fun toSongs(): List<Song> {
+        return listOf(
+            Song(
+                id = "yt_${System.currentTimeMillis()}",
+                title = title ?: "Lagu YouTube",
+                artist = "YouTube Music",
+                album = "YouTube Stream",
+                duration = duration ?: "3:45",
+                coverUrl = thumbnail ?: "",
+                audioUrl = data?.url ?: data?.audioUrl ?: "",
+                source = "youtube"
+            )
         )
     }
 }

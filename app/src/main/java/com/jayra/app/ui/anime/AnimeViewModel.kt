@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeSearchItem
-import com.jayra.app.data.KitsuAnime
-import com.jayra.app.data.KitsuApi
+import com.jayra.app.data.NexadevApi
+import com.jayra.app.data.NexadevAnime
+import com.jayra.app.data.NexadevAnimeListResponse
+import com.jayra.app.data.NexadevAnimeDetailResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -23,8 +25,8 @@ data class AnimeUiState(
 )
 
 class AnimeViewModel : ViewModel() {
-    // Sumber data baru: Kitsu API (API lama apii.nexadev.my.id sudah mati / 503).
-    private val api = KitsuApi.create()
+    // Sumber data baru: NexaDev API (hanya API yang diizinkan)
+    private val api = NexadevApi.create()
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
@@ -35,14 +37,14 @@ class AnimeViewModel : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val popular = runCatching {
-                    api.list(limit = 20, sort = "-userCount").body()?.data.orEmpty()
+                    api.getAnimeList(limit = 20, sort = "-userCount").body()?.data.orEmpty()
                 }.getOrDefault(emptyList())
                 val ongoing = runCatching {
-                    api.list(limit = 20, sort = "-userCount", status = "current")
+                    api.getAnimeList(limit = 20, sort = "-userCount", status = "ongoing")
                         .body()?.data.orEmpty()
                 }.getOrDefault(emptyList())
                 val completed = runCatching {
-                    api.list(limit = 20, sort = "-averageRating", status = "finished")
+                    api.getAnimeList(limit = 20, sort = "-averageRating", status = "completed")
                         .body()?.data.orEmpty()
                 }.getOrDefault(emptyList())
 
@@ -69,29 +71,31 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val res = api.detail(url)
+                val res = api.getAnimeDetail(url)
                 val data = res.body()?.data
-                if (res.isSuccessful && data != null) {
-                    val attrs = data.attributes
-                    val info = buildMap {
-                        attrs?.status?.let { put("Status", it) }
-                        attrs?.startDate?.let { put("Mulai", it) }
-                        attrs?.episodeCount?.let { put("Episode", "$it") }
-                    }
+                if (res.body()?.success == true && data != null) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         detail = AnimeDetailData(
-                            title = attrs?.displayTitle(),
-                            image = attrs?.posterImage?.best()?.takeIf { it.isNotBlank() }
-                                ?: attrs?.coverImage?.best(),
-                            synopsis = attrs?.synopsis,
-                            rating = attrs?.averageRating?.toDoubleOrNull(),
-                            totalEpisodes = attrs?.episodeCount,
-                            genres = null,
-                            info = info,
-                            episodes = emptyList()
-                        ),
-                        episodes = emptyList()
+                            title = data.title,
+                            image = data.image,
+                            synopsis = data.synopsis,
+                            rating = data.rating?.toDoubleOrNull(),
+                            totalEpisodes = data.totalEpisodes?.toIntOrNull(),
+                            genres = data.genres,
+                            info = buildMap {
+                                data.status?.let { put("Status", it) }
+                                data.startDate?.let { put("Mulai", it) }
+                                data.totalEpisodes?.let { put("Episode", "$it") }
+                            },
+                            episodes = data.episodes?.map { ep ->
+                                AnimeEpisode(
+                                    episode = ep.episode,
+                                    title = ep.title,
+                                    episodeUrl = ep.episodeUrl
+                                )
+                            } ?: emptyList()
+                        )
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
@@ -109,16 +113,37 @@ class AnimeViewModel : ViewModel() {
     }
 
     fun loadStream(url: String) {
-        // Kitsu tidak menyediakan streaming; detail tetap bisa dibuka.
-        _uiState.value = _uiState.value.copy(streamUrl = null)
+        // NexaDev menyediakan streaming URL
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val res = api.getAnimeStream(url)
+                if (res.body()?.success == true && res.body()?.data?.streamUrl?.isNotBlank() == true) {
+                    val streamUrl = res.body()?.data?.streamUrl
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        streamUrl = streamUrl
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Tidak ada URL streaming tersedia"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.localizedMessage ?: "Gagal memuat streaming"
+                )
+            }
+        }
     }
 
-    private fun KitsuAnime.toItem(): AnimeSearchItem = AnimeSearchItem(
-        title = attributes?.displayTitle(),
-        link = id,
-        image = attributes?.posterImage?.best()?.takeIf { it.isNotBlank() }
-            ?: attributes?.coverImage?.best(),
-        latestEpisode = attributes?.episodeCount?.let { "$it eps" } ?: attributes?.status,
-        type = attributes?.subtype
+    private fun NexadevAnime.toItem(): AnimeSearchItem = AnimeSearchItem(
+        title = title,
+        link = link,
+        image = image,
+        latestEpisode = totalEpisodes?.let { "$it eps" } ?: status,
+        type = type
     )
 }
