@@ -774,11 +774,11 @@ private fun MainNavigationGraph(
                     ) {
                         Text(
                             text = state.error ?: "Video tidak tersedia",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Spacer(Modifier.height(12.dp))
-                        Button(onClick = { vm.loadStream(decoded) }) { Text("Coba Lagi") }
+                        androidx.compose.material3.Button(onClick = { vm.loadStream(decoded) }) { Text("Coba Lagi") }
                     }
                 }
                 else -> {
