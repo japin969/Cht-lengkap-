@@ -31,6 +31,9 @@ interface SiputzxApi {
         @Query("temperature") temperature: Float = 0.7f
     ): Response<AIResponse>
 
+    @GET("api/applemusic")
+    suspend fun searchAppleMusic(@Query("q") query: String): Response<AppleMusicResponse>
+
     companion object {
         private const val AI_BASE_URL = "https://api.siputzx.my.id/"
         private const val BROWSER_UA =
