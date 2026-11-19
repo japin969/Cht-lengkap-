@@ -77,11 +77,11 @@ fun AnimeHomeScreen(
                     singleLine = true,
                     placeholder = { Text("Cari anime...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     textStyle = TextStyle(fontSize = 16.sp),
-                    leadingIcon = { Icon(Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                Icon(Close, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(Icons.Default.Close, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
