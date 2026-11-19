@@ -293,7 +293,7 @@ class AnimeViewModel : ViewModel() {
                         it.copy(
                             isDetailLoading = false,
                             detail = detailData,
-                            episodes = detailData.episodes,
+                            episodes = detailData.episodes ?: emptyList(),
                             detailError = null
                         )
                     }

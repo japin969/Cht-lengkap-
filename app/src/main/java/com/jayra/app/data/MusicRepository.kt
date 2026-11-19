@@ -18,10 +18,12 @@ class MusicRepository(
 ) {
 
     private suspend fun <T : Any> callApi(block: () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
-        runCatching { block() }.getOrElse { Result.failure(it) }
-            .filter { it.isSuccessful }
-            .map { it.body()!! }
-            .recover { Result.failure(Exception("HTTP ${it.code()}")) }
+        val response = runCatching { block() }.getOrElse { return@withContext Result.failure(it) }
+        if (response.isSuccessful) {
+            Result.success(response.body()!!)
+        } else {
+            Result.failure(Exception("HTTP ${response.code()}"))
+        }
     }
 
     /**
