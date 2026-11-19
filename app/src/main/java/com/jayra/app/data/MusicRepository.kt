@@ -17,7 +17,7 @@ class MusicRepository(
     private val siputzxApi: SiputzxApi = SiputzxApi.create()
 ) {
 
-    private suspend fun <T : Any> safeApiCall(crossinline block: () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
+    private suspend fun <T : Any> safeApiCall(block: suspend () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
         try {
             val response = block()
             if (response.isSuccessful) {
