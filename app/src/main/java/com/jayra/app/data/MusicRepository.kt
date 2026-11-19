@@ -17,12 +17,16 @@ class MusicRepository(
     private val siputzxApi: SiputzxApi = SiputzxApi.create()
 ) {
 
-    private suspend fun <T : Any> callApi(block: () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
-        val response = runCatching { block() }.getOrElse { return@withContext Result.failure(it) }
-        if (response.isSuccessful) {
-            Result.success(response.body()!!)
-        } else {
-            Result.failure(Exception("HTTP ${response.code()}"))
+    private suspend fun <T : Any> safeApiCall(block: () -> Response<T>): Result<T> = withContext(Dispatchers.IO) {
+        try {
+            val response = block()
+            if (response.isSuccessful) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
@@ -33,9 +37,9 @@ class MusicRepository(
     suspend fun searchAll(query: String): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
             coroutineScope {
-                val spotifyDeferred = async { callApi { nexadevApi.searchSpotify(query) } }
-                val appleDeferred = async { callApi { siputzxApi.searchAppleMusic(query) } }
-                val ytDeferred = async { callApi { nexadevApi.searchYouTube(query) } }
+                val spotifyDeferred = async { safeApiCall { nexadevApi.searchSpotify(query) } }
+                val appleDeferred = async { safeApiCall { siputzxApi.searchAppleMusic(query) } }
+                val ytDeferred = async { safeApiCall { nexadevApi.searchYouTube(query) } }
 
                 val (spotifyResult, appleResult, ytResult) = awaitAll(spotifyDeferred, appleDeferred, ytDeferred)
 
@@ -70,11 +74,11 @@ class MusicRepository(
     suspend fun getPopularChart(): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
             // Try SpotifyPlay first
-            callApi { nexadevApi.searchSpotify("top hits") }.onSuccess { response ->
+            safeApiCall { nexadevApi.searchSpotify("top hits") }.onSuccess { response ->
                 response.data?.map { it.toSong() } ?: emptyList()
             } ?: runCatching {
                 // Fallback to YTPlay
-                callApi { nexadevApi.searchYouTube("top hits") }.onSuccess { response ->
+                safeApiCall { nexadevApi.searchYouTube("top hits") }.onSuccess { response ->
                     response.toSong()?.let { listOf(it) } ?: emptyList()
                 } ?: emptyList()
             }
