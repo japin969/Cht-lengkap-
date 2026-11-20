@@ -1,14 +1,8 @@
 package com.jayra.app.data
 
 import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 interface AnimeApi {
     @GET("animasu")
@@ -33,22 +27,10 @@ interface AnimeApi {
     suspend fun schedule(@Query("schedule") on: Int = 1): Response<AnimeListResponse>
 
     companion object {
-        private const val BASE_URL = "https://apii.nexadev.my.id/"
+        private const val BASE_URL = "https://api.nexadev.my.id/"
 
         fun create(): AnimeApi {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .build()
-
-            val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-
-            return Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .client(client)
-                .addConverterFactory(MoshiConverterFactory.create(moshi))
-                .build()
-                .create(AnimeApi::class.java)
+            return NetworkClient.createRetrofit(BASE_URL).create(AnimeApi::class.java)
         }
     }
 }

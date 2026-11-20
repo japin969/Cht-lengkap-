@@ -2,18 +2,20 @@ package com.jayra.app.ui.music
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,6 +28,7 @@ import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -60,11 +63,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.jayra.app.data.Song
-import com.jayra.app.ui.theme.JayraBlue
-import com.jayra.app.ui.theme.JayraDarkChatBg
-import com.jayra.app.ui.theme.JayraDarkTopBar
-import com.jayra.app.ui.theme.JayraSubtext
+import com.jayra.app.ui.theme.IOSBlueDark
+import com.jayra.app.ui.theme.IOSGreenDark
+import com.jayra.app.ui.theme.IOSRedDark
+import com.jayra.app.ui.theme.IOSSecondaryLabelDark
 import com.jayra.app.ui.theme.JayraTheme
+import com.jayra.app.ui.theme.SquircleShape
 import java.util.Locale
 
 @Composable
@@ -76,6 +80,8 @@ fun MusicPlayerScreen(
 
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val isBuffering by viewModel.isBuffering.collectAsStateWithLifecycle()
+    val playbackError by viewModel.playbackError.collectAsStateWithLifecycle()
     val currentPosition by viewModel.currentPosition.collectAsStateWithLifecycle()
     val duration by viewModel.duration.collectAsStateWithLifecycle()
     val isShuffle by viewModel.isShuffle.collectAsStateWithLifecycle()
@@ -84,6 +90,8 @@ fun MusicPlayerScreen(
     MusicPlayerContent(
         song = currentSong,
         isPlaying = isPlaying,
+        isBuffering = isBuffering,
+        playbackError = playbackError,
         currentPosition = currentPosition,
         duration = duration,
         isShuffle = isShuffle,
@@ -94,7 +102,8 @@ fun MusicPlayerScreen(
         onNext = viewModel::onNext,
         onPrev = viewModel::onPrev,
         onShuffleToggle = viewModel::onShuffleToggle,
-        onRepeatToggle = viewModel::onRepeatToggle
+        onRepeatToggle = viewModel::onRepeatToggle,
+        onDismissError = viewModel::clearPlaybackError
     )
 }
 
@@ -102,6 +111,8 @@ fun MusicPlayerScreen(
 fun MusicPlayerContent(
     song: Song?,
     isPlaying: Boolean,
+    isBuffering: Boolean = false,
+    playbackError: String? = null,
     currentPosition: Long,
     duration: Long,
     isShuffle: Boolean,
@@ -112,15 +123,11 @@ fun MusicPlayerContent(
     onNext: () -> Unit,
     onPrev: () -> Unit,
     onShuffleToggle: () -> Unit,
-    onRepeatToggle: () -> Unit
+    onRepeatToggle: () -> Unit,
+    onDismissError: () -> Unit = {}
 ) {
-    val isDark = isSystemInDarkTheme()
     val gradientBackground = Brush.verticalGradient(
-        colors = if (isDark) {
-            listOf(Color(0xFF1E3A5F), Color(0xFF4A2E6B))
-        } else {
-            listOf(Color(0xFF3B5B78), Color(0xFF1E2833))
-        }
+        colors = listOf(Color(0xFF0E1B2B), Color(0xFF151E30), Color(0xFF0A0A0C))
     )
 
     var isUserSeeking by remember { mutableStateOf(false) }
@@ -128,58 +135,70 @@ fun MusicPlayerContent(
     var showMenu by remember { mutableStateOf(false) }
 
     val effectivePosition = if (isUserSeeking) seekPosition.toLong() else currentPosition
-    val effectiveDuration = if (duration > 0L) duration else 210000L // 3:30 default fallback
+    val effectiveDuration = if (duration > 0L) duration else 180000L
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(gradientBackground)
+            .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 2.1 TopAppBar (Tinggi 56dp, background transparan)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(52.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
                 onClick = onBack,
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(44.dp)
                     .testTag("player_back_button")
             ) {
                 Icon(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = "Tutup Pemutar",
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
 
-            Text(
-                text = "Sedang Diputar",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "SEDANG DIPUTAR",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.sp,
+                    color = IOSSecondaryLabelDark
+                )
+                if (song != null && song.source.isNotBlank()) {
+                    val isYt = song.source == "youtube"
+                    Text(
+                        text = if (isYt) "YouJay Full Track" else "SpoJay Full Track",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isYt) IOSRedDark else IOSGreenDark
+                    )
+                }
+            }
 
             Box {
                 IconButton(
                     onClick = { showMenu = true },
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.MoreVert,
                         contentDescription = "Menu Lainnya",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        tint = Color.White
                     )
                 }
-
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
@@ -192,15 +211,15 @@ fun MusicPlayerContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.weight(0.5f))
 
-        // 2.2 Cover Album (300dp, RoundedCornerShape 16dp, center, Shadow 8dp)
         Box(
             modifier = Modifier
-                .size(300.dp)
-                .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp))
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0x1AFFFFFF)),
+                .fillMaxWidth(0.76f)
+                .aspectRatio(1f)
+                .shadow(elevation = 16.dp, shape = SquircleShape(24.dp))
+                .clip(SquircleShape(24.dp))
+                .background(Color(0x1FFFFFFF)),
             contentAlignment = Alignment.Center
         ) {
             if (song != null && song.coverUrl.isNotBlank()) {
@@ -217,18 +236,37 @@ fun MusicPlayerContent(
                 Icon(
                     imageVector = Icons.Rounded.MusicNote,
                     contentDescription = "Cover",
-                    tint = JayraSubtext,
-                    modifier = Modifier.size(120.dp)
+                    tint = IOSSecondaryLabelDark,
+                    modifier = Modifier.size(96.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.weight(0.5f))
 
-        // 2.3 Info Lagu
+        if (!playbackError.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(IOSRedDark.copy(alpha = 0.22f))
+                    .clickable { onDismissError() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = playbackError,
+                    fontSize = 12.sp,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
         Text(
             text = song?.title ?: "Tidak ada lagu dipilih",
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             textAlign = TextAlign.Center,
@@ -236,20 +274,19 @@ fun MusicPlayerContent(
             overflow = TextOverflow.Ellipsis
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = song?.artist ?: "Pilih lagu untuk memulai",
-            fontSize = 17.sp,
-            color = JayraSubtext,
+            fontSize = 16.sp,
+            color = IOSSecondaryLabelDark,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // 2.4 Progress Bar
         Slider(
             value = effectivePosition.toFloat().coerceIn(0f, effectiveDuration.toFloat()),
             onValueChange = {
@@ -263,8 +300,8 @@ fun MusicPlayerContent(
             valueRange = 0f..effectiveDuration.toFloat(),
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
-                activeTrackColor = JayraBlue,
-                inactiveTrackColor = JayraSubtext.copy(alpha = 0.5f)
+                activeTrackColor = IOSBlueDark,
+                inactiveTrackColor = Color.White.copy(alpha = 0.25f)
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -278,39 +315,31 @@ fun MusicPlayerContent(
             Text(
                 text = formatTime(effectivePosition),
                 fontSize = 12.sp,
-                color = JayraSubtext
+                color = IOSSecondaryLabelDark
             )
             Text(
                 text = formatTime(effectiveDuration),
                 fontSize = 12.sp,
-                color = JayraSubtext
+                color = IOSSecondaryLabelDark
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // 2.5 Kontrol Player (Row center, spacing 24dp)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Tombol Shuffle 24dp JayraSubtext
-            IconButton(
-                onClick = onShuffleToggle,
-                modifier = Modifier.size(44.dp)
-            ) {
+            IconButton(onClick = onShuffleToggle, modifier = Modifier.size(44.dp)) {
                 Icon(
                     imageVector = Icons.Rounded.Shuffle,
                     contentDescription = "Acak",
-                    tint = if (isShuffle) JayraBlue else JayraSubtext,
+                    tint = if (isShuffle) IOSBlueDark else IOSSecondaryLabelDark,
                     modifier = Modifier.size(24.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Tombol Prev 32dp Putih
             IconButton(
                 onClick = onPrev,
                 modifier = Modifier
@@ -321,38 +350,40 @@ fun MusicPlayerContent(
                     imageVector = Icons.Rounded.SkipPrevious,
                     contentDescription = "Sebelumnya",
                     tint = Color.White,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(34.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Tombol Play/Pause 64dp JayraBlue (circle background #FFFFFF alpha 0.2)
             Box(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f)),
+                    .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
-                IconButton(
-                    onClick = onPlayPauseClick,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .testTag("player_play_pause_button")
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        contentDescription = if (isPlaying) "Jeda" else "Putar",
-                        tint = JayraBlue,
-                        modifier = Modifier.size(36.dp)
+                if (isBuffering) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 3.dp,
+                        color = Color(0xFF0E1B2B)
                     )
+                } else {
+                    IconButton(
+                        onClick = onPlayPauseClick,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .testTag("player_play_pause_button")
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = if (isPlaying) "Jeda" else "Putar",
+                            tint = Color(0xFF0E1B2B),
+                            modifier = Modifier.size(38.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Tombol Next 32dp Putih
             IconButton(
                 onClick = onNext,
                 modifier = Modifier
@@ -363,25 +394,21 @@ fun MusicPlayerContent(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = "Berikutnya",
                     tint = Color.White,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(34.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Tombol Repeat 24dp JayraSubtext
-            IconButton(
-                onClick = onRepeatToggle,
-                modifier = Modifier.size(44.dp)
-            ) {
+            IconButton(onClick = onRepeatToggle, modifier = Modifier.size(44.dp)) {
                 Icon(
                     imageVector = Icons.Rounded.Repeat,
                     contentDescription = "Ulangi",
-                    tint = if (isRepeat) JayraBlue else JayraSubtext,
+                    tint = if (isRepeat) IOSBlueDark else IOSSecondaryLabelDark,
                     modifier = Modifier.size(24.dp)
                 )
             }
         }
+
+        Spacer(modifier = Modifier.weight(0.4f))
     }
 }
 
@@ -392,36 +419,6 @@ private fun formatTime(millis: Long): String {
     return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
 }
 
-@Preview(name = "Music Player Light", showBackground = true)
-@Composable
-private fun MusicPlayerScreenLightPreview() {
-    JayraTheme(darkTheme = false) {
-        Surface {
-            MusicPlayerContent(
-                song = Song(
-                    id = "1",
-                    title = "Starboy",
-                    artist = "The Weeknd, Daft Punk",
-                    album = "Starboy",
-                    duration = "3:50"
-                ),
-                isPlaying = true,
-                currentPosition = 84000L,
-                duration = 230000L,
-                isShuffle = false,
-                isRepeat = true,
-                onBack = {},
-                onPlayPauseClick = {},
-                onSeekTo = {},
-                onNext = {},
-                onPrev = {},
-                onShuffleToggle = {},
-                onRepeatToggle = {}
-            )
-        }
-    }
-}
-
 @Preview(name = "Music Player Dark", showBackground = true)
 @Composable
 private fun MusicPlayerScreenDarkPreview() {
@@ -429,17 +426,18 @@ private fun MusicPlayerScreenDarkPreview() {
         Surface {
             MusicPlayerContent(
                 song = Song(
-                    id = "2",
-                    title = "Blinding Lights",
-                    artist = "The Weeknd",
-                    album = "After Hours",
-                    duration = "3:20"
+                    id = "1",
+                    title = "Karena Kamu",
+                    artist = "Geisha",
+                    album = "Meraih Bintang",
+                    duration = "3:54",
+                    source = "spotify"
                 ),
-                isPlaying = false,
-                currentPosition = 0L,
-                duration = 200000L,
-                isShuffle = true,
-                isRepeat = false,
+                isPlaying = true,
+                currentPosition = 84000L,
+                duration = 234000L,
+                isShuffle = false,
+                isRepeat = true,
                 onBack = {},
                 onPlayPauseClick = {},
                 onSeekTo = {},

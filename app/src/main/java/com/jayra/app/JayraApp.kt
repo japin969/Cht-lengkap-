@@ -4,13 +4,16 @@ import android.app.Application
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import coil.ImageLoader
+import coil.ImageLoaderFactory
 import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.jayra.app.data.NetworkClient
 import com.jayra.app.di.AppModule
 import com.jayra.app.util.ErrorHandler
 import timber.log.Timber
 
-class JayraApp : Application() {
+class JayraApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
@@ -44,11 +47,17 @@ class JayraApp : Application() {
         }
     }
 
+    override fun newImageLoader(): ImageLoader {
+        return ImageLoader.Builder(this)
+            .okHttpClient(NetworkClient.okHttpClient)
+            .crossfade(true)
+            .build()
+    }
+
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        // Lepas cache gambar saat app masuk background (mencegah OOM)
         if (level >= TRIM_MEMORY_UI_HIDDEN) {
-            // Cache akan dibersihkan otomatis oleh Coil
+            // Cache dibersihkan oleh Coil
         }
     }
 

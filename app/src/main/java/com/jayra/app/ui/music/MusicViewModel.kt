@@ -1,10 +1,19 @@
 package com.jayra.app.ui.music
 
 import android.app.Application
-import android.media.AudioAttributes
-import android.media.MediaPlayer
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.jayra.app.data.NetworkClient
 import com.jayra.app.data.NexadevApi
 import com.jayra.app.data.Song
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +55,12 @@ class MusicViewModel @JvmOverloads constructor(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    private val _isBuffering = MutableStateFlow(false)
+    val isBuffering: StateFlow<Boolean> = _isBuffering.asStateFlow()
+
+    private val _playbackError = MutableStateFlow<String?>(null)
+    val playbackError: StateFlow<String?> = _playbackError.asStateFlow()
+
     private val _currentPosition = MutableStateFlow(0L)
     val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
 
@@ -58,32 +73,20 @@ class MusicViewModel @JvmOverloads constructor(
     private val _isRepeat = MutableStateFlow(false)
     val isRepeat: StateFlow<Boolean> = _isRepeat.asStateFlow()
 
-    private var mediaPlayer: MediaPlayer? = null
+    private var exoPlayer: ExoPlayer? = null
     private var progressUpdateJob: Job? = null
+    private var fallbackJob: Job? = null
     private var lastQuery: String = ""
 
-    private val curatedSongs = listOf(
-        Song(
-            id = "seed_1",
-            title = "Starboy",
-            artist = "The Weeknd, Daft Punk",
-            album = "Starboy",
-            duration = "3:50",
-        )
-    )
-
-    // History
-    private val prefs = application.getSharedPreferences("jayra_music_prefs", android.content.Context.MODE_PRIVATE)
+    private val prefs = application.getSharedPreferences("jayra_music_prefs", Context.MODE_PRIVATE)
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
     val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
 
     init {
         loadHistory()
-
-        // Observe search query with 300ms debounce
         viewModelScope.launch {
             _searchQuery
-                .debounce(300L)
+                .debounce(450L)
                 .distinctUntilChanged()
                 .collect { query ->
                     executeSearch(query)
@@ -91,27 +94,104 @@ class MusicViewModel @JvmOverloads constructor(
         }
     }
 
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun ensurePlayer(): ExoPlayer {
+        exoPlayer?.let { return it }
+
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent(NetworkClient.BROWSER_UA)
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(20_000)
+            .setReadTimeoutMs(30_000)
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .setUsage(C.USAGE_MEDIA)
+            .build()
+
+        return ExoPlayer.Builder(getApplication())
+            .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
+            .build()
+            .apply {
+                setAudioAttributes(audioAttributes, true)
+                addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(playing: Boolean) {
+                        _isPlaying.value = playing
+                        if (playing) {
+                            _isBuffering.value = false
+                            startProgressTracking()
+                        } else {
+                            stopProgressTracking()
+                        }
+                    }
+
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        when (playbackState) {
+                            Player.STATE_BUFFERING -> _isBuffering.value = true
+                            Player.STATE_READY -> {
+                                _isBuffering.value = false
+                                _playbackError.value = null
+                                val d = duration
+                                if (d > 0L) _duration.value = d
+                            }
+                            Player.STATE_ENDED -> {
+                                _isBuffering.value = false
+                                if (_isRepeat.value) {
+                                    seekTo(0L)
+                                    playWhenReady = true
+                                } else {
+                                    onNext()
+                                }
+                            }
+                            Player.STATE_IDLE -> _isBuffering.value = false
+                        }
+                    }
+
+                    override fun onPlayerError(error: PlaybackException) {
+                        _isPlaying.value = false
+                        _isBuffering.value = false
+                        val current = _currentSong.value
+                        if (current != null && current.source == "spotify") {
+                            fallbackToYouTubeFullTrack(current)
+                        } else {
+                            _playbackError.value = "Gagal memutar audio (${error.errorCodeName})"
+                        }
+                    }
+                })
+                exoPlayer = this
+            }
+    }
+
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
+    }
+
+    fun searchNow(query: String = _searchQuery.value) {
+        viewModelScope.launch {
+            executeSearch(query)
+        }
     }
 
     private fun loadHistory() {
         val stored = prefs.getString("music_history", "") ?: ""
         _searchHistory.value = if (stored.isBlank()) emptyList()
-            else stored.split("||").filter { it.isNotBlank() }
+        else stored.split("||").filter { it.isNotBlank() }
     }
 
     private fun addHistory(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return
         val current = _searchHistory.value.toMutableList()
-        current.remove(query)
-        current.add(0, query)
-        val capped = current.take(20)
+        current.removeAll { it.equals(trimmed, ignoreCase = true) }
+        current.add(0, trimmed)
+        val capped = current.take(15)
         _searchHistory.value = capped
         prefs.edit().putString("music_history", capped.joinToString("||")).apply()
     }
 
     fun onHistoryClick(query: String) {
         _searchQuery.value = query
+        searchNow(query)
     }
 
     fun onClearHistory() {
@@ -119,186 +199,163 @@ class MusicViewModel @JvmOverloads constructor(
         prefs.edit().remove("music_history").apply()
     }
 
-    private suspend fun executeSearch(query: String) {
+    fun clearPlaybackError() {
+        _playbackError.value = null
+    }
+
+    private suspend fun executeSearch(rawQuery: String) {
+        val query = rawQuery.trim()
+        lastQuery = query
         if (query.isBlank()) {
-            _uiState.value = MusicUiState.Success(emptyList())
+            _uiState.value = MusicUiState.Empty
             return
         }
+
         _uiState.value = MusicUiState.Loading
         val results = mutableListOf<Song>()
         try {
             val spotifyDeferred = viewModelScope.async(Dispatchers.IO) {
-                try {
+                runCatching {
                     val r = nexadevApi.searchSpotify(query)
                     if (r.isSuccessful && r.body()?.status == true) {
-                        r.body()?.data?.let { s ->
-                            s.toSong(
-                                fallbackId = "sp_${System.currentTimeMillis()}"
-                            ).copy(source = "spotify")
-                        }
+                        val payload = r.body()?.data ?: r.body()?.result
+                        payload?.toSong("sp_${query.hashCode()}")
+                            ?.takeIf { it.audioUrl.isNotBlank() }
                     } else null
-                } catch (_: Exception) { null }
+                }.getOrNull()
             }
+
             val ytDeferred = viewModelScope.async(Dispatchers.IO) {
-                try {
+                runCatching {
                     val r = nexadevApi.searchYouTube(query)
                     if (r.isSuccessful && r.body()?.status == true) {
-                        r.body()?.toSong("yt_${System.currentTimeMillis()}")
-                            ?.copy(source = "youtube")
+                        r.body()?.toSong("yt_${query.hashCode()}")
+                            ?.takeIf { it.audioUrl.isNotBlank() }
                     } else null
-                } catch (_: Exception) { null }
+                }.getOrNull()
             }
+
             spotifyDeferred.await()?.let { results.add(it) }
             ytDeferred.await()?.let { results.add(it) }
+
             if (results.isNotEmpty()) {
                 _uiState.value = MusicUiState.Success(results)
                 addHistory(query)
             } else {
-                _uiState.value = MusicUiState.Empty
+                _uiState.value = MusicUiState.Error("Lagu \"$query\" tidak ditemukan atau server sibuk")
             }
         } catch (e: Exception) {
             _uiState.value = MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
         }
     }
 
-    private suspend fun searchYouTubeFallback(query: String) {
-        try {
-            val ytResponse = withContext(Dispatchers.IO) {
-                nexadevApi.searchYouTube(query)
-            }
-
-            if (ytResponse.isSuccessful && ytResponse.body() != null) {
-                val song = ytResponse.body()!!.toSong()
-                _uiState.value = MusicUiState.Success(listOf(song))
-            } else {
-                // If API fails, filter curated songs
-                val filtered = curatedSongs.filter {
-                    it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
-                }
-                _uiState.value = if (filtered.isNotEmpty()) {
-                    MusicUiState.Success(filtered)
-                } else {
-                    MusicUiState.Empty
-                }
-            }
-        } catch (e: Exception) {
-            val filtered = curatedSongs.filter {
-                it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
-            }
-            if (filtered.isNotEmpty()) {
-                _uiState.value = MusicUiState.Success(filtered)
-            } else {
-                _uiState.value = MusicUiState.Error("Gagal memuat musik: ${e.localizedMessage ?: "Koneksi bermasalah"}")
-            }
-        }
-    }
-
     fun onSongClick(song: Song) {
-        if (_currentSong.value?.id == song.id) {
+        if (_currentSong.value?.id == song.id && exoPlayer != null) {
             onPlayPauseClick()
             return
         }
-
         _currentSong.value = song
         playSong(song)
     }
 
     private fun playSong(song: Song) {
-        releasePlayer()
+        fallbackJob?.cancel()
+        _playbackError.value = null
+        _currentPosition.value = 0L
+        _duration.value = parseDurationMs(song.duration)
 
         if (song.audioUrl.isBlank()) {
-            _isPlaying.value = false
+            if (song.source == "spotify") {
+                fallbackToYouTubeFullTrack(song)
+            } else {
+                _isPlaying.value = false
+                _playbackError.value = "Link audio tidak tersedia"
+            }
             return
         }
 
         try {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
-                setDataSource(song.audioUrl)
-                setOnPreparedListener { mp ->
-                    mp.start()
-                    _isPlaying.value = true
-                    _duration.value = mp.duration.toLong()
-                    startProgressTracking()
-                }
-                setOnCompletionListener {
-                    if (_isRepeat.value) {
-                        seekTo(0)
-                        start()
-                        _isPlaying.value = true
-                    } else {
-                        onNext()
-                    }
-                }
-                setOnErrorListener { _, _, _ ->
-                    _isPlaying.value = false
-                    false
-                }
-                prepareAsync()
-            }
-        } catch (_: Exception) {
+            _isBuffering.value = true
+            val player = ensurePlayer()
+            player.setMediaItem(MediaItem.fromUri(song.audioUrl))
+            player.prepare()
+            player.playWhenReady = true
+        } catch (e: Exception) {
+            _isBuffering.value = false
             _isPlaying.value = false
+            _playbackError.value = e.localizedMessage ?: "Gagal memutar lagu"
+        }
+    }
+
+    private fun fallbackToYouTubeFullTrack(song: Song) {
+        fallbackJob?.cancel()
+        _isBuffering.value = true
+        fallbackJob = viewModelScope.launch {
+            val ytSong = withContext(Dispatchers.IO) {
+                runCatching {
+                    val q = "${song.title} ${song.artist}".trim()
+                    val r = nexadevApi.searchYouTube(q)
+                    if (r.isSuccessful && r.body()?.status == true) {
+                        r.body()?.toSong(song.id)?.takeIf { it.audioUrl.isNotBlank() }
+                    } else null
+                }.getOrNull()
+            }
+
+            if (ytSong != null) {
+                val merged = song.copy(audioUrl = ytSong.audioUrl, source = "youtube")
+                _currentSong.value = merged
+                playSong(merged)
+            } else {
+                _isBuffering.value = false
+                _playbackError.value = "Gagal memutar stream full track"
+            }
         }
     }
 
     fun onPlayPauseClick() {
-        val player = mediaPlayer ?: run {
+        val player = exoPlayer ?: run {
             _currentSong.value?.let { playSong(it) }
             return
         }
-
         if (player.isPlaying) {
             player.pause()
-            _isPlaying.value = false
-            stopProgressTracking()
         } else {
-            player.start()
-            _isPlaying.value = true
-            startProgressTracking()
+            if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
+                if (player.playbackState == Player.STATE_ENDED) player.seekTo(0L)
+                player.prepare()
+            }
+            player.play()
         }
     }
 
     fun onSeekTo(positionMs: Long) {
-        mediaPlayer?.let { player ->
-            player.seekTo(positionMs.toInt())
+        exoPlayer?.let { player ->
+            player.seekTo(positionMs.coerceAtLeast(0L))
             _currentPosition.value = positionMs
         }
     }
 
     fun onNext() {
-        val currentList = when (val state = _uiState.value) {
-            is MusicUiState.Success -> state.songs
-            else -> curatedSongs
-        }
+        val currentList = (uiState.value as? MusicUiState.Success)?.songs.orEmpty()
         if (currentList.isEmpty()) return
-
         val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
-        val nextIndex = if (_isShuffle.value) {
-            (0 until currentList.size).random()
+        val nextIndex = if (_isShuffle.value && currentList.size > 1) {
+            var candidate = currentList.indices.random()
+            if (candidate == currentIndex) candidate = (currentIndex + 1) % currentList.size
+            candidate
         } else {
             if (currentIndex == -1 || currentIndex >= currentList.size - 1) 0 else currentIndex + 1
         }
-
         val nextSong = currentList[nextIndex]
         _currentSong.value = nextSong
         playSong(nextSong)
     }
 
     fun onPrev() {
-        val currentList = when (val state = _uiState.value) {
-            is MusicUiState.Success -> state.songs
-            else -> curatedSongs
-        }
+        val currentList = (uiState.value as? MusicUiState.Success)?.songs.orEmpty()
         if (currentList.isEmpty()) return
-
         val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
         val prevIndex = if (currentIndex <= 0) currentList.size - 1 else currentIndex - 1
-
         val prevSong = currentList[prevIndex]
         _currentSong.value = prevSong
         playSong(prevSong)
@@ -314,18 +371,32 @@ class MusicViewModel @JvmOverloads constructor(
 
     fun onRetry() {
         viewModelScope.launch {
-            executeSearch(lastQuery)
+            executeSearch(lastQuery.ifBlank { _searchQuery.value })
+        }
+    }
+
+    private fun parseDurationMs(durationText: String): Long {
+        val parts = durationText.trim().split(":")
+        return try {
+            when (parts.size) {
+                2 -> ((parts[0].toLong() * 60L) + parts[1].toLong()) * 1000L
+                3 -> ((parts[0].toLong() * 3600L) + (parts[1].toLong() * 60L) + parts[2].toLong()) * 1000L
+                else -> 0L
+            }
+        } catch (_: Exception) {
+            0L
         }
     }
 
     private fun startProgressTracking() {
         progressUpdateJob?.cancel()
         progressUpdateJob = viewModelScope.launch {
-            while (isActive && mediaPlayer?.isPlaying == true) {
-                mediaPlayer?.let { player ->
-                    _currentPosition.value = player.currentPosition.toLong()
-                    _duration.value = player.duration.toLong()
-                }
+            while (isActive) {
+                val player = exoPlayer ?: break
+                if (!player.isPlaying) break
+                _currentPosition.value = player.currentPosition.coerceAtLeast(0L)
+                val d = player.duration
+                if (d > 0L) _duration.value = d
                 delay(500L)
             }
         }
@@ -336,13 +407,16 @@ class MusicViewModel @JvmOverloads constructor(
     }
 
     private fun releasePlayer() {
+        fallbackJob?.cancel()
         stopProgressTracking()
         try {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-        } catch (_: Exception) {}
-        mediaPlayer = null
+            exoPlayer?.stop()
+            exoPlayer?.release()
+        } catch (_: Exception) {
+        }
+        exoPlayer = null
         _isPlaying.value = false
+        _isBuffering.value = false
     }
 
     override fun onCleared() {

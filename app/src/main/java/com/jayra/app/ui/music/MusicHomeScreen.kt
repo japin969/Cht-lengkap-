@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -24,12 +25,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,13 +43,16 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -63,9 +70,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -76,18 +85,27 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.jayra.app.data.Song
-import com.jayra.app.ui.theme.JayraBlue
-import com.jayra.app.ui.theme.JayraDangerRed
-import com.jayra.app.ui.theme.JayraDarkChatBg
-import com.jayra.app.ui.theme.JayraDarkTopBar
-import com.jayra.app.ui.theme.JayraLightChatBg
-import com.jayra.app.ui.theme.JayraLightTopBar
-import com.jayra.app.ui.theme.JayraSearchDark
-import com.jayra.app.ui.theme.JayraSearchLight
-import com.jayra.app.ui.theme.JayraSeparatorDark
-import com.jayra.app.ui.theme.JayraSeparatorLight
-import com.jayra.app.ui.theme.JayraSubtext
+import com.jayra.app.ui.theme.IOSBlue
+import com.jayra.app.ui.theme.IOSBlueDark
+import com.jayra.app.ui.theme.IOSGray5
+import com.jayra.app.ui.theme.IOSGray5Dark
+import com.jayra.app.ui.theme.IOSGray6
+import com.jayra.app.ui.theme.IOSGray6Dark
+import com.jayra.app.ui.theme.IOSGreen
+import com.jayra.app.ui.theme.IOSGreenDark
+import com.jayra.app.ui.theme.IOSLabel
+import com.jayra.app.ui.theme.IOSLabelDark
+import com.jayra.app.ui.theme.IOSRed
+import com.jayra.app.ui.theme.IOSRedDark
+import com.jayra.app.ui.theme.IOSSecondaryLabel
+import com.jayra.app.ui.theme.IOSSecondaryLabelDark
+import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
+import com.jayra.app.ui.theme.IOSSecondarySystemGroupedBackground
+import com.jayra.app.ui.theme.IOSSystemGroupedBackground
+import com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark
 import com.jayra.app.ui.theme.JayraTheme
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.ui.theme.SquircleShape
 
 @Composable
 fun MusicHomeScreen(
@@ -103,22 +121,30 @@ fun MusicHomeScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val isBuffering by viewModel.isBuffering.collectAsStateWithLifecycle()
     val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
+    val currentPosition by viewModel.currentPosition.collectAsStateWithLifecycle()
+    val duration by viewModel.duration.collectAsStateWithLifecycle()
 
     MusicHomeContent(
         uiState = uiState,
         searchQuery = searchQuery,
         currentSong = currentSong,
         isPlaying = isPlaying,
+        isBuffering = isBuffering,
+        currentPosition = currentPosition,
+        duration = duration,
         searchHistory = searchHistory,
         onHistoryClick = viewModel::onHistoryClick,
         onClearHistory = viewModel::onClearHistory,
         onSearchQueryChange = viewModel::onSearchQueryChange,
+        onSearchSubmit = { viewModel.searchNow() },
         onSongClick = { song ->
             viewModel.onSongClick(song)
             onSongClick(song)
         },
         onPlayPauseClick = viewModel::onPlayPauseClick,
+        onNextClick = viewModel::onNext,
         onRetry = viewModel::onRetry,
         onBack = onBack
     )
@@ -130,449 +156,506 @@ fun MusicHomeContent(
     searchQuery: String,
     currentSong: Song?,
     isPlaying: Boolean,
+    isBuffering: Boolean = false,
+    currentPosition: Long = 0L,
+    duration: Long = 0L,
     searchHistory: List<String> = emptyList(),
     onHistoryClick: (String) -> Unit = {},
     onClearHistory: () -> Unit = {},
     onSearchQueryChange: (String) -> Unit,
+    onSearchSubmit: () -> Unit = {},
     onSongClick: (Song) -> Unit,
     onPlayPauseClick: () -> Unit,
+    onNextClick: () -> Unit = {},
     onRetry: () -> Unit,
     onBack: (() -> Unit)? = null
 ) {
     val isDark = isSystemInDarkTheme()
-    val loginGradient = androidx.compose.ui.graphics.Brush.verticalGradient(
-        colors = listOf(Color(0xFF1E3A5F), Color(0xFF4A2E6B))
-    )
-    val topBarBg = Color.Transparent
-    val screenBg = Color.Transparent
-    val searchBg = Color(0x33FFFFFF)
-    val textColor = Color.White
+    val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
+    val cardBg = if (isDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemGroupedBackground
+    val searchBg = if (isDark) IOSGray6Dark else Color(0xFFE5E5EA)
+    val labelColor = if (isDark) IOSLabelDark else IOSLabel
+    val subLabelColor = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
+    val accentBlue = if (isDark) IOSBlueDark else IOSBlue
+    val borderColor = if (isDark) LiquidGlassSpecV2.DarkBorderTop else Color(0x14000000)
+
+    val keyboardController = LocalSoftwareKeyboardController.current
     var showMenu by remember { mutableStateOf(false) }
 
+    // Ruang aman agar floating LiquidNavBarRow di MainScreen tidak menutupi MiniPlayer/item terbawah
+    val navSafeBottom = if (onBack == null) 88.dp else 12.dp
+
     Scaffold(
+        containerColor = bgColor,
         topBar = {
-            // 1.1 TopAppBar (Tinggi 56dp)
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .background(bgColor)
+                    .statusBarsPadding()
             ) {
-                if (onBack != null) {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("music_back_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(16.dp))
-                }
-
-                Text(
-                    text = "Musik",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Ikon Search 24dp Putih
-                IconButton(
-                    onClick = { /* Search field is already integrated below */ },
-                    modifier = Modifier.size(48.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Search,
-                        contentDescription = "Cari",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // Ikon MoreVert 24dp Putih
-                Box {
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.MoreVert,
-                            contentDescription = "Menu Lainnya",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
+                    if (onBack != null) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .testTag("music_back_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Kembali",
+                                tint = accentBlue
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(12.dp))
                     }
 
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Segarkan") },
-                            onClick = {
-                                showMenu = false
-                                onRetry()
-                            }
-                        )
-                    }
-                }
-            }
-        },
-        bottomBar = {
-            // Mini Player bar when a song is selected/playing
-            AnimatedVisibility(
-                visible = currentSong != null,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn()
-            ) {
-                if (currentSong != null) {
-                    MusicMiniPlayer(
-                        song = currentSong,
-                        isPlaying = isPlaying,
-                        onPlayPauseClick = onPlayPauseClick,
-                        onClick = { onSongClick(currentSong) }
+                    Text(
+                        text = "Musik",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = labelColor,
+                        modifier = Modifier.weight(1f)
                     )
-                }
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(loginGradient)
-                .padding(innerPadding)
-        ) {
-            // 1.2 Search Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(searchBg)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = "Search",
-                    tint = Color(0x99FFFFFF),
-                    modifier = Modifier.size(16.dp)
-                )
 
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Box(modifier = Modifier.weight(1f)) {
-                    if (searchQuery.isEmpty()) {
-                        Text(
-                            text = "Cari lagu atau artis",
-                            fontSize = 15.sp,
-                            color = Color(0x99FFFFFF)
-                        )
-                    }
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("music_search_input"),
-                        textStyle = TextStyle(
-                            fontSize = 15.sp,
-                            color = textColor
-                        ),
-                        cursorBrush = SolidColor(JayraBlue),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false)
-                    )
-                }
-
-                if (searchQuery.isNotEmpty()) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "Hapus teks",
-                        tint = JayraSubtext,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clickable { onSearchQueryChange("") }
-                    )
-                }
-            }
-
-            // History (muncul saat search kosong)
-            if (searchQuery.isBlank() && searchHistory.isNotEmpty()) {
-                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Pencarian terakhir",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0x99FFFFFF)
-                        )
-                        Text(
-                            text = "Hapus",
-                            fontSize = 13.sp,
-                            color = Color(0xFF5AC8FA),
-                            modifier = Modifier.clickable { onClearHistory() }
-                        )
-                    }
-                    androidx.compose.foundation.lazy.LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(vertical = 4.dp)
-                    ) {
-                        items(searchHistory, key = { it }) { q ->
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Color(0x33FFFFFF))
-                                    .clickable { onHistoryClick(q) }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = q,
-                                    fontSize = 13.sp,
-                                    color = Color.White,
-                                    maxLines = 1
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = "Menu Lainnya",
+                                tint = accentBlue
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Segarkan") },
+                                onClick = {
+                                    showMenu = false
+                                    onRetry()
+                                }
+                            )
+                            if (searchHistory.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("Hapus Riwayat") },
+                                    onClick = {
+                                        showMenu = false
+                                        onClearHistory()
+                                    }
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            // 1.3 & 1.4 State UI: Hasil Pencarian, Loading, Empty, Error
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                when (uiState) {
-                    is MusicUiState.Loading -> {
-                        MusicShimmerLoading()
-                    }
-
-                    is MusicUiState.Empty -> {
-                        MusicEmptyState(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-
-                    is MusicUiState.Error -> {
-                        MusicErrorState(
-                            message = uiState.message,
-                            onRetry = onRetry,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-
-                    is MusicUiState.Success -> {
-                        if (uiState.songs.isEmpty()) {
-                            MusicEmptyState(
-                                modifier = Modifier.align(Alignment.Center)
+                // iOS Search Pill
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(searchBg)
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = "Cari",
+                        tint = subLabelColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Cari lagu atau artis...",
+                                fontSize = 15.sp,
+                                color = subLabelColor
                             )
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 16.dp)
-                            ) {
-                                items(
-                                    items = uiState.songs,
-                                    key = { it.id },
-                                    contentType = { "song_item" }
-                                ) { song ->
-                                    val isCurrent = currentSong?.id == song.id
-                                    MusicSongItem(
-                                        song = song,
-                                        isCurrentSong = isCurrent,
-                                        isPlaying = isCurrent && isPlaying,
-                                        onClick = { onSongClick(song) }
+                        }
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("music_search_input"),
+                            textStyle = TextStyle(
+                                fontSize = 15.sp,
+                                color = labelColor
+                            ),
+                            cursorBrush = SolidColor(accentBlue),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                autoCorrectEnabled = false,
+                                imeAction = ImeAction.Search
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    keyboardController?.hide()
+                                    onSearchSubmit()
+                                }
+                            )
+                        )
+                    }
+                    if (searchQuery.isNotEmpty()) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Hapus teks",
+                            tint = subLabelColor,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable { onSearchQueryChange("") }
+                        )
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(bgColor)
+                .padding(innerPadding)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (searchQuery.isBlank() && searchHistory.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Pencarian Terakhir",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = subLabelColor
+                            )
+                            Text(
+                                text = "Hapus",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = accentBlue,
+                                modifier = Modifier.clickable { onClearHistory() }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(searchHistory, key = { it }) { q ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(cardBg)
+                                        .border(0.75.dp, borderColor, RoundedCornerShape(16.dp))
+                                        .clickable { onHistoryClick(q) }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = q,
+                                        fontSize = 13.sp,
+                                        color = labelColor,
+                                        maxLines = 1
                                     )
                                 }
                             }
                         }
                     }
                 }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    when (uiState) {
+                        is MusicUiState.Loading -> MusicShimmerLoading(isDark = isDark)
+                        is MusicUiState.Empty -> MusicEmptyState(
+                            isDark = isDark,
+                            accentBlue = accentBlue,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(bottom = navSafeBottom)
+                        )
+                        is MusicUiState.Error -> MusicErrorState(
+                            message = uiState.message,
+                            accentBlue = accentBlue,
+                            labelColor = labelColor,
+                            onRetry = onRetry,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(bottom = navSafeBottom)
+                        )
+                        is MusicUiState.Success -> {
+                            if (uiState.songs.isEmpty()) {
+                                MusicEmptyState(
+                                    isDark = isDark,
+                                    accentBlue = accentBlue,
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .padding(bottom = navSafeBottom)
+                                )
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(
+                                        start = 16.dp,
+                                        end = 16.dp,
+                                        top = 8.dp,
+                                        bottom = navSafeBottom + if (currentSong != null) 80.dp else 12.dp
+                                    ),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    items(
+                                        items = uiState.songs,
+                                        key = { it.id },
+                                        contentType = { "song_item" }
+                                    ) { song ->
+                                        val isCurrent = currentSong?.id == song.id
+                                        MusicSongItem(
+                                            song = song,
+                                            isCurrentSong = isCurrent,
+                                            isPlaying = isCurrent && isPlaying,
+                                            isBuffering = isCurrent && isBuffering,
+                                            isDark = isDark,
+                                            cardBg = cardBg,
+                                            borderColor = borderColor,
+                                            labelColor = labelColor,
+                                            subLabelColor = subLabelColor,
+                                            accentBlue = accentBlue,
+                                            onClick = { onSongClick(song) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = currentSong != null,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = navSafeBottom)
+            ) {
+                if (currentSong != null) {
+                    MusicMiniPlayer(
+                        song = currentSong,
+                        isPlaying = isPlaying,
+                        isBuffering = isBuffering,
+                        progress = if (duration > 0L) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f,
+                        isDark = isDark,
+                        accentBlue = accentBlue,
+                        onPlayPauseClick = onPlayPauseClick,
+                        onNextClick = onNextClick,
+                        onClick = { onSongClick(currentSong) }
+                    )
+                }
             }
         }
     }
 }
 
-// 1.3 Item Hasil Pencarian
 @Composable
 private fun MusicSongItem(
     song: Song,
     isCurrentSong: Boolean,
     isPlaying: Boolean,
+    isBuffering: Boolean,
+    isDark: Boolean,
+    cardBg: Color,
+    borderColor: Color,
+    labelColor: Color,
+    subLabelColor: Color,
+    accentBlue: Color,
     onClick: () -> Unit
 ) {
-    val separatorColor = Color(0x33FFFFFF)
-    val titleColor = if (isCurrentSong) Color(0xFF5AC8FA) else Color.White
-    val searchBg = Color(0x1AFFFFFF)
-    val subtitleColor = Color(0x99FFFFFF)
+    val shape = SquircleShape(14.dp)
+    val titleColor = if (isCurrentSong) accentBlue else labelColor
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0x1AFFFFFF))
+            .clip(shape)
+            .background(cardBg)
+            .border(
+                width = if (isCurrentSong) 1.dp else 0.75.dp,
+                color = if (isCurrentSong) accentBlue.copy(alpha = 0.6f) else borderColor,
+                shape = shape
+            )
             .clickable(onClick = onClick)
-            .testTag("song_item_${song.id}")
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .testTag("song_item_${song.id}"),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(72.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(56.dp)
+                .clip(SquircleShape(10.dp))
+                .background(if (isDark) IOSGray6Dark else IOSGray6),
+            contentAlignment = Alignment.Center
         ) {
-            // Cover Album 56dp RoundedCornerShape(8dp) margin end 16dp
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(searchBg),
-                contentAlignment = Alignment.Center
-            ) {
-                if (song.coverUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(song.coverUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = song.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Rounded.MusicNote,
-                        contentDescription = "Cover",
-                        tint = Color(0x99FFFFFF),
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Column (weight 1f)
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = song.title,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = titleColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    if (song.source.isNotBlank()) {
-                        Spacer(Modifier.width(6.dp))
-                        val badge = if (song.source == "youtube") "YouJay" else "SpoJay"
-                        val badgeColor = if (song.source == "youtube") Color(0xFFFF3B30) else Color(0xFF34C759)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(badgeColor.copy(alpha = 0.85f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = badge,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = song.artist,
-                    fontSize = 15.sp,
-                    color = subtitleColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            if (song.coverUrl.isNotBlank()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(song.coverUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = song.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = song.duration,
-                    fontSize = 13.sp,
-                    color = subtitleColor
-                )
-            }
-
-            // Ikon Play 24dp JayraBlue di kanan, tap target 48dp
-            IconButton(
-                onClick = onClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .testTag("play_song_${song.id}")
-            ) {
+            } else {
                 Icon(
-                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = if (isPlaying) "Jeda" else "Putar",
-                    tint = JayraBlue,
-                    modifier = Modifier.size(24.dp)
+                    imageVector = Icons.Rounded.MusicNote,
+                    contentDescription = "Cover",
+                    tint = subLabelColor,
+                    modifier = Modifier.size(26.dp)
                 )
             }
         }
 
-        // Separator 0.5dp margin start 88dp
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = song.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = titleColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (song.source.isNotBlank()) {
+                    Spacer(Modifier.width(6.dp))
+                    val isYt = song.source == "youtube"
+                    val badge = if (isYt) "YouJay" else "SpoJay"
+                    val badgeColor = if (isYt) {
+                        if (isDark) IOSRedDark else IOSRed
+                    } else {
+                        if (isDark) IOSGreenDark else IOSGreen
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(badgeColor.copy(alpha = 0.16f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = badge,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = badgeColor
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = song.artist,
+                fontSize = 14.sp,
+                color = subLabelColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "${song.duration} • Full Track",
+                fontSize = 12.sp,
+                color = subLabelColor
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 88.dp)
-                .height(0.5.dp)
-                .background(separatorColor)
-        )
+            modifier = Modifier.size(44.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isBuffering) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = accentBlue
+                )
+            } else {
+                IconButton(
+                    onClick = onClick,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .testTag("play_song_${song.id}")
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = if (isPlaying) "Jeda" else "Putar",
+                        tint = accentBlue,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
-// Mini Player bar
 @Composable
 private fun MusicMiniPlayer(
     song: Song,
     isPlaying: Boolean,
+    isBuffering: Boolean,
+    progress: Float,
+    isDark: Boolean,
+    accentBlue: Color,
     onPlayPauseClick: () -> Unit,
+    onNextClick: () -> Unit,
     onClick: () -> Unit
 ) {
+    val bg = if (isDark) LiquidGlassSpecV2.DarkGlassElevated else LiquidGlassSpecV2.LightGlassElevated
+    val border = if (isDark) LiquidGlassSpecV2.DarkBorderTop else Color(0x1F000000)
+    val label = if (isDark) IOSLabelDark else IOSLabel
+    val sub = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                colors = listOf(Color(0xB31E3A5F), Color(0xCC4A2E6B))
-            ))
+            .padding(horizontal = 12.dp)
+            .clip(SquircleShape(16.dp))
+            .background(bg)
+            .border(0.75.dp, border, SquircleShape(16.dp))
             .clickable(onClick = onClick)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(0.5.dp)
-                .background(Color(0x33FFFFFF))
-        )
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(JayraBlue),
+                    .size(42.dp)
+                    .clip(SquircleShape(9.dp))
+                    .background(accentBlue.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 if (song.coverUrl.isNotBlank()) {
@@ -589,8 +672,8 @@ private fun MusicMiniPlayer(
                     Icon(
                         imageVector = Icons.Rounded.MusicNote,
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        tint = accentBlue,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -601,75 +684,109 @@ private fun MusicMiniPlayer(
                 Text(
                     text = song.title,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    color = label,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = song.artist,
-                    fontSize = 13.sp,
-                    color = Color(0x99FFFFFF),
+                    text = if (isBuffering) "Menghubungkan audio..." else song.artist,
+                    fontSize = 12.sp,
+                    color = if (isBuffering) accentBlue else sub,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            IconButton(
-                onClick = onPlayPauseClick,
-                modifier = Modifier.size(44.dp)
-            ) {
+            if (isBuffering) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp,
+                    color = accentBlue
+                )
+            } else {
+                IconButton(onClick = onPlayPauseClick, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        tint = accentBlue,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+
+            IconButton(onClick = onNextClick, modifier = Modifier.size(40.dp)) {
                 Icon(
-                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color(0xFF5AC8FA),
-                    modifier = Modifier.size(28.dp)
+                    imageVector = Icons.Rounded.SkipNext,
+                    contentDescription = "Berikutnya",
+                    tint = label,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
+
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp),
+            color = accentBlue,
+            trackColor = Color.Transparent
+        )
     }
 }
 
-// 1.4 Empty State
 @Composable
 private fun MusicEmptyState(
+    isDark: Boolean,
+    accentBlue: Color,
     modifier: Modifier = Modifier
 ) {
+    val label = if (isDark) IOSLabelDark else IOSLabel
+    val sub = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = Icons.Rounded.MusicNote,
-            contentDescription = "Music",
-            tint = Color(0x99FFFFFF),
-            modifier = Modifier.size(64.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(accentBlue.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.MusicNote,
+                contentDescription = "Music",
+                tint = accentBlue,
+                modifier = Modifier.size(36.dp)
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Cari lagu favoritmu",
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xCCFFFFFF),
+            text = "Putar Musik Full Track",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = label,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Ketik judul lagu atau nama artis",
-            fontSize = 15.sp,
-            color = Color(0x99FFFFFF),
+            text = "Ketik judul lagu atau nama artis di kolom pencarian",
+            fontSize = 14.sp,
+            color = sub,
             textAlign = TextAlign.Center
         )
     }
 }
 
-// 1.4 Error State
 @Composable
 private fun MusicErrorState(
     message: String,
+    accentBlue: Color,
+    labelColor: Color,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -677,51 +794,48 @@ private fun MusicErrorState(
         modifier = modifier
             .fillMaxWidth()
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = Icons.Rounded.Warning,
             contentDescription = "Warning",
-            tint = JayraDangerRed,
-            modifier = Modifier.size(48.dp)
+            tint = IOSRed,
+            modifier = Modifier.size(44.dp)
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = if (message.isNotBlank()) message else "Gagal memuat musik",
-            fontSize = 17.sp,
-            color = Color(0xCCFFFFFF),
+            text = message.ifBlank { "Gagal memuat musik" },
+            fontSize = 16.sp,
+            color = labelColor,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
         Button(
             onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5AC8FA)),
-            shape = RoundedCornerShape(10.dp)
+            colors = ButtonDefaults.buttonColors(containerColor = accentBlue),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Text(
                 text = "Coba Lagi",
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = Color.White
             )
         }
     }
 }
 
-// 1.4 Shimmer Loading (8 item)
 @Composable
-private fun MusicShimmerLoading() {
-    val isDark = isSystemInDarkTheme()
-    val baseColor = Color(0x1AFFFFFF)
-    val highlightColor = Color(0x33FFFFFF)
+private fun MusicShimmerLoading(isDark: Boolean) {
+    val baseColor = if (isDark) IOSGray6Dark else IOSGray5
+    val highlightColor = if (isDark) IOSGray5Dark else IOSGray6
 
     val transition = rememberInfiniteTransition(label = "shimmer_transition")
     val translateAnim by transition.animateFloat(
         initialValue = 0f,
-        targetValue = 1000f,
+        targetValue = 900f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing),
+            animation = tween(durationMillis = 900, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "shimmer_anim"
@@ -729,57 +843,24 @@ private fun MusicShimmerLoading() {
 
     val brush = Brush.linearGradient(
         colors = listOf(baseColor, highlightColor, baseColor),
-        start = Offset(x = translateAnim - 300f, y = translateAnim - 300f),
-        end = Offset(x = translateAnim, y = translateAnim)
+        start = Offset(x = translateAnim - 250f, y = 0f),
+        end = Offset(x = translateAnim, y = 250f)
     )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        repeat(8) {
-            Row(
+        repeat(4) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(brush)
-                )
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(18.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(brush)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.4f)
-                            .height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(brush)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(brush)
-                )
-            }
+                    .height(76.dp)
+                    .clip(SquircleShape(14.dp))
+                    .background(brush)
+            )
         }
     }
 }
@@ -792,66 +873,17 @@ private fun MusicHomeScreenLightPreview() {
             MusicHomeContent(
                 uiState = MusicUiState.Success(
                     songs = listOf(
-                        Song(
-                            id = "1",
-                            title = "Starboy",
-                            artist = "The Weeknd, Daft Punk",
-                            album = "Starboy",
-                            duration = "3:50"
-                        ),
-                        Song(
-                            id = "2",
-                            title = "Blinding Lights",
-                            artist = "The Weeknd",
-                            album = "After Hours",
-                            duration = "3:20"
-                        )
+                        Song(id = "1", title = "Karena Kamu", artist = "Geisha", duration = "3:54", source = "spotify"),
+                        Song(id = "2", title = "Geisha - Karena Kamu (Lyrics)", artist = "RinaiMelodi", duration = "03:55", source = "youtube")
                     )
                 ),
-                searchQuery = "",
-                currentSong = Song(
-                    id = "1",
-                    title = "Starboy",
-                    artist = "The Weeknd, Daft Punk",
-                    album = "Starboy",
-                    duration = "3:50"
-                ),
+                searchQuery = "karna kamu",
+                currentSong = Song(id = "1", title = "Karena Kamu", artist = "Geisha", duration = "3:54", source = "spotify"),
                 isPlaying = true,
                 onSearchQueryChange = {},
                 onSongClick = {},
                 onPlayPauseClick = {},
-                onRetry = {},
-                onBack = {}
-            )
-        }
-    }
-}
-
-@Preview(name = "Music Home Dark", showBackground = true)
-@Composable
-private fun MusicHomeScreenDarkPreview() {
-    JayraTheme(darkTheme = true) {
-        Surface {
-            MusicHomeContent(
-                uiState = MusicUiState.Success(
-                    songs = listOf(
-                        Song(
-                            id = "1",
-                            title = "Starboy",
-                            artist = "The Weeknd",
-                            album = "Starboy",
-                            duration = "3:50"
-                        )
-                    )
-                ),
-                searchQuery = "Weeknd",
-                currentSong = null,
-                isPlaying = false,
-                onSearchQueryChange = {},
-                onSongClick = {},
-                onPlayPauseClick = {},
-                onRetry = {},
-                onBack = {}
+                onRetry = {}
             )
         }
     }

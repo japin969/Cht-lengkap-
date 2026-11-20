@@ -19,17 +19,21 @@ data class SpotifyData(
     @Json(name = "cover") val cover: String? = null,
     @Json(name = "mp3_url") val mp3Url: String? = null,
     @Json(name = "preview") val preview: String? = null,
+    @Json(name = "spotify_url") val spotifyUrl: String? = null,
     @Json(name = "url") val url: String? = null
 ) {
     fun toSong(fallbackId: String = System.currentTimeMillis().toString()): Song {
+        // Wajib full track mp3_url; jangan jatuh ke 30s preview
+        val fullTrackUrl = mp3Url?.takeIf { it.isNotBlank() } ?: ""
         return Song(
             id = fallbackId,
             title = title ?: "Lagu Tanpa Judul",
             artist = artist ?: "Artis Tidak Diketahui",
             album = album ?: "Single",
-            duration = duration ?: "3:30",
+            duration = duration ?: "0:00",
             coverUrl = cover ?: "",
-            audioUrl = mp3Url ?: url ?: preview ?: ""
+            audioUrl = fullTrackUrl,
+            source = "spotify"
         )
     }
 }
