@@ -1,6 +1,7 @@
 package com.jayra.app.ui.komik
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -36,7 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,7 +86,7 @@ fun KomikHomeScreen(
     viewModel: KomikViewModel = viewModel(),
     onKomikClick: (String) -> Unit
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isDark = isSystemInDarkTheme()
     val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
     val labelColor = if (isDark) IOSLabelDark else IOSLabel
@@ -256,7 +258,7 @@ private fun SearchResultsSection(
             )
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp, bottom = 96.dp),
+                contentPadding = PaddingValues(12.dp, 8.dp, 12.dp, 96.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
@@ -315,7 +317,7 @@ private fun HomeContentSection(
         )
         else -> LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 96.dp),
+            contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Hero Card
@@ -395,7 +397,7 @@ private fun HomeContentSection(
                 item(key = "grid_all") {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(12.dp, 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -496,7 +498,7 @@ private fun HorizontalCardRow(
     onKomikClick: (String) -> Unit
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(16.dp, 0.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.height(220.dp)
     ) {
