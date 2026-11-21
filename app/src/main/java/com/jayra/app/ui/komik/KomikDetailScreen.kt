@@ -136,9 +136,9 @@ fun KomikDetailScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(SquircleShape(18.dp))
+                                .clip(squircle(18))
                                 .background(cardBg)
-                                .border(0.75.dp, borderColor, SquircleShape(18.dp))
+                                .border(0.75.dp, borderColor, squircle(18))
                                 .padding(14.dp)
                         ) {
                             AsyncImage(
@@ -151,7 +151,7 @@ fun KomikDetailScreen(
                                 modifier = Modifier
                                     .width(114.dp)
                                     .height(164.dp)
-                                    .clip(SquircleShape(12.dp))
+                                    .clip(squircle(12))
                                     .background(if (isDark) IOSGray6Dark else IOSGray6),
                                 contentScale = ContentScale.Crop
                             )
@@ -268,9 +268,9 @@ fun KomikDetailScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(SquircleShape(16.dp))
+                                .clip(squircle(16))
                                 .background(cardBg)
-                                .border(0.75.dp, borderColor, SquircleShape(16.dp))
+                                .border(0.75.dp, borderColor, squircle(16))
                                 .clickable { expandSynopsis = !expandSynopsis }
                                 .padding(14.dp)
                         ) {
@@ -334,9 +334,9 @@ fun KomikDetailScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(SquircleShape(14.dp))
+                                .clip(squircle(14))
                                 .background(cardBg)
-                                .border(0.75.dp, borderColor, SquircleShape(14.dp))
+                                .border(0.75.dp, borderColor, squircle(14))
                                 .clickable {
                                     val target = ch.resolvedSlug
                                     if (target.isNotBlank()) onChapterClick(target)

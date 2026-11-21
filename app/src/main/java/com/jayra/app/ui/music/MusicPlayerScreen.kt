@@ -217,8 +217,8 @@ fun MusicPlayerContent(
             modifier = Modifier
                 .fillMaxWidth(0.76f)
                 .aspectRatio(1f)
-                .shadow(elevation = 16.dp, shape = SquircleShape(24.dp))
-                .clip(SquircleShape(24.dp))
+                .shadow(elevation = 16.dp, shape = squircle(24))
+                .clip(squircle(24))
                 .background(Color(0x1FFFFFFF)),
             contentAlignment = Alignment.Center
         ) {

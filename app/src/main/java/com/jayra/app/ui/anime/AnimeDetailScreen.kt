@@ -211,9 +211,9 @@ fun AnimeDetailScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(SquircleShape(18.dp))
+                                .clip(squircle(18))
                                 .background(cardBg)
-                                .border(0.75.dp, borderColor, SquircleShape(18.dp))
+                                .border(0.75.dp, borderColor, squircle(18))
                                 .padding(14.dp)
                         ) {
                             AsyncImage(
@@ -222,7 +222,7 @@ fun AnimeDetailScreen(
                                 modifier = Modifier
                                     .width(116.dp)
                                     .height(168.dp)
-                                    .clip(SquircleShape(12.dp))
+                                    .clip(squircle(12))
                                     .background(if (isDark) IOSGray6Dark else IOSGray6),
                                 contentScale = ContentScale.Crop
                             )
@@ -303,9 +303,9 @@ fun AnimeDetailScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(SquircleShape(16.dp))
+                                .clip(squircle(16))
                                 .background(cardBg)
-                                .border(0.75.dp, borderColor, SquircleShape(16.dp))
+                                .border(0.75.dp, borderColor, squircle(16))
                                 .clickable { expandSynopsis = !expandSynopsis }
                                 .padding(14.dp)
                         ) {
@@ -355,7 +355,7 @@ fun AnimeDetailScreen(
                     if (orderedEpisodes.isEmpty()) {
                         item(key = "ep_empty") {
                             Box(
-                                modifier = Modifier.fillMaxWidth().clip(SquircleShape(14.dp)).background(cardBg).padding(20.dp),
+                                modifier = Modifier.fillMaxWidth().clip(squircle(14)).background(cardBg).padding(20.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("Belum ada daftar episode", color = subLabelColor, fontSize = 14.sp)
@@ -366,9 +366,9 @@ fun AnimeDetailScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(SquircleShape(14.dp))
+                                    .clip(squircle(14))
                                     .background(cardBg)
-                                    .border(0.75.dp, borderColor, SquircleShape(14.dp))
+                                    .border(0.75.dp, borderColor, squircle(14))
                                     .clickable {
                                         ep.episodeUrl?.takeIf { it.isNotBlank() }?.let { url ->
                                             activeEpisode = ep

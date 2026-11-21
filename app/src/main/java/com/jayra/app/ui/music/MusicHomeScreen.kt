@@ -489,7 +489,7 @@ private fun MusicSongItem(
     accentBlue: Color,
     onClick: () -> Unit
 ) {
-    val shape = SquircleShape(14.dp)
+    val shape = squircle(14)
     val titleColor = if (isCurrentSong) accentBlue else labelColor
 
     Row(
@@ -510,7 +510,7 @@ private fun MusicSongItem(
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .clip(SquircleShape(10.dp))
+                .clip(squircle(10))
                 .background(if (isDark) IOSGray6Dark else IOSGray6),
             contentAlignment = Alignment.Center
         ) {
@@ -639,9 +639,9 @@ private fun MusicMiniPlayer(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
-            .clip(SquircleShape(16.dp))
+            .clip(squircle(16))
             .background(bg)
-            .border(0.75.dp, border, SquircleShape(16.dp))
+            .border(0.75.dp, border, squircle(16))
             .clickable(onClick = onClick)
     ) {
         Row(
@@ -654,7 +654,7 @@ private fun MusicMiniPlayer(
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(SquircleShape(9.dp))
+                    .clip(squircle(9))
                     .background(accentBlue.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -858,7 +858,7 @@ private fun MusicShimmerLoading(isDark: Boolean) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(76.dp)
-                    .clip(SquircleShape(14.dp))
+                    .clip(squircle(14))
                     .background(brush)
             )
         }

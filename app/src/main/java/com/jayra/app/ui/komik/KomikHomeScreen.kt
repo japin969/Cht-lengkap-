@@ -382,7 +382,7 @@ private fun KomikHeroCard(komik: KomikItem, accentBlue: Color, onClick: () -> Un
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .height(200.dp)
-            .clip(SquircleShape(20.dp))
+            .clip(squircle(20))
             .clickable { onClick() }
     ) {
         AsyncImage(
@@ -455,7 +455,7 @@ private fun KomikPosterCard(
     Column(modifier = Modifier.width(124.dp).clickable { onClick(komik.resolvedSlug) }) {
         Box(
             modifier = Modifier.width(124.dp).height(176.dp)
-                .clip(SquircleShape(14.dp))
+                .clip(squircle(14))
                 .background(if (isDark) IOSGray6Dark else IOSGray6)
         ) {
             AsyncImage(
@@ -516,7 +516,7 @@ private fun KomikGridCard(
     Column(modifier = Modifier.fillMaxWidth().clickable { onClick(komik.resolvedSlug) }) {
         Box(
             modifier = Modifier.fillMaxWidth().aspectRatio(0.7f)
-                .clip(SquircleShape(12.dp))
+                .clip(squircle(12))
                 .background(if (isDark) IOSGray6Dark else IOSGray6)
         ) {
             AsyncImage(
