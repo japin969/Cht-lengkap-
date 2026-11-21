@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +30,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -187,9 +186,30 @@ private fun DetailContent(
                         .align(Alignment.TopEnd)
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ActionIconButton(icon = Icons.Rounded.FavoriteBorder, onClick = { /* TODO: add to favorites */ })
-                        ActionIconButton(icon = Icons.Rounded.Share, onClick = { /* TODO: share */ })
-                        ActionIconButton(icon = Icons.Rounded.OpenInNew, onClick = { item.link?.let { openInBrowser(context, it) } })
+                        IconButton(onClick = { /* TODO: add to favorites */ }) {
+                            Icon(
+                                imageVector = Icons.Rounded.FavoriteBorder,
+                                contentDescription = "Favorit",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        IconButton(onClick = { /* TODO: share */ }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Share,
+                                contentDescription = "Bagikan",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        IconButton(onClick = { item.link?.let { openInBrowser(context, it) } }) {
+                            Icon(
+                                imageVector = Icons.Rounded.OpenInNew,
+                                contentDescription = "Buka di browser",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
                 // Title overlay
@@ -382,29 +402,6 @@ private fun DetailContent(
 }
 
 @Composable
-private fun ActionIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .clip(androidx.compose.foundation.shape.CircleShape)
-            .background(Color(0x88000000))
-            .size(36.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        IconButton(onClick = onClick) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-    }
-}
-
-@Composable
 private fun ChapterItem(
     title: String,
     subtitle: String,
@@ -414,6 +411,16 @@ private fun ChapterItem(
     cardBg: Color,
     onClick: () -> Unit
 ) {
+    val customColors = object : ListItemColors {
+        override val containerColor: Color = cardBg
+        override val pressedContainerColor: Color = accentBlue.copy(alpha = 0.1f)
+        override val focusedContainerColor: Color = Color.Transparent
+        override val hoveredContainerColor: Color = Color.Transparent
+        override val contentColor: Color = Color.Unspecified
+        override val leadingIconColor: Color = Color.Unspecified
+        override val trailingIconColor: Color = Color.Unspecified
+    }
+
     androidx.compose.material3.ListItem(
         headlineContent = {
             Text(
@@ -444,10 +451,7 @@ private fun ChapterItem(
             .background(cardBg)
             .clip(RoundedCornerShape(10.dp))
             .clickable { onClick() },
-        colors = ListItemDefaults.listItemColors(
-            containerColor = cardBg,
-            pressedContainerColor = accentBlue.copy(alpha = 0.1f)
-        )
+        colors = customColors
     )
 }
 
