@@ -247,7 +247,7 @@ fun KomikReaderScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = OpenInNew,
+                                imageVector = Icons.Default.OpenInNew,
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.size(18.dp)

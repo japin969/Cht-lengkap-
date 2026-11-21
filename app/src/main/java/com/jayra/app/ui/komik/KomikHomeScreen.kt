@@ -466,7 +466,7 @@ fun KomikCard(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Star,
+                            imageVector = Icons.Rounded.Star,
                             contentDescription = null,
                             tint = IOSOrange,
                             modifier = Modifier.size(11.dp)

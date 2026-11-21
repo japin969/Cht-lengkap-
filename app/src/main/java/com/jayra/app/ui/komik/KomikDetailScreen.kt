@@ -135,7 +135,7 @@ fun KomikDetailScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                                imageVector = MenuBook,
+                                imageVector = Icons.AutoMirrored.Rounded.MenuBook,
                                 contentDescription = null,
                                 tint = subLabelColor,
                                 modifier = Modifier.size(44.dp)
@@ -247,7 +247,7 @@ private fun KomikDetailContent(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Star,
+                                        imageVector = Icons.Rounded.Star,
                                         contentDescription = null,
                                         tint = Color.White,
                                         modifier = Modifier.size(12.dp)
@@ -280,7 +280,7 @@ private fun KomikDetailContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = OpenInNew,
+                                imageVector = Icons.Default.OpenInNew,
                                 contentDescription = null,
                                 tint = Color(0xFF007AFF),
                                 modifier = Modifier.size(18.dp)
