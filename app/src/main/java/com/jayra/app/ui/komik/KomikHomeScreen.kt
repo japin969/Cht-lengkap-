@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.jayra.app.data.KomikItem
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.jayra.app.ui.theme.IOSBlue
