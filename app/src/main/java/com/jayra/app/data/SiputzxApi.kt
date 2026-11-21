@@ -12,6 +12,12 @@ import java.util.concurrent.TimeUnit
 
 interface SiputzxApi {
 
+    @GET("api/s/applemusic")
+    suspend fun searchAppleMusic(
+        @Query("query") query: String,
+        @Query("region") region: String = "id"
+    ): Response<AppleMusicResponse>
+
     @GET("api/s/pinterest")
     suspend fun searchPinterest(
         @Query("query") query: String

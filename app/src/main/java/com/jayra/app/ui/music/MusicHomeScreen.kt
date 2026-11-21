@@ -106,6 +106,9 @@ import com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark
 import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.ui.theme.squircle
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassSurfaceSpec
+import com.jayra.app.util.glassSurfaceV2
 
 @Composable
 fun MusicHomeScreen(
@@ -178,6 +181,10 @@ fun MusicHomeContent(
     val subLabelColor = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
     val accentBlue = if (isDark) IOSBlueDark else IOSBlue
     val borderColor = if (isDark) LiquidGlassSpecV2.DarkBorderTop else Color(0x14000000)
+
+    // Glass spec (tanpa blur) untuk komponen Music — spes dari LiquidGlassSpecV2
+    val glassTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+    val glassSpec = remember(glassTier, isDark) { LiquidGlassSpecV2.forTier(glassTier, isDark).surface }
 
     val keyboardController = LocalSoftwareKeyboardController.current
     var showMenu by remember { mutableStateOf(false) }
@@ -267,8 +274,7 @@ fun MusicHomeContent(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .height(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(searchBg)
+                        .glassSurfaceV2(glassSpec, solidColor = searchBg, cornerRadius = 12.dp)
                         .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -362,9 +368,7 @@ fun MusicHomeContent(
                             items(searchHistory, key = { it }) { q ->
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(cardBg)
-                                        .border(0.75.dp, borderColor, RoundedCornerShape(16.dp))
+                                        .glassSurfaceV2(glassSpec, solidColor = cardBg, cornerRadius = 16.dp)
                                         .clickable { onHistoryClick(q) }
                                         .padding(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
@@ -437,6 +441,7 @@ fun MusicHomeContent(
                                             isDark = isDark,
                                             cardBg = cardBg,
                                             borderColor = borderColor,
+                                            glassSpec = glassSpec,
                                             labelColor = labelColor,
                                             subLabelColor = subLabelColor,
                                             accentBlue = accentBlue,
@@ -484,6 +489,7 @@ private fun MusicSongItem(
     isDark: Boolean,
     cardBg: Color,
     borderColor: Color,
+    glassSpec: GlassSurfaceSpec,
     labelColor: Color,
     subLabelColor: Color,
     accentBlue: Color,
@@ -495,13 +501,7 @@ private fun MusicSongItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(cardBg)
-            .border(
-                width = if (isCurrentSong) 1.dp else 0.75.dp,
-                color = if (isCurrentSong) accentBlue.copy(alpha = 0.6f) else borderColor,
-                shape = shape
-            )
+            .glassSurfaceV2(glassSpec, solidColor = cardBg, cornerRadius = 14.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .testTag("song_item_${song.id}"),
@@ -639,9 +639,7 @@ private fun MusicMiniPlayer(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
-            .clip(squircle(16))
-            .background(bg)
-            .border(0.75.dp, border, squircle(16))
+            .glassSurfaceV2(glassSpec, solidColor = bg, cornerRadius = 16.dp)
             .clickable(onClick = onClick)
     ) {
         Row(

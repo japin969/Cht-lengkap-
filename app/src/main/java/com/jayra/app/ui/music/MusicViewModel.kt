@@ -13,8 +13,10 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.jayra.app.data.AppleMusicResponse
 import com.jayra.app.data.NetworkClient
 import com.jayra.app.data.NexadevApi
+import com.jayra.app.data.SiputzxApi
 import com.jayra.app.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -40,7 +42,8 @@ sealed interface MusicUiState {
 @OptIn(FlowPreview::class)
 class MusicViewModel @JvmOverloads constructor(
     application: Application,
-    private val nexadevApi: NexadevApi = NexadevApi.create()
+    private val nexadevApi: NexadevApi = NexadevApi.create(),
+    private val siputzxApi: SiputzxApi = SiputzxApi.create()
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Empty)
@@ -151,7 +154,7 @@ class MusicViewModel @JvmOverloads constructor(
                         _isPlaying.value = false
                         _isBuffering.value = false
                         val current = _currentSong.value
-                        if (current != null && current.source == "spotify") {
+                        if (current != null && (current.source == "spotify" || current.source == "applemusic")) {
                             fallbackToYouTubeFullTrack(current)
                         } else {
                             _playbackError.value = "Gagal memutar audio (${error.errorCodeName})"
@@ -213,6 +216,7 @@ class MusicViewModel @JvmOverloads constructor(
 
         _uiState.value = MusicUiState.Loading
         val results = mutableListOf<Song>()
+        val seenKeys = mutableSetOf<String>()
         try {
             val spotifyDeferred = viewModelScope.async(Dispatchers.IO) {
                 runCatching {
@@ -235,8 +239,28 @@ class MusicViewModel @JvmOverloads constructor(
                 }.getOrNull()
             }
 
-            spotifyDeferred.await()?.let { results.add(it) }
-            ytDeferred.await()?.let { results.add(it) }
+            val amDeferred = viewModelScope.async(Dispatchers.IO) {
+                runCatching {
+                    val r = siputzxApi.searchAppleMusic(query, region = "id")
+                    if (r.isSuccessful && r.body()?.status == true) {
+                        r.body()?.data?.map { item ->
+                            item.toSong("am_${query.hashCode()}_${item.title?.hashCode() ?: 0}")
+                        }?.firstOrNull { it.audioUrl.isNotBlank() }
+                    } else null
+                }.getOrNull()
+            }
+
+            spotifyDeferred.await()?.let { addUnique(it) }
+            ytDeferred.await()?.let { addUnique(it) }
+            amDeferred.await()?.let { addUnique(it) }
+
+            fun addUnique(song: Song) {
+                val key = "${song.title.lowercase()}::${song.artist.lowercase()}"
+                if (key not in seenKeys) {
+                    seenKeys.add(key)
+                    results.add(song)
+                }
+            }
 
             if (results.isNotEmpty()) {
                 _uiState.value = MusicUiState.Success(results)
@@ -265,7 +289,7 @@ class MusicViewModel @JvmOverloads constructor(
         _duration.value = parseDurationMs(song.duration)
 
         if (song.audioUrl.isBlank()) {
-            if (song.source == "spotify") {
+            if (song.source == "spotify" || song.source == "applemusic") {
                 fallbackToYouTubeFullTrack(song)
             } else {
                 _isPlaying.value = false

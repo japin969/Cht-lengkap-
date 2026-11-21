@@ -68,7 +68,11 @@ import com.jayra.app.ui.theme.IOSGreenDark
 import com.jayra.app.ui.theme.IOSRedDark
 import com.jayra.app.ui.theme.IOSSecondaryLabelDark
 import com.jayra.app.ui.theme.JayraTheme
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.ui.theme.squircle
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassSurfaceSpec
+import com.jayra.app.util.glassSurfaceV2
 import java.util.Locale
 
 @Composable
@@ -129,6 +133,10 @@ fun MusicPlayerContent(
     val gradientBackground = Brush.verticalGradient(
         colors = listOf(Color(0xFF0E1B2B), Color(0xFF151E30), Color(0xFF0A0A0C))
     )
+
+    val isDark = isSystemInDarkTheme()
+    val glassTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+    val glassSpec = remember(glassTier, isDark) { LiquidGlassSpecV2.forTier(glassTier, isDark).surface }
 
     var isUserSeeking by remember { mutableStateOf(false) }
     var seekPosition by remember { mutableFloatStateOf(0f) }
@@ -217,9 +225,7 @@ fun MusicPlayerContent(
             modifier = Modifier
                 .fillMaxWidth(0.76f)
                 .aspectRatio(1f)
-                .shadow(elevation = 16.dp, shape = squircle(24))
-                .clip(squircle(24))
-                .background(Color(0x1FFFFFFF)),
+                .glassSurfaceV2(glassSpec, solidColor = Color(0x1FFFFFFF), cornerRadius = 24.dp),
             contentAlignment = Alignment.Center
         ) {
             if (song != null && song.coverUrl.isNotBlank()) {
