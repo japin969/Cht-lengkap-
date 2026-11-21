@@ -6,9 +6,8 @@ import com.jayra.app.data.KomikChapter
 import com.jayra.app.data.KomikDetailResponse
 import com.jayra.app.data.KomikItem
 import com.jayra.app.data.KomikPage
-import com.jayra.app.data.MangaDexApi
-import com.jayra.app.data.MdxChapter
-import com.jayra.app.data.MdxManga
+import com.jayra.app.data.KomikStreamResponse
+import com.jayra.app.data.NexadevApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -30,8 +29,9 @@ data class KomikUiState(
 )
 
 class KomikViewModel : ViewModel() {
-    // Sumber data baru: MangaDex API (API lama apii.nexadev.my.id sudah mati / 503).
-    private val api = MangaDexApi.create()
+    // Sumber data: Nexadev API (https://api.nexadev.my.id) — client & base URL
+    // yang sudah ada di project, sama persis dengan fitur lain.
+    private val api = NexadevApi.create()
     private val _uiState = MutableStateFlow(KomikUiState())
     val uiState: StateFlow<KomikUiState> = _uiState
 
@@ -44,8 +44,29 @@ class KomikViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
             try {
-                val res = api.list()
-                val mapped = res.body()?.data.orEmpty().map { it.toItem() }
+                val res = api.getKomikList(page = 1)
+                val mapped = res.body()?.results.orEmpty()
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    latest = mapped,
+                    popular = mapped,
+                    homeError = if (mapped.isEmpty()) "Daftar komik kosong" else null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    homeError = e.localizedMessage ?: "Koneksi bermasalah"
+                )
+            }
+        }
+    }
+
+    /** Muat satu halaman daftar komik. */
+    fun loadPage(page: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
+            try {
+                val mapped = api.getKomikList(page = page).body()?.results.orEmpty()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     latest = mapped,
@@ -75,22 +96,12 @@ class KomikViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(detailLoading = true, detailError = null)
             try {
-                val detailRes = api.detail(slug)
-                val manga = detailRes.body()?.data
-                val chapterItems = runCatching {
-                    api.chapters(slug).body()?.data.orEmpty()
-                }.getOrDefault(emptyList())
-                if (detailRes.isSuccessful && manga != null) {
-                    val mapped = chapterItems.map { it.toChapter() }
+                val body = api.getKomikDetail(slug = slug, type = "detail").body()
+                if (body != null && body.success == true) {
+                    val mapped = body.chapters.orEmpty()
                     _uiState.value = _uiState.value.copy(
                         detailLoading = false,
-                        detail = KomikDetailResponse(
-                            success = true,
-                            title = manga.attributes?.displayTitle(),
-                            cover = manga.coverUrl(),
-                            synopsis = manga.attributes?.displayDescription(),
-                            chapters = mapped
-                        ),
+                        detail = body,
                         chapters = mapped,
                         detailError = null
                     )
@@ -125,19 +136,13 @@ class KomikViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(detailLoading = true, detailError = null)
             try {
-                val res = api.chapterImages(slug)
-                val body = res.body()
-                val base = body?.baseUrl
-                val hash = body?.chapter?.hash
-                val files = body?.chapter?.data.orEmpty()
-                val pages = if (base != null && hash != null) {
-                    files.mapIndexed { index, file ->
-                        KomikPage(page = index + 1, url = "$base/data/$hash/$file")
-                    }
-                } else emptyList()
+                val body = api.getKomikPages(slug = slug, type = "stream").body()
+                val pages = body?.pages.orEmpty()
                 _uiState.value = _uiState.value.copy(
                     detailLoading = false,
-                    streamTitle = _uiState.value.detail?.title,
+                    streamTitle = body?.chapterTitle
+                        ?: body?.mangaTitle
+                        ?: _uiState.value.detail?.title,
                     pages = pages,
                     detailError = if (pages.isEmpty()) "Halaman chapter tidak tersedia" else null
                 )
@@ -154,32 +159,11 @@ class KomikViewModel : ViewModel() {
         lastSlug?.let { loadStream(it) }
     }
 
-    /** Pencarian MangaDex. Return hasil agar screen bisa menampilkan state sendiri. */
+    /** Pencarian komik. Return hasil agar screen bisa menampilkan state sendiri. */
     suspend fun search(query: String): List<KomikItem> {
         if (query.isBlank()) return emptyList()
         return runCatching {
-            api.search(query.trim()).body()?.data.orEmpty().map { it.toItem() }
+            api.searchKomik(query.trim()).body()?.results.orEmpty()
         }.getOrElse { emptyList() }
-    }
-
-    private fun MdxManga.toItem(): KomikItem = KomikItem(
-        title = attributes?.displayTitle(),
-        slug = id,
-        cover = coverUrl(),
-        updatedAt = attributes?.lastChapter?.takeIf { it.isNotBlank() }?.let { "Ch. $it" }
-            ?: attributes?.status,
-        rating = null
-    )
-
-    private fun MdxChapter.toChapter(): KomikChapter {
-        val number = attributes?.chapter?.takeIf { it.isNotBlank() }
-        val title = attributes?.title?.takeIf { it.isNotBlank() }
-        val label = when {
-            number != null && title != null -> "Chapter $number · $title"
-            number != null -> "Chapter $number"
-            title != null -> title
-            else -> "Chapter"
-        }
-        return KomikChapter(title = label, slug = id, link = id)
     }
 }

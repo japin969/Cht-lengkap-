@@ -844,12 +844,35 @@ private fun MainNavigationGraph(
         ) { backStackEntry ->
             val url = backStackEntry.arguments?.getString("url") ?: ""
             val decoded = java.net.URLDecoder.decode(url, "UTF-8")
-            // Pemutar native (ExoPlayer). Bila sumber tidak menyediakan tautan,
-            // layar akan menampilkan pesan, bukan crash / WebView.
-            com.jayra.app.ui.anime.AnimePlayerScreen(
-                videoUrl = "",
-                onBack = { navController.popBackStack() }
-            )
+            // Ambil link streaming dari Nexadev lalu putar dengan ExoPlayer native.
+            val vm: com.jayra.app.ui.anime.AnimeViewModel =
+                androidx.lifecycle.viewmodel.compose.viewModel()
+            val state by vm.uiState.collectAsState()
+            LaunchedEffect(decoded) { vm.loadStream(decoded) }
+
+            val stream = state.streamUrl
+            when {
+                state.streamLoading && stream == null -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                stream != null -> {
+                    com.jayra.app.ui.anime.AnimePlayerScreen(
+                        videoUrl = stream,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                else -> {
+                    com.jayra.app.ui.anime.AnimePlayerScreen(
+                        videoUrl = "",
+                        onBack = { navController.popBackStack() },
+                        errorMessage = state.streamError
+                    )
+                }
+            }
         }
 
         composable(

@@ -432,7 +432,8 @@ private fun AnimeEpisodeRow(episode: AnimeEpisode, onClick: () -> Unit) {
 @Composable
 fun AnimePlayerScreen(
     videoUrl: String,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    errorMessage: String? = null
 ) {
     val context = LocalContext.current
 
@@ -495,7 +496,8 @@ fun AnimePlayerScreen(
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        text = "Sumber video belum tersedia",
+                        text = errorMessage?.takeIf { it.isNotBlank() }
+                            ?: "Sumber video belum tersedia",
                         color = Color.White.copy(alpha = 0.85f),
                         style = MaterialTheme.typography.bodyMedium
                     )

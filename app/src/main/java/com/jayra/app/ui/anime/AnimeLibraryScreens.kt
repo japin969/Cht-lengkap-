@@ -194,7 +194,7 @@ private fun AnimeGridItem(anime: AnimeSearchItem, onClick: (String) -> Unit) {
 }
 
 /**
- * Pencarian Anime — memakai Kitsu search API.
+ * Pencarian Anime — memakai Nexadev API (animasu).
  */
 @Composable
 fun AnimeSearchScreen(

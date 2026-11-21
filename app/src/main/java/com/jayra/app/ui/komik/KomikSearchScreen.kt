@@ -33,7 +33,7 @@ import com.jayra.app.ui.media.MediaTopBar
 import kotlinx.coroutines.delay
 
 /**
- * Pencarian Komik — memakai MangaDex search API.
+ * Pencarian Komik — memakai Nexadev API (komikindo).
  *
  * Query kosong  -> panel saran + daftar populer (hasil loadHome).
  * Sedang ketik  -> debounce 350ms lalu cari ke API.

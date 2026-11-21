@@ -28,6 +28,77 @@ interface NexadevApi {
     @GET("api/dramabox/detail")
     suspend fun getDramaDetail(@Query("url") url: String): Response<DramaDetailResponse>
 
+    // ═══════════════════════════════════════════════════════════════
+    // KOMIK — parlemen komikindo (endpoint yang sama, dibedakan
+    // parameter `type`, mengikuti pola yang sudah dipakai di project).
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Daftar komik terbaru. `page` mulai dari 1. */
+    @GET("komik")
+    suspend fun getKomikList(@Query("page") page: Int = 1): Response<KomikListResponse>
+
+    /** Cari komik berdasarkan judul. */
+    @GET("komik")
+    suspend fun searchKomik(@Query("q") query: String): Response<KomikListResponse>
+
+    /** Detail komik: sinopsis, genre, dan daftar chapter. */
+    @GET("komik")
+    suspend fun getKomikDetail(
+        @Query("slug") slug: String,
+        @Query("type") type: String = "detail"
+    ): Response<KomikDetailResponse>
+
+    /** Halaman gambar untuk satu chapter (dipakai reader). */
+    @GET("komik")
+    suspend fun getKomikPages(
+        @Query("slug") slug: String,
+        @Query("type") type: String = "stream"
+    ): Response<KomikStreamResponse>
+
+    // ═══════════════════════════════════════════════════════════════
+    // ANIME — animasu
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Anime sedang tayang. */
+    @GET("animasu")
+    suspend fun getAnimeOngoing(
+        @Query("ongoing") ongoing: Int = 1,
+        @Query("page") page: Int = 1
+    ): Response<AnimeListResponse>
+
+    /** Anime yang sudah selesai tayang. */
+    @GET("animasu")
+    suspend fun getAnimeCompleted(
+        @Query("completed") completed: Int = 1,
+        @Query("page") page: Int = 1
+    ): Response<AnimeListResponse>
+
+    /** Anime populer. */
+    @GET("animasu")
+    suspend fun getAnimePopular(
+        @Query("popular") popular: Int = 1,
+        @Query("page") page: Int = 1
+    ): Response<AnimeListResponse>
+
+    /** Anime terbaru (recent). */
+    @GET("animasu")
+    suspend fun getAnimeRecent(
+        @Query("recent") recent: Int = 1,
+        @Query("page") page: Int = 1
+    ): Response<AnimeListResponse>
+
+    /** Cari anime berdasarkan judul. */
+    @GET("animasu")
+    suspend fun searchAnime(@Query("search") query: String): Response<AnimeSearchResponse>
+
+    /** Detail anime: info, genre, sinopsis, daftar episode. */
+    @GET("animasu")
+    suspend fun getAnimeDetail(@Query("details") details: String): Response<AnimeDetailResponse>
+
+    /** Link streaming satu episode anime. */
+    @GET("animasu")
+    suspend fun getAnimeStream(@Query("stream") stream: String): Response<AnimeStreamResponse>
+
     companion object {
         private const val BASE_URL = "https://api.nexadev.my.id/"
 

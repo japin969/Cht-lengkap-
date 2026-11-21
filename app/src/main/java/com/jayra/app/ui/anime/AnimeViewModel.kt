@@ -5,23 +5,28 @@ import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeSearchItem
-import com.jayra.app.data.KitsuAnime
-import com.jayra.app.data.KitsuApi
-import com.jayra.app.data.KitsuEpisode
+import com.jayra.app.data.AnimeStreamData
+import com.jayra.app.data.NexadevApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class AnimeUiState(
     val isLoading: Boolean = false,
     val ongoing: List<AnimeSearchItem> = emptyList(),
     val popular: List<AnimeSearchItem> = emptyList(),
     val completed: List<AnimeSearchItem> = emptyList(),
+    val recent: List<AnimeSearchItem> = emptyList(),
     val detail: AnimeDetailData? = null,
     val episodes: List<AnimeEpisode> = emptyList(),
     /** Menandakan episode sedang dimuat. */
     val episodesLoading: Boolean = false,
+    /** URL mp4 siap putar (hasil resolusi stream). */
     val streamUrl: String? = null,
+    val streamLoading: Boolean = false,
+    val streamError: String? = null,
     /** Error umum (home / detail). */
     val error: String? = null,
     val homeError: String? = null,
@@ -29,12 +34,13 @@ data class AnimeUiState(
 )
 
 class AnimeViewModel : ViewModel() {
-    // Sumber data baru: Kitsu API (API lama apii.nexadev.my.id sudah mati / 503).
-    private val api = KitsuApi.create()
+    // Sumber data: Nexadev API (https://api.nexadev.my.id) — client & base URL
+    // yang sudah ada di project, sama persis dengan fitur lain.
+    private val api = NexadevApi.create()
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
-    private var lastAnimeId: String? = null
+    private var lastAnimeUrl: String? = null
 
     init { loadHome() }
 
@@ -42,31 +48,28 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
             try {
-                val popular = runCatching {
-                    api.list(limit = 20, sort = "-userCount").body()?.data.orEmpty()
-                }.getOrDefault(emptyList())
                 val ongoing = runCatching {
-                    api.list(limit = 20, sort = "-userCount", status = "current")
-                        .body()?.data.orEmpty()
+                    api.getAnimeOngoing().body()?.data?.animeList.orEmpty()
+                }.getOrDefault(emptyList())
+                val popular = runCatching {
+                    api.getAnimePopular().body()?.data?.animeList.orEmpty()
                 }.getOrDefault(emptyList())
                 val completed = runCatching {
-                    api.list(limit = 20, sort = "-averageRating", status = "finished")
-                        .body()?.data.orEmpty()
+                    api.getAnimeCompleted().body()?.data?.animeList.orEmpty()
+                }.getOrDefault(emptyList())
+                val recent = runCatching {
+                    api.getAnimeRecent().body()?.data?.animeList.orEmpty()
                 }.getOrDefault(emptyList())
 
-                val mappedPopular = popular.map { it.toItem() }
-                val mappedOngoing = ongoing.map { it.toItem() }
-                val mappedCompleted = completed.map { it.toItem() }
-                val hasData = mappedPopular.isNotEmpty() ||
-                    mappedOngoing.isNotEmpty() ||
-                    mappedCompleted.isNotEmpty()
+                val hasData = ongoing.isNotEmpty() || popular.isNotEmpty() ||
+                    completed.isNotEmpty() || recent.isNotEmpty()
 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    popular = mappedPopular,
-                    ongoing = mappedOngoing,
-                    completed = mappedCompleted,
-                    error = if (hasData) null else "Gagal memuat daftar anime",
+                    ongoing = ongoing,
+                    popular = popular,
+                    completed = completed,
+                    recent = recent,
                     homeError = if (hasData) null else "Gagal memuat daftar anime"
                 )
             } catch (e: Exception) {
@@ -90,38 +93,19 @@ class AnimeViewModel : ViewModel() {
             )
             return
         }
-        lastAnimeId = url
+        lastAnimeUrl = url
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, detailError = null)
             try {
-                val res = api.detail(url)
-                val data = res.body()?.data
-                if (res.isSuccessful && data != null) {
-                    val attrs = data.attributes
-                    val info = buildMap {
-                        attrs?.status?.let { put("Status", it) }
-                        attrs?.startDate?.let { put("Mulai", it) }
-                        attrs?.episodeCount?.let { put("Episode", "$it") }
-                        attrs?.subtype?.let { put("Tipe", it) }
-                    }
+                val data = api.getAnimeDetail(details = url).body()?.data
+                if (data != null) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        detail = AnimeDetailData(
-                            title = attrs?.displayTitle(),
-                            image = attrs?.posterImage?.best()?.takeIf { it.isNotBlank() }
-                                ?: attrs?.coverImage?.best(),
-                            synopsis = attrs?.synopsis,
-                            rating = attrs?.averageRating?.toDoubleOrNull(),
-                            totalEpisodes = attrs?.episodeCount,
-                            genres = null,
-                            info = info,
-                            episodes = emptyList()
-                        ),
-                        episodes = emptyList(),
+                        detail = data,
+                        episodes = data.episodes.orEmpty(),
+                        episodesLoading = false,
                         detailError = null
                     )
-                    // Episode dimuat menyusul agar detail cepat tampil.
-                    loadEpisodes(url)
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -138,57 +122,107 @@ class AnimeViewModel : ViewModel() {
     }
 
     fun retryDetail() {
-        lastAnimeId?.let { loadDetail(it) }
+        lastAnimeUrl?.let { loadDetail(it) }
     }
 
-    /** Muat ulang hanya daftar episode (dipakai tombol Retry di section episode). */
+    /** Muat ulang daftar episode saja. */
     fun retryEpisodes() {
-        lastAnimeId?.let { loadEpisodes(it) }
+        lastAnimeUrl?.let { loadDetail(it) }
     }
 
-    private fun loadEpisodes(animeId: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(episodesLoading = true)
-            val list = runCatching {
-                api.episodes(animeId).body()?.data.orEmpty()
-            }.getOrDefault(emptyList())
+    /**
+     * Ambil link streaming episode lalu ubah ke URL mp4 yang bisa diputar ExoPlayer.
+     *
+     * Nexadev mengembalikan `streamUrl` berupa halaman Blogger; di dalamnya ada
+     * URL googlevideo (video/mp4). Bila tidak ditemukan, `streamUrl` dibiarkan
+     * null dan UI menampilkan pesan — bukan crash.
+     */
+    fun loadStream(episodeUrl: String) {
+        if (episodeUrl.isBlank()) {
             _uiState.value = _uiState.value.copy(
-                episodesLoading = false,
-                episodes = list.map { it.toEpisode() }
+                streamLoading = false,
+                streamError = "Episode tidak ditemukan"
             )
+            return
+        }
+        lastStreamEpisodeUrl = episodeUrl
+        _uiState.value = _uiState.value.copy(
+            streamLoading = true,
+            streamError = null,
+            streamUrl = null
+        )
+        viewModelScope.launch {
+            try {
+                val data = api.getAnimeStream(stream = episodeUrl).body()?.data
+                val pageUrl = data?.streamUrl
+                if (pageUrl.isNullOrBlank()) {
+                    _uiState.value = _uiState.value.copy(
+                        streamLoading = false,
+                        streamError = "Sumber video belum tersedia"
+                    )
+                    return@launch
+                }
+                val mp4 = resolvePlayableUrl(pageUrl)
+                _uiState.value = _uiState.value.copy(
+                    streamLoading = false,
+                    streamUrl = mp4,
+                    streamError = if (mp4 == null) "Sumber video belum tersedia" else null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    streamLoading = false,
+                    streamError = e.localizedMessage ?: "Gagal memuat video"
+                )
+            }
         }
     }
 
-    fun loadStream(url: String) {
-        // Kitsu tidak menyediakan streaming; detail tetap bisa dibuka.
-        _uiState.value = _uiState.value.copy(streamUrl = null)
+    fun retryStream() {
+        lastStreamEpisodeUrl?.let { loadStream(it) }
     }
 
-    /** Pencarian Kitsu. Return hasil agar screen bisa menampilkan state sendiri. */
+    private var lastStreamEpisodeUrl: String? = null
+
+    /** Pencarian anime. Return hasil agar screen bisa menampilkan state sendiri. */
     suspend fun search(query: String): List<AnimeSearchItem> {
         if (query.isBlank()) return emptyList()
         return runCatching {
-            api.search(query.trim()).body()?.data.orEmpty().map { it.toItem() }
+            api.searchAnime(query.trim()).body()?.data?.results.orEmpty()
         }.getOrElse { emptyList() }
     }
 
-    private fun KitsuAnime.toItem(): AnimeSearchItem = AnimeSearchItem(
-        title = attributes?.displayTitle(),
-        link = id,
-        image = attributes?.posterImage?.best()?.takeIf { it.isNotBlank() }
-            ?: attributes?.coverImage?.best(),
-        latestEpisode = attributes?.episodeCount?.let { "$it eps" } ?: attributes?.status,
-        type = attributes?.subtype
-    )
+    /**
+     * Ubah halaman blogger menjadi URL mp4 langsung.
+     * Mengembalikan null bila tidak ada URL video yang bisa diputar.
+     */
+    private suspend fun resolvePlayableUrl(pageUrl: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val client = okhttp3.OkHttpClient.Builder()
+                .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+            val request = okhttp3.Request.Builder()
+                .url(pageUrl)
+                .header("User-Agent", USER_AGENT)
+                .build()
+            client.newCall(request).execute().use { response ->
+                val html = response.body?.string() ?: return@use null
+                // Unescape HTML entities yang umum dipakai di halaman blogger.
+                val decoded = html
+                    .replace("&quot;", "\"")
+                    .replace("\\u0026", "&")
+                    .replace("\\u003d", "=")
+                    .replace("&amp;", "&")
+                val match = GOOGLEVIDEO_REGEX.find(decoded)?.value ?: return@use null
+                if (match.isBlank()) null else match
+            }
+        }.getOrNull()
+    }
 
-    private fun KitsuEpisode.toEpisode(): AnimeEpisode {
-        val number = attributes?.number
-        return AnimeEpisode(
-            episode = number?.toString(),
-            title = attributes?.displayTitle()?.takeIf { it.isNotBlank() }
-                ?: number?.let { "Episode $it" }
-                ?: "Episode",
-            episodeUrl = id
+    companion object {
+        private const val USER_AGENT = "okhttp/4.12.0"
+        private val GOOGLEVIDEO_REGEX = Regex(
+            """https://rr\d+---[a-z0-9-]+\.googlevideo\.com/videoplayback\?[^"\\\s]*"""
         )
     }
 }
