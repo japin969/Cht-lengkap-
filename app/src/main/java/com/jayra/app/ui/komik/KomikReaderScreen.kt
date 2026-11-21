@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,12 +41,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jayra.app.data.KomikItem
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.jayra.app.data.KomikItem
 import com.jayra.app.ui.theme.IOSBlue
 import com.jayra.app.ui.theme.IOSBlueDark
 import com.jayra.app.ui.theme.IOSGray6
@@ -175,21 +177,25 @@ fun KomikReaderScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                currentKomik.type?.takeIf { it.isNotBlank() }?.let { t ->
-                    Text(
-                        text = t,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = subLabelColor
-                    )
+                currentKomik.type?.let { t ->
+                    if (t.isNotBlank()) {
+                        Text(
+                            text = t,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = subLabelColor
+                        )
+                    }
                 }
-                currentKomik.rating?.takeIf { it.isNotBlank() }?.let { rate ->
-                    Text(
-                        text = "$rate",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = IOSOrange
-                    )
+                currentKomik.rating?.let { rate ->
+                    if (rate.isNotBlank()) {
+                        Text(
+                            text = "$rate",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = IOSOrange
+                        )
+                    }
                 }
             }
 

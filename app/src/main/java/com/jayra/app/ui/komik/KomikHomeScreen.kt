@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -53,9 +54,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jayra.app.data.KomikItem
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.jayra.app.data.KomikItem
 import com.jayra.app.ui.theme.IOSBlue
 import com.jayra.app.ui.theme.IOSBlueDark
 import com.jayra.app.ui.theme.IOSGray6
@@ -93,7 +94,6 @@ fun KomikHomeScreen(
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Glass spec (tanpa blur) untuk kartu komik — konsisten dengan spec LiquidGlassSpecV2
     val glassTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
     val glassSpec = remember(glassTier, isDark) { LiquidGlassSpecV2.forTier(glassTier, isDark).surface }
 
@@ -102,7 +102,6 @@ fun KomikHomeScreen(
             .fillMaxSize()
             .background(bgColor)
     ) {
-        // iOS Search Pill
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -158,7 +157,6 @@ fun KomikHomeScreen(
             }
         }
 
-        // Mode Pencarian
         if (state.searchQuery.isNotBlank()) {
             when {
                 state.isSearching -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -202,7 +200,6 @@ fun KomikHomeScreen(
             return
         }
 
-        // Beranda
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = accentBlue)
@@ -259,7 +256,6 @@ private fun KomikHomeContent(
         contentPadding = PaddingValues(bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Hero komik pertama (banner besar)
         val hero = state.items.firstOrNull()
         if (hero != null) {
             item(key = "hero") {
@@ -267,7 +263,8 @@ private fun KomikHomeContent(
             }
         }
 
-        if (state.items.size > 1) {
+        val rest = state.items.drop(1)
+        if (rest.isNotEmpty()) {
             item(key = "section_populer") {
                 KomikSectionHeader(title = "Populer", labelColor = labelColor, accentBlue = accentBlue)
             }
@@ -277,7 +274,7 @@ private fun KomikHomeContent(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(state.items.drop(1).take(8), key = { "pop_${it.resolvedSlug.ifBlank { it.cleanTitle }}" }) { komik ->
+                    items(rest.take(8), key = { "pop_${it.resolvedSlug.ifBlank { it.cleanTitle }}" }) { komik ->
                         KomikCard(komik, isDark, labelColor, subLabelColor, accentBlue, glassSpec) {
                             onKomikClick(komik.resolvedSlug)
                         }
@@ -286,7 +283,8 @@ private fun KomikHomeContent(
             }
         }
 
-        if (state.items.size > 9) {
+        val rest2 = state.items.drop(9)
+        if (rest2.isNotEmpty()) {
             item(key = "section_terbaru") {
                 KomikSectionHeader(title = "Update Terbaru", labelColor = labelColor, accentBlue = accentBlue)
             }
@@ -296,7 +294,7 @@ private fun KomikHomeContent(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(state.items.drop(9).take(8), key = { "upd_${it.resolvedSlug.ifBlank { it.cleanTitle }}" }) { komik ->
+                    items(rest2.take(8), key = { "upd_${it.resolvedSlug.ifBlank { it.cleanTitle }}" }) { komik ->
                         KomikCard(komik, isDark, labelColor, subLabelColor, accentBlue, glassSpec) {
                             onKomikClick(komik.resolvedSlug)
                         }
@@ -306,7 +304,7 @@ private fun KomikHomeContent(
         }
 
         if (state.hasNext) {
-            item(span = { GridCellSpan(3) }) {
+            item(key = "load_more") {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
@@ -330,8 +328,6 @@ private fun KomikHomeContent(
         }
     }
 }
-
-private typealias GridCellSpan = androidx.compose.foundation.lazy.grid.GridItemSpan
 
 @Composable
 private fun KomikSectionHeader(title: String, labelColor: Color, accentBlue: Color) {
@@ -357,7 +353,7 @@ fun KomikHeroCard(
     accentBlue: Color,
     onClick: () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -367,7 +363,7 @@ fun KomikHeroCard(
             .clickable { onClick() }
     ) {
         AsyncImage(
-            model = coil.request.ImageRequest.Builder(context)
+            model = ImageRequest.Builder(context)
                 .data(komik.cover)
                 .addHeader("Referer", "https://komikindo.ch/")
                 .crossfade(true)
@@ -383,20 +379,24 @@ fun KomikHeroCard(
         )
         Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                komik.type?.takeIf { it.isNotBlank() }?.let { t ->
-                    Box(
-                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(t, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                komik.type?.let { t ->
+                    if (t.isNotBlank()) {
+                        Box(
+                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(t, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                        }
                     }
                 }
-                komik.latestChapter?.takeIf { it.isNotBlank() }?.let { ch ->
-                    Box(
-                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(ch, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                komik.latestChapter?.let { ch ->
+                    if (ch.isNotBlank()) {
+                        Box(
+                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(ch, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                 }
             }
@@ -423,7 +423,7 @@ fun KomikCard(
     glassSpec: GlassSurfaceSpec,
     onClick: (String) -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     Column(modifier = Modifier.width(116.dp).clickable { onClick(komik.resolvedSlug) }) {
         Box(
             modifier = Modifier
@@ -433,7 +433,7 @@ fun KomikCard(
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
-                model = coil.request.ImageRequest.Builder(context)
+                model = ImageRequest.Builder(context)
                     .data(komik.cover)
                     .addHeader("Referer", "https://komikindo.ch/")
                     .crossfade(true)
@@ -442,29 +442,33 @@ fun KomikCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            komik.latestChapter?.takeIf { it.isNotBlank() }?.let { ch ->
-                Box(
-                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
-                        .clip(RoundedCornerShape(6.dp)).background(accentBlue.copy(alpha = 0.92f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(ch, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+            komik.latestChapter?.let { ch ->
+                if (ch.isNotBlank()) {
+                    Box(
+                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
+                            .clip(RoundedCornerShape(6.dp)).background(accentBlue.copy(alpha = 0.92f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(ch, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                    }
                 }
             }
-            komik.rating?.takeIf { it.isNotBlank() }?.let { rate ->
-                Box(
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                        .clip(RoundedCornerShape(6.dp)).background(Color(0xAA000000))
-                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.material.icons.rounded.Star(
-                            contentDescription = null,
-                            tint = IOSOrange,
-                            modifier = Modifier.size(11.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(rate, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            komik.rating?.let { rate ->
+                if (rate.isNotBlank()) {
+                    Box(
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
+                            .clip(RoundedCornerShape(6.dp)).background(Color(0xAA000000))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material.icons.rounded.Star(
+                                contentDescription = null,
+                                tint = IOSOrange,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(rate, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                 }
             }
@@ -481,5 +485,3 @@ fun KomikCard(
         )
     }
 }
-
-private fun SolidColor(color: Color) = androidx.compose.ui.graphics.SolidColor(color)

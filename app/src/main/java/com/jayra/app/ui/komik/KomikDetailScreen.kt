@@ -51,9 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jayra.app.data.KomikItem
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.jayra.app.data.KomikItem
 import com.jayra.app.ui.theme.IOSBlue
 import com.jayra.app.ui.theme.IOSBlueDark
 import com.jayra.app.ui.theme.IOSGray6
@@ -191,7 +191,6 @@ private fun KomikDetailContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Hero cover header
         item(key = "hero") {
             Box(
                 modifier = Modifier
@@ -217,31 +216,37 @@ private fun KomikDetailContent(
                 )
                 Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        komik.type?.takeIf { it.isNotBlank() }?.let { t ->
-                            Box(
-                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Text(t, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                        komik.type?.let { t ->
+                            if (t.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(t, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                                }
                             }
                         }
-                        komik.latestChapter?.takeIf { it.isNotBlank() }?.let { ch ->
-                            Box(
-                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Text(ch, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        komik.latestChapter?.let { ch ->
+                            if (ch.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(ch, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
                             }
                         }
-                        komik.rating?.takeIf { it.isNotBlank() }?.let { rate ->
-                            Box(
-                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IOSOrange.copy(alpha = 0.95f))
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Star(contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Text(rate, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        komik.rating?.let { rate ->
+                            if (rate.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IOSOrange.copy(alpha = 0.95f))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Star(contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Text(rate, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
                                 }
                             }
                         }
@@ -286,38 +291,40 @@ private fun KomikDetailContent(
             }
         }
 
-        // Info row
         item(key = "info") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                komik.type?.takeIf { it.isNotBlank() }?.let { t ->
-                    Text(
-                        text = t,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = subLabelColor
-                    )
+                komik.type?.let { t ->
+                    if (t.isNotBlank()) {
+                        Text(
+                            text = t,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = subLabelColor
+                        )
+                    }
                 }
                 Text(
                     text = "•",
                     fontSize = 12.sp,
                     color = subLabelColor
                 )
-                komik.rating?.takeIf { it.isNotBlank() }?.let { rate ->
-                    Text(
-                        text = "Rating $rate",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = subLabelColor
-                    )
+                komik.rating?.let { rate ->
+                    if (rate.isNotBlank()) {
+                        Text(
+                            text = "Rating $rate",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = subLabelColor
+                        )
+                    }
                 }
             }
         }
 
-        // Synopsis
         item(key = "synopsis") {
             Column(
                 modifier = Modifier
@@ -353,7 +360,6 @@ private fun KomikDetailContent(
             }
         }
 
-        // Chapter list (API tidak menyediakan chapter images, tampilkan state kosong dengan aksi)
         item(key = "ch_header") {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -396,7 +402,7 @@ private fun KomikDetailContent(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Klik \"Baca di Komikindo\" di atas untuk membaca chapter secara langsung.",
+                        text = "Klik \"Buka di Komikindo\" di atas untuk membaca chapter secara langsung.",
                         color = subLabelColor,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center,
