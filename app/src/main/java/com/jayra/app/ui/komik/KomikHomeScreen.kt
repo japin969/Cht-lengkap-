@@ -96,7 +96,7 @@ fun KomikHomeScreen(
     val subLabelColor = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
     val accentBlue = if (isDark) IOSBlueDark else IOSBlue
     val cardBg = if (isDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemGroupedBackground
-    val borderColor = if (isDark) LiquidGlassSpecV2.DarkBorder else Color(0x14000000)
+    val borderColor = if (isDark) Color(0x14FFFFFF) else Color(0x14000000)
     val glassTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
     val glassSpec = remember(glassTier, isDark) { LiquidGlassSpecV2.forTier(glassTier, isDark).surface }
     val context = LocalContext.current

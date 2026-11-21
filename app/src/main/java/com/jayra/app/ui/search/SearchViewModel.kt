@@ -228,8 +228,8 @@ class SearchViewModel(
                 .distinctUntilChanged()
                 .filter { it.isNotBlank() }
                 .filter { _selectedFilter.value == SearchFilter.ALL || _selectedFilter.value == SearchFilter.KOMIK }
-                .flatMapLatest { query ->
-                    kotlinx.coroutines.flow.flow {
+                .flatMapLatest { query: String ->
+                    kotlinx.coroutines.flow.flow<SearchUiState> {
                         _isLoading.value = true
                         try {
                             val res = komikApi.search(query)
@@ -257,7 +257,7 @@ class SearchViewModel(
                             _isLoading.value = false
                         }
                     }
-                }.collect { komikState ->
+                }.collect { komikState: SearchUiState ->
                     // Merge komik results with existing results
                     _uiState.value = when {
                         _uiState.value is SearchUiState.Success -> {
