@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- Base config: dipakai semua domain yang TIDAK punya domain-config sendiri.
+         Ini termasuk api.deezer.com (Music) dan api.nexadev.my.id (Komik/Anime). -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
@@ -12,10 +14,21 @@
             <certificates src="system" />
         </trust-anchors>
     </domain-config>
-    <domain-config>
-        <domain includeSubdomains="true">api.nexadev.my.id</domain>
-        <trust-anchors>
-            <certificates src="system" />
-        </trust-anchors>
-    </domain-config>
+    <!--
+        CATATAN: domain-config untuk api.nexadev.my.id DIHAPUS.
+
+        Sebelumnya domain ini dibatasi hanya `system` trust anchor. Akibatnya
+        sertifikat api.nexadev.my.id (rantai: api.nexadev.my.id <- YR1 Let's
+        Encrypt <- Root YR ISRG <- ISRG Root X1) hanya bisa divalidasi oleh CA
+        yang ada di system store, sehingga device dengan CA user-install
+        (proxy/VPN/antivirus) mendapat
+        CertPathValidatorException: Trust Anchor ... not found.
+
+        api.deezer.com (Music) TIDAK punya domain-config, jadi memakai base-config
+        (system + user) dan tidak mengalami masalah ini. Itulah bedanya.
+
+        Dengan domain-config dihapus, api.nexadev.my.id memakai base-config yang
+        sama dengan domain lain. Ini BUKAN trust-all-certs: `system` tetap wajib,
+        hanya CA user yang sah ikut dipercaya (default Android).
+    -->
 </network-security-config>

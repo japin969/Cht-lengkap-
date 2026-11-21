@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlinx.coroutines.withContext
 
 data class AnimeUiState(
@@ -42,28 +43,51 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val popular = runCatching {
-                    api.getAnimePopular().body()?.data?.animeList.orEmpty()
-                }.getOrDefault(emptyList())
-                val ongoing = runCatching {
-                    api.getAnimeOngoing().body()?.data?.animeList.orEmpty()
-                }.getOrDefault(emptyList())
-                val completed = runCatching {
-                    api.getAnimeCompleted().body()?.data?.animeList.orEmpty()
-                }.getOrDefault(emptyList())
+                val popularRes = api.getAnimePopular()
+                val ongoingRes = api.getAnimeOngoing()
+                val completedRes = api.getAnimeCompleted()
+
+                val popular = popularRes.body()?.data?.animeList.orEmpty()
+                val ongoing = ongoingRes.body()?.data?.animeList.orEmpty()
+                val completed = completedRes.body()?.data?.animeList.orEmpty()
 
                 val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    popular = popular,
-                    ongoing = ongoing,
-                    completed = completed,
-                    error = if (hasData) null else "Gagal memuat daftar anime"
-                )
+
+                if (hasData) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        popular = popular,
+                        ongoing = ongoing,
+                        completed = completed,
+                        error = null
+                    )
+                } else {
+                    // Susun pesan yang menyebutkan sebab konkret, bukan generik.
+                    val codes = listOf(popularRes, ongoingRes, completedRes)
+                        .joinToString { it.code().toString() }
+                    val detail = popularRes.errorBody()?.string()
+                        ?: ongoingRes.errorBody()?.string()
+                        ?: completedRes.errorBody()?.string()
+                    Timber.e(
+                        "loadHome: semua daftar anime kosong. HTTP=%s body=%s",
+                        codes,
+                        detail?.take(300).orEmpty()
+                    )
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        popular = emptyList(),
+                        ongoing = emptyList(),
+                        completed = emptyList(),
+                        error = "Gagal memuat daftar anime (HTTP $codes, daftar kosong)"
+                    )
+                }
             } catch (e: Exception) {
+                // JANGAN telan exception: tampilkan sebab asli (mis. SSL / timeout).
+                Timber.e(e, "loadHome gagal: %s", e.javaClass.simpleName)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.localizedMessage ?: "Koneksi bermasalah"
+                    error = e.javaClass.simpleName + ": " +
+                        (e.localizedMessage ?: "Koneksi bermasalah")
                 )
             }
         }
