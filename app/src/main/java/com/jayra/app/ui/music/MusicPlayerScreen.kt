@@ -3,6 +3,7 @@ package com.jayra.app.ui.music
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,9 +70,9 @@ import com.jayra.app.ui.theme.IOSRedDark
 import com.jayra.app.ui.theme.IOSSecondaryLabelDark
 import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.ui.theme.GlassSurfaceSpec
 import com.jayra.app.ui.theme.squircle
 import com.jayra.app.util.GlassEffectPrefs
-import com.jayra.app.util.GlassSurfaceSpec
 import com.jayra.app.util.glassSurfaceV2
 import java.util.Locale
 

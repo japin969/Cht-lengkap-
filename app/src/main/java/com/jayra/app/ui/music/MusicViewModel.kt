@@ -250,17 +250,17 @@ class MusicViewModel @JvmOverloads constructor(
                 }.getOrNull()
             }
 
-            spotifyDeferred.await()?.let { addUnique(it) }
-            ytDeferred.await()?.let { addUnique(it) }
-            amDeferred.await()?.let { addUnique(it) }
-
             fun addUnique(song: Song) {
                 val key = "${song.title.lowercase()}::${song.artist.lowercase()}"
-                if (key not in seenKeys) {
+                if (!seenKeys.contains(key)) {
                     seenKeys.add(key)
                     results.add(song)
                 }
             }
+
+            spotifyDeferred.await()?.let { addUnique(it) }
+            ytDeferred.await()?.let { addUnique(it) }
+            amDeferred.await()?.let { addUnique(it) }
 
             if (results.isNotEmpty()) {
                 _uiState.value = MusicUiState.Success(results)

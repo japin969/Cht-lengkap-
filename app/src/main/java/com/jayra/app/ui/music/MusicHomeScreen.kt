@@ -107,8 +107,8 @@ import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.ui.theme.squircle
 import com.jayra.app.util.GlassEffectPrefs
-import com.jayra.app.util.GlassSurfaceSpec
 import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.ui.theme.GlassSurfaceSpec
 
 @Composable
 fun MusicHomeScreen(
@@ -470,6 +470,7 @@ fun MusicHomeContent(
                         progress = if (duration > 0L) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f,
                         isDark = isDark,
                         accentBlue = accentBlue,
+                        glassSpec = glassSpec,
                         onPlayPauseClick = onPlayPauseClick,
                         onNextClick = onNextClick,
                         onClick = { onSongClick(currentSong) }
@@ -626,6 +627,7 @@ private fun MusicMiniPlayer(
     progress: Float,
     isDark: Boolean,
     accentBlue: Color,
+    glassSpec: GlassSurfaceSpec,
     onPlayPauseClick: () -> Unit,
     onNextClick: () -> Unit,
     onClick: () -> Unit

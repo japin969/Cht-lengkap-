@@ -17,7 +17,7 @@ data class AppleMusicResponse(
     ) {
         fun toSong(fallbackId: String = System.currentTimeMillis().toString()): Song {
             // Apple Music hanya menyediakan link web, tidak ada direct audio URL.
-            # Simpan link sebagai audioUrl; saat diputar, fallback ke YouTube jika gagal.
+            // Simpan link sebagai audioUrl; saat diputar, fallback ke YouTube jika gagal.
             val audioUrl = link?.takeIf { it.isNotBlank() } ?: ""
             return Song(
                 id = "am_${title?.let { it.hashCode().toString() } ?: fallbackId}",
