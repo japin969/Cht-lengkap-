@@ -70,7 +70,7 @@ fun KomikDetailScreen(
     viewModel: KomikViewModel = viewModel(),
     onChapterClick: (String) -> Unit
 ) {
-    val state = viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isDark = isSystemInDarkTheme()
     val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
     val labelColor = if (isDark) IOSLabelDark else IOSLabel

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,7 +70,7 @@ fun KomikReaderScreen(
     slug: String,
     viewModel: KomikViewModel = viewModel()
 ) {
-    val state = viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isDark = isSystemInDarkTheme()
     val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
     val labelColor = if (isDark) IOSLabelDark else IOSLabel
