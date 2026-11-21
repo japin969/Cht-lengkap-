@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -419,6 +420,14 @@ private fun ChapterItem(
         override val contentColor: Color = Color.Unspecified
         override val leadingIconColor: Color = Color.Unspecified
         override val trailingIconColor: Color = Color.Unspecified
+        override val headlineColor: Color = Color.Unspecified
+        override val supportingTextColor: Color = Color.Unspecified
+        override val overlineColor: Color = Color.Unspecified
+        override val disabledHeadlineColor: Color = Color.Unspecified
+        override val disabledSupportingTextColor: Color = Color.Unspecified
+        override val disabledContainerColor: Color = Color.Unspecified
+        override val disabledLeadingIconColor: Color = Color.Unspecified
+        override val disabledTrailingIconColor: Color = Color.Unspecified
     }
 
     androidx.compose.material3.ListItem(

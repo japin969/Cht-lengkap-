@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -137,8 +136,8 @@ fun KomikReaderScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp, end = 16.dp)
-                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp),
+                contentAlignment = Alignment.TopEnd
             ) {
                 IconButton(onClick = { isFullscreen = false }) {
                     Icon(
@@ -237,8 +236,8 @@ private fun ReaderBottomBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .align(Alignment.BottomCenter)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        contentAlignment = Alignment.BottomCenter
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
