@@ -377,7 +377,7 @@ private fun SearchResultRow(
                         SearchResultType.MESSAGE -> Icons.Rounded.Forum
                         SearchResultType.CHAT -> Icons.Rounded.Person
                         SearchResultType.FILE -> Icons.Rounded.Forum
-                        SearchResultType.KOMIK -> Icons.Rounded.Bookmark
+                        SearchResultType.KOMIK -> Icons.Rounded.MenuBook
                     },
                     contentDescription = null,
                     tint = Color.White,
