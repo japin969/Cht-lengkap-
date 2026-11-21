@@ -14,25 +14,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -68,7 +71,7 @@ fun KomikDetailScreen(
     viewModel: KomikViewModel = viewModel(),
     onChapterClick: (String) -> Unit
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isDark = isSystemInDarkTheme()
     val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
     val labelColor = if (isDark) IOSLabelDark else IOSLabel
@@ -243,7 +246,8 @@ private fun DetailContent(
                                 Text(rating, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
-                        if (item.link != null && item.link!.isNotBlank()) {
+                        val link = item.link
+                        if (link != null && link.isNotBlank()) {
                             Text("Sumber: komikindo.ch", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
                         }
                     }
@@ -427,7 +431,7 @@ private fun ChapterItem(
         },
         trailingContent = {
             Icon(
-                imageVector = Icons.Rounded.AutoStories,
+                imageVector = Icons.Rounded.MenuBook,
                 contentDescription = "Baca",
                 tint = accentBlue,
                 modifier = Modifier.size(20.dp).padding(end = 8.dp)
@@ -439,7 +443,7 @@ private fun ChapterItem(
             .background(cardBg)
             .clip(RoundedCornerShape(10.dp))
             .clickable { onClick() },
-        colors = androidx.compose.material3.ListItemDefaults.listItemColors(
+        colors = ListItemDefaults.listItemColors(
             containerColor = cardBg,
             pressedContainerColor = accentBlue.copy(alpha = 0.1f)
         )
