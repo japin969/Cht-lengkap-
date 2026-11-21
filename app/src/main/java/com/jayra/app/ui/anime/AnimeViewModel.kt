@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeSearchItem
-import com.jayra.app.data.AnimeStreamData
 import com.jayra.app.data.NexadevApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,24 +17,19 @@ data class AnimeUiState(
     val ongoing: List<AnimeSearchItem> = emptyList(),
     val popular: List<AnimeSearchItem> = emptyList(),
     val completed: List<AnimeSearchItem> = emptyList(),
-    val recent: List<AnimeSearchItem> = emptyList(),
     val detail: AnimeDetailData? = null,
     val episodes: List<AnimeEpisode> = emptyList(),
-    /** Menandakan episode sedang dimuat. */
-    val episodesLoading: Boolean = false,
-    /** URL mp4 siap putar (hasil resolusi stream). */
     val streamUrl: String? = null,
+    /** Menandakan proses resolve stream sedang berjalan. */
     val streamLoading: Boolean = false,
+    /** Pesan bila stream tidak bisa diputar. */
     val streamError: String? = null,
-    /** Error umum (home / detail). */
-    val error: String? = null,
-    val homeError: String? = null,
-    val detailError: String? = null
+    val error: String? = null
 )
 
 class AnimeViewModel : ViewModel() {
     // Sumber data: Nexadev API (https://api.nexadev.my.id) — client & base URL
-    // yang sudah ada di project, sama persis dengan fitur lain.
+    // yang sama persis dengan fitur Music yang sudah jalan di project ini.
     private val api = NexadevApi.create()
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
@@ -46,38 +40,30 @@ class AnimeViewModel : ViewModel() {
 
     fun loadHome() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val ongoing = runCatching {
-                    api.getAnimeOngoing().body()?.data?.animeList.orEmpty()
-                }.getOrDefault(emptyList())
                 val popular = runCatching {
                     api.getAnimePopular().body()?.data?.animeList.orEmpty()
+                }.getOrDefault(emptyList())
+                val ongoing = runCatching {
+                    api.getAnimeOngoing().body()?.data?.animeList.orEmpty()
                 }.getOrDefault(emptyList())
                 val completed = runCatching {
                     api.getAnimeCompleted().body()?.data?.animeList.orEmpty()
                 }.getOrDefault(emptyList())
-                val recent = runCatching {
-                    api.getAnimeRecent().body()?.data?.animeList.orEmpty()
-                }.getOrDefault(emptyList())
 
-                val hasData = ongoing.isNotEmpty() || popular.isNotEmpty() ||
-                    completed.isNotEmpty() || recent.isNotEmpty()
-
+                val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    ongoing = ongoing,
                     popular = popular,
+                    ongoing = ongoing,
                     completed = completed,
-                    recent = recent,
-                    homeError = if (hasData) null else "Gagal memuat daftar anime"
+                    error = if (hasData) null else "Gagal memuat daftar anime"
                 )
             } catch (e: Exception) {
-                val msg = e.localizedMessage ?: "Koneksi bermasalah"
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = msg,
-                    homeError = msg
+                    error = e.localizedMessage ?: "Koneksi bermasalah"
                 )
             }
         }
@@ -89,13 +75,13 @@ class AnimeViewModel : ViewModel() {
         if (url.isBlank()) {
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                detailError = "Anime tidak ditemukan"
+                error = "Anime tidak ditemukan"
             )
             return
         }
         lastAnimeUrl = url
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, detailError = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val data = api.getAnimeDetail(details = url).body()?.data
                 if (data != null) {
@@ -103,19 +89,18 @@ class AnimeViewModel : ViewModel() {
                         isLoading = false,
                         detail = data,
                         episodes = data.episodes.orEmpty(),
-                        episodesLoading = false,
-                        detailError = null
+                        error = null
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        detailError = "Gagal memuat detail anime"
+                        error = "Gagal memuat detail anime"
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    detailError = e.localizedMessage ?: "Gagal memuat detail anime"
+                    error = e.localizedMessage ?: "Gagal memuat detail anime"
                 )
             }
         }
@@ -125,51 +110,45 @@ class AnimeViewModel : ViewModel() {
         lastAnimeUrl?.let { loadDetail(it) }
     }
 
-    /** Muat ulang daftar episode saja. */
-    fun retryEpisodes() {
-        lastAnimeUrl?.let { loadDetail(it) }
-    }
-
     /**
-     * Ambil link streaming episode lalu ubah ke URL mp4 yang bisa diputar ExoPlayer.
+     * Ambil link streaming episode dari Nexadev lalu ubah ke URL mp4 yang
+     * bisa diputar ExoPlayer.
      *
-     * Nexadev mengembalikan `streamUrl` berupa halaman Blogger; di dalamnya ada
-     * URL googlevideo (video/mp4). Bila tidak ditemukan, `streamUrl` dibiarkan
-     * null dan UI menampilkan pesan — bukan crash.
+     * Nexadev mengembalikan `streamUrl` berupa halaman Blogger. Di dalam
+     * halaman itu ada URL googlevideo (video/mp4). Bila tidak ditemukan,
+     * streamUrl dibiarkan null agar UI bisa menampilkan pesan.
      */
-    fun loadStream(episodeUrl: String) {
-        if (episodeUrl.isBlank()) {
+    /** Episode yang sedang diputar, dipakai untuk judul & navigasi prev/next. */
+    private var lastStreamEpisodeUrl: String? = null
+
+    fun loadStream(url: String) {
+        if (url.isBlank()) {
             _uiState.value = _uiState.value.copy(
+                streamUrl = null,
                 streamLoading = false,
                 streamError = "Episode tidak ditemukan"
             )
             return
         }
-        lastStreamEpisodeUrl = episodeUrl
+        lastStreamEpisodeUrl = url
         _uiState.value = _uiState.value.copy(
+            streamUrl = null,
             streamLoading = true,
-            streamError = null,
-            streamUrl = null
+            streamError = null
         )
         viewModelScope.launch {
             try {
-                val data = api.getAnimeStream(stream = episodeUrl).body()?.data
+                val data = api.getAnimeStream(stream = url).body()?.data
                 val pageUrl = data?.streamUrl
-                if (pageUrl.isNullOrBlank()) {
-                    _uiState.value = _uiState.value.copy(
-                        streamLoading = false,
-                        streamError = "Sumber video belum tersedia"
-                    )
-                    return@launch
-                }
-                val mp4 = resolvePlayableUrl(pageUrl)
+                val mp4 = if (pageUrl.isNullOrBlank()) null else resolvePlayableUrl(pageUrl)
                 _uiState.value = _uiState.value.copy(
-                    streamLoading = false,
                     streamUrl = mp4,
+                    streamLoading = false,
                     streamError = if (mp4 == null) "Sumber video belum tersedia" else null
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
+                    streamUrl = null,
                     streamLoading = false,
                     streamError = e.localizedMessage ?: "Gagal memuat video"
                 )
@@ -181,9 +160,7 @@ class AnimeViewModel : ViewModel() {
         lastStreamEpisodeUrl?.let { loadStream(it) }
     }
 
-    private var lastStreamEpisodeUrl: String? = null
-
-    /** Pencarian anime. Return hasil agar screen bisa menampilkan state sendiri. */
+    /** Pencarian anime. */
     suspend fun search(query: String): List<AnimeSearchItem> {
         if (query.isBlank()) return emptyList()
         return runCatching {
@@ -207,14 +184,13 @@ class AnimeViewModel : ViewModel() {
                 .build()
             client.newCall(request).execute().use { response ->
                 val html = response.body?.string() ?: return@use null
-                // Unescape HTML entities yang umum dipakai di halaman blogger.
+                // Unescape HTML entity yang umum dipakai di halaman blogger.
                 val decoded = html
                     .replace("&quot;", "\"")
                     .replace("\\u0026", "&")
                     .replace("\\u003d", "=")
                     .replace("&amp;", "&")
-                val match = GOOGLEVIDEO_REGEX.find(decoded)?.value ?: return@use null
-                if (match.isBlank()) null else match
+                GOOGLEVIDEO_REGEX.find(decoded)?.value?.takeIf { it.isNotBlank() }
             }
         }.getOrNull()
     }

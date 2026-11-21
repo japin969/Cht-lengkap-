@@ -41,11 +41,15 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -730,95 +734,7 @@ private fun MainNavigationGraph(
                 },
                 onKomikClick = { slug ->
                     navController.navigate("komik_detail?slug=$slug")
-                },
-                onAnimeSearchClick = { navController.navigate("anime_search") },
-                onAnimeBookmarkClick = { navController.navigate("anime_bookmark") },
-                onAnimeHistoryClick = { navController.navigate("anime_history") },
-                onAnimeViewAllClick = { navController.navigate("anime_list") },
-                onKomikSearchClick = { navController.navigate("komik_search") },
-                onKomikBookmarkClick = { navController.navigate("komik_bookmark") },
-                onKomikHistoryClick = { navController.navigate("komik_history") },
-                onKomikViewAllClick = { navController.navigate("komik_list") }
-            )
-        }
-
-        composable("anime_search") {
-            com.jayra.app.ui.anime.AnimeSearchScreen(
-                onAnimeClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("anime_detail?url=$encoded")
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("anime_list") {
-            com.jayra.app.ui.anime.AnimeListScreen(
-                onAnimeClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("anime_detail?url=$encoded")
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("anime_bookmark") {
-            com.jayra.app.ui.anime.AnimeBookmarkScreen(
-                onAnimeClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("anime_detail?url=$encoded")
-                },
-                onBack = { navController.popBackStack() },
-                onBrowseClick = { navController.popBackStack() }
-            )
-        }
-
-        composable("anime_history") {
-            com.jayra.app.ui.anime.AnimeHistoryScreen(
-                onAnimeClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("anime_detail?url=$encoded")
-                },
-                onBack = { navController.popBackStack() },
-                onBrowseClick = { navController.popBackStack() }
-            )
-        }
-
-        composable("komik_search") {
-            com.jayra.app.ui.komik.KomikSearchScreen(
-                onKomikClick = { slug ->
-                    navController.navigate("komik_detail?slug=$slug")
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("komik_list") {
-            com.jayra.app.ui.komik.KomikListScreen(
-                onKomikClick = { slug ->
-                    navController.navigate("komik_detail?slug=$slug")
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("komik_bookmark") {
-            com.jayra.app.ui.komik.KomikBookmarkScreen(
-                onKomikClick = { slug ->
-                    navController.navigate("komik_detail?slug=$slug")
-                },
-                onBack = { navController.popBackStack() },
-                onBrowseClick = { navController.popBackStack() }
-            )
-        }
-
-        composable("komik_history") {
-            com.jayra.app.ui.komik.KomikHistoryScreen(
-                onKomikClick = { slug ->
-                    navController.navigate("komik_detail?slug=$slug")
-                },
-                onBack = { navController.popBackStack() },
-                onBrowseClick = { navController.popBackStack() }
+                }
             )
         }
 
@@ -833,8 +749,7 @@ private fun MainNavigationGraph(
                 onPlayEpisode = { epUrl ->
                     val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                     navController.navigate("anime_player?url=$epEncoded")
-                },
-                onBack = { navController.popBackStack() }
+                }
             )
         }
 
@@ -844,33 +759,95 @@ private fun MainNavigationGraph(
         ) { backStackEntry ->
             val url = backStackEntry.arguments?.getString("url") ?: ""
             val decoded = java.net.URLDecoder.decode(url, "UTF-8")
-            // Ambil link streaming dari Nexadev lalu putar dengan ExoPlayer native.
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry("anime_detail?url={url}")
+            }
             val vm: com.jayra.app.ui.anime.AnimeViewModel =
-                androidx.lifecycle.viewmodel.compose.viewModel()
+                androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner = parentEntry)
             val state by vm.uiState.collectAsState()
             LaunchedEffect(decoded) { vm.loadStream(decoded) }
+
+            // Daftar episode untuk navigasi prev / next.
+            val episodes = state.episodes
+            val currentIndex = episodes.indexOfFirst { it.episodeUrl == decoded }
+            val hasPrevious = currentIndex > 0
+            val hasNext = currentIndex in 0 until episodes.lastIndex
+            val currentTitle = episodes.getOrNull(currentIndex)?.title
+                ?: episodes.getOrNull(currentIndex)?.let { "Episode ${it.episode}" }
 
             val stream = state.streamUrl
             when {
                 state.streamLoading && stream == null -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                    Box(
+                        Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = "Menyiapkan video...",
+                                color = Color.White.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
 
                 stream != null -> {
                     com.jayra.app.ui.anime.AnimePlayerScreen(
                         videoUrl = stream,
-                        onBack = { navController.popBackStack() }
+                        title = currentTitle,
+                        onBack = { navController.popBackStack() },
+                        hasPrevious = hasPrevious,
+                        hasNext = hasNext,
+                        onPrevious = {
+                            episodes.getOrNull(currentIndex - 1)?.episodeUrl?.let { epUrl ->
+                                val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
+                                navController.navigate("anime_player?url=$epEncoded") {
+                                    popUpTo("anime_player") { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                        onNext = {
+                            episodes.getOrNull(currentIndex + 1)?.episodeUrl?.let { epUrl ->
+                                val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
+                                navController.navigate("anime_player?url=$epEncoded") {
+                                    popUpTo("anime_player") { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
                     )
                 }
 
                 else -> {
-                    com.jayra.app.ui.anime.AnimePlayerScreen(
-                        videoUrl = "",
-                        onBack = { navController.popBackStack() },
-                        errorMessage = state.streamError
-                    )
+                    Box(
+                        Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Text(
+                                text = state.streamError ?: "Sumber video belum tersedia",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Button(onClick = { vm.retryStream() }) { Text("Coba Lagi") }
+                                OutlinedButton(
+                                    onClick = { navController.popBackStack() },
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = Color.White
+                                    )
+                                ) { Text("Kembali") }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -893,8 +870,7 @@ private fun MainNavigationGraph(
                 slug = slug,
                 onChapterClick = { chapterSlug ->
                     navController.navigate("komik_reader?slug=$chapterSlug")
-                },
-                onBack = { navController.popBackStack() }
+                }
             )
         }
 
@@ -903,10 +879,7 @@ private fun MainNavigationGraph(
             arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
         ) { backStackEntry ->
             val slug = backStackEntry.arguments?.getString("slug") ?: ""
-            com.jayra.app.ui.komik.KomikReaderScreen(
-                slug = slug,
-                onBack = { navController.popBackStack() }
-            )
+            com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
         }
 
         composable("archived_chats") {

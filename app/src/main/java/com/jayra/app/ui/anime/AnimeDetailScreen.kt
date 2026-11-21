@@ -1,445 +1,131 @@
 package com.jayra.app.ui.anime
 
-import android.content.Context
-import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.Bookmark
-import androidx.compose.material.icons.rounded.BookmarkBorder
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.FullscreenExit
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import com.jayra.app.data.AnimeEpisode
-import com.jayra.app.data.MediaLibraryStore
-import com.jayra.app.ui.media.CoverImage
-import com.jayra.app.ui.media.MediaEmptyState
-import com.jayra.app.ui.media.MediaErrorState
-import com.jayra.app.ui.media.MediaIconButton
-import com.jayra.app.ui.media.MediaLoading
-import com.jayra.app.ui.media.MediaTopBar
-import com.jayra.app.ui.media.MetaChip
+import androidx.compose.ui.viewinterop.AndroidView
+import android.view.ViewGroup
+import coil.compose.AsyncImage
 
-/**
- * Detail Anime — hero, sinopsis, info, dan daftar episode.
- *
- * Tidak ada WebView: pemutaran video memakai ExoPlayer native (lihat
- * [AnimePlayerScreen]).
- */
 @Composable
 fun AnimeDetailScreen(
     animeUrl: String,
     viewModel: AnimeViewModel = viewModel(),
-    onPlayEpisode: (String) -> Unit,
-    onBack: () -> Unit = {}
+    onPlayEpisode: (String) -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val state by viewModel.uiState.collectAsState()
 
-    var bookmarked by remember(animeUrl) { mutableStateOf(false) }
-    var synopsisExpanded by remember(animeUrl) { mutableStateOf(false) }
+    LaunchedEffect(animeUrl) { viewModel.loadDetail(animeUrl) }
 
-    LaunchedEffect(animeUrl) {
-        viewModel.loadDetail(animeUrl)
-        bookmarked = MediaLibraryStore.isBookmarked(context, "anime", animeUrl)
-    }
-
-    // Catat riwayat saat detail berhasil dimuat.
-    LaunchedEffect(state.detail?.title) {
-        val detail = state.detail ?: return@LaunchedEffect
-        if (detail.title != null) {
-            MediaLibraryStore.recordHistory(
-                context,
-                MediaLibraryStore.Entry(
-                    kind = "anime",
-                    id = animeUrl,
-                    title = detail.title ?: "Tanpa judul",
-                    image = detail.image,
-                    subtitle = "Anime"
-                )
-            )
-        }
-    }
-
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        MediaTopBar(
-            title = state.detail?.title ?: "Detail Anime",
-            onBack = onBack,
-            actions = {
-                MediaIconButton(
-                    icon = if (bookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                    contentDescription = if (bookmarked) "Hapus bookmark" else "Simpan bookmark",
-                    onClick = {
-                        val nowSaved = MediaLibraryStore.toggleBookmark(
-                            context,
-                            MediaLibraryStore.Entry(
-                                kind = "anime",
-                                id = animeUrl,
-                                title = state.detail?.title ?: "Tanpa judul",
-                                image = state.detail?.image,
-                                subtitle = "Anime"
-                            )
-                        )
-                        bookmarked = nowSaved
-                    },
-                    active = bookmarked
-                )
-            }
-        )
-
-        Box(Modifier.fillMaxSize()) {
-            when {
-                state.isLoading && state.detail == null -> MediaLoading()
-
-                state.detailError != null && state.detail == null -> MediaErrorState(
-                    message = state.detailError,
-                    title = "Detail tidak bisa dimuat",
-                    onRetry = { viewModel.retryDetail() }
-                )
-
-                state.detail == null -> MediaEmptyState(
-                    title = "Anime tidak ditemukan",
-                    message = "Detail anime tidak tersedia.",
-                    icon = Icons.Rounded.Movie,
-                    actionLabel = "Coba Lagi",
-                    onAction = { viewModel.retryDetail() }
-                )
-
-                else -> AnimeDetailContent(
-                    state = state,
-                    synopsisExpanded = synopsisExpanded,
-                    onToggleSynopsis = { synopsisExpanded = !synopsisExpanded },
-                    onPlayEpisode = onPlayEpisode,
-                    onRetryEpisodes = { viewModel.retryEpisodes() }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AnimeDetailContent(
-    state: AnimeUiState,
-    synopsisExpanded: Boolean,
-    onToggleSynopsis: () -> Unit,
-    onPlayEpisode: (String) -> Unit,
-    onRetryEpisodes: () -> Unit
-) {
-    val detail = state.detail ?: return
-    val synopsis = detail.synopsis?.takeIf { it.isNotBlank() }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 28.dp)
-    ) {
-        // ── Hero ───────────────────────────────────────────────
-        item(key = "hero") {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-            ) {
-                CoverImage(
-                    url = detail.image,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    contentScale = ContentScale.Crop,
-                    shape = RoundedCornerShape(0.dp)
-                )
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                0.2f to MaterialTheme.colorScheme.background.copy(alpha = 0.55f),
-                                1f to MaterialTheme.colorScheme.background
-                            )
-                        )
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    CoverImage(
-                        url = detail.image,
-                        contentDescription = detail.title,
+    if (state.isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+    } else if (state.error != null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Error: ${state.error}") }
+    } else {
+        LazyColumn(Modifier.fillMaxSize()) {
+            item {
+                Row(Modifier.padding(16.dp)) {
+                    AsyncImage(
+                        model = state.detail?.image,
+                        contentDescription = null,
                         modifier = Modifier
-                            .width(110.dp)
-                            .height(160.dp),
-                        contentScale = ContentScale.Crop,
-                        shape = RoundedCornerShape(14.dp)
+                            .width(120.dp)
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(androidx.compose.ui.graphics.Color.White),
+                        contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(16.dp))
-                    Column(Modifier.weight(1f)) {
-                        Spacer(Modifier.height(24.dp))
-                        Text(
-                            text = detail.title ?: "Tanpa judul",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            AnimeRatingChip(detail.rating)
-                            MetaChip(
-                                text = detail.totalEpisodes?.let { "$it eps" } ?: "TV"
-                            )
-                        }
+                    Column {
+                        Text(state.detail?.title ?: "", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Rating: ${state.detail?.rating ?: "-"}", style = MaterialTheme.typography.bodySmall)
+                        Text("Total: ${state.detail?.totalEpisodes ?: 0} Episode", style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(8.dp))
+                        Text(state.detail?.synopsis ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 6)
                     }
                 }
             }
-        }
-
-        // ── Info chips ─────────────────────────────────────────
-        val info = detail.info
-        if (!info.isNullOrEmpty()) {
-            item(key = "info") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    info["Status"]?.let { MetaChip(text = it) }
-                    info["Tipe"]?.let { MetaChip(text = it) }
-                    info["Mulai"]?.let { MetaChip(text = it.take(10)) }
-                }
-            }
-        }
-
-        // ── Sinopsis ───────────────────────────────────────────
-        if (!synopsis.isNullOrBlank()) {
-            item(key = "synopsis") {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Text(
-                        text = "Sinopsis",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = synopsis,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = if (synopsisExpanded) Int.MAX_VALUE else 5,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (synopsis.length > 180) {
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .clickable(onClick = onToggleSynopsis)
-                                .padding(horizontal = 4.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (synopsisExpanded) "Tutup" else "Selengkapnya",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            androidx.compose.material3.Icon(
-                                imageVector = if (synopsisExpanded)
-                                    Icons.Rounded.ExpandLess
-                                else
-                                    Icons.Rounded.ExpandMore,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+            item { Text("Daftar Episode", Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
+            items(state.episodes) { ep ->
+                ListItem(
+                    headlineContent = { Text(ep.title ?: "Episode ${ep.episode}") },
+                    leadingContent = { Icon(Icons.Rounded.PlayArrow, null) },
+                    modifier = Modifier.clickable {
+                        ep.episodeUrl?.let { onPlayEpisode(it) }
                     }
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                )
+                Divider()
             }
         }
-
-        // ── Daftar episode ─────────────────────────────────────
-        item(key = "episode-header") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                androidx.compose.material3.Icon(
-                    imageVector = Icons.Rounded.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = "Daftar Episode",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "${state.episodes.size}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        when {
-            state.episodesLoading && state.episodes.isEmpty() -> item(key = "ep-loading") {
-                MediaLoading(modifier = Modifier.height(200.dp))
-            }
-
-            state.episodes.isEmpty() -> item(key = "ep-empty") {
-                MediaEmptyState(
-                    title = "Episode belum tersedia",
-                    message = "Daftar episode untuk anime ini belum bisa dimuat.",
-                    icon = Icons.Rounded.Movie,
-                    actionLabel = "Coba Lagi",
-                    onAction = onRetryEpisodes,
-                    modifier = Modifier.height(240.dp)
-                )
-            }
-
-            else -> items(
-                items = state.episodes,
-                key = { it.episodeUrl ?: it.episode ?: it.title ?: "" }
-            ) { ep ->
-                AnimeEpisodeRow(
-                    episode = ep,
-                    onClick = { onPlayEpisode(ep.episodeUrl ?: "") }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AnimeEpisodeRow(episode: AnimeEpisode, onClick: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.material3.Icon(
-                    imageVector = Icons.Rounded.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = episode.title?.takeIf { it.isNotBlank() }
-                        ?: episode.episode?.let { "Episode $it" }
-                        ?: "Episode",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = if (episode.episode != null) "Episode ${episode.episode}" else "Putar",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            androidx.compose.material3.Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
     }
 }
 
 /**
- * Pemutar video native memakai ExoPlayer.
- * Menggantikan implementasi WebView sebelumnya. Bila [videoUrl] kosong,
- * ditampilkan pesan bahwa sumber video belum tersedia — tidak crash.
+ * Pemutar video native (ExoPlayer) dengan kontrol modern:
+ * play/pause, seekbar, posisi waktu, fullscreen, judul episode,
+ * serta tombol episode sebelumnya / berikutnya.
+ *
+ * Tidak memakai WebView.
  */
 @Composable
 fun AnimePlayerScreen(
     videoUrl: String,
+    title: String? = null,
     onBack: () -> Unit = {},
-    errorMessage: String? = null
+    hasPrevious: Boolean = false,
+    hasNext: Boolean = false,
+    onPrevious: () -> Unit = {},
+    onNext: () -> Unit = {}
 ) {
-    val context = LocalContext.current
+    if (videoUrl.isBlank()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Sumber video belum tersedia",
+                color = Color.White.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        return
+    }
 
+    val context = LocalContext.current
     val exoPlayer = remember(videoUrl) {
-        if (videoUrl.isBlank()) null
-        else ExoPlayer.Builder(context).build().apply {
+        ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(videoUrl))
             prepare()
             playWhenReady = true
@@ -447,68 +133,256 @@ fun AnimePlayerScreen(
     }
 
     DisposableEffect(exoPlayer) {
-        onDispose { exoPlayer?.release() }
+        onDispose { exoPlayer.release() }
     }
 
-    Column(
+    var isPlaying by remember { mutableStateOf(true) }
+    var position by remember { mutableLongStateOf(0L) }
+    var duration by remember { mutableLongStateOf(0L) }
+    var showControls by remember { mutableStateOf(true) }
+    var isFullscreen by remember { mutableStateOf(false) }
+
+    // Update posisi & durasi secara berkala.
+    LaunchedEffect(exoPlayer) {
+        while (true) {
+            position = exoPlayer.currentPosition
+            duration = exoPlayer.duration.coerceAtLeast(0L)
+            isPlaying = exoPlayer.isPlaying
+            kotlinx.coroutines.delay(500)
+        }
+    }
+
+    // Sembunyikan kontrol otomatis setelah 3 detik.
+    LaunchedEffect(showControls, isPlaying) {
+        if (showControls && isPlaying) {
+            kotlinx.coroutines.delay(3000)
+            showControls = false
+        }
+    }
+
+    BackHandler(enabled = true) { onBack() }
+
+    Box(
         Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        MediaTopBar(
-            title = "Memutar",
-            onBack = onBack,
-            containerColor = Color(0xFF101010)
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = false
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (isFullscreen) Modifier.fillMaxSize()
+                    else Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .align(Alignment.TopCenter)
+                ),
+            update = { view ->
+                // Klik area video untuk show/hide kontrol.
+                view.setOnClickListener { showControls = !showControls }
+            }
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .background(Color.Black),
-            contentAlignment = Alignment.Center
+        // Lapisan kontrol
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showControls,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut(),
+            modifier = Modifier.fillMaxSize()
         ) {
-            val player = exoPlayer
-            if (player != null) {
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            this.player = player
-                            useController = true
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.0f to Color.Black.copy(alpha = 0.75f),
+                            0.35f to Color.Transparent,
+                            0.65f to Color.Transparent,
+                            1.0f to Color.Black.copy(alpha = 0.85f)
+                        )
+                    )
+            ) {
+                // ── Bar atas: back + judul + fullscreen ──────────
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(52.dp)
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Rounded.Movie,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.size(40.dp)
-                    )
-                    Spacer(Modifier.height(10.dp))
+                    Box(
+                        Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(50))
+                            .clickable { onBack() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Kembali",
+                            tint = Color.White
+                        )
+                    }
                     Text(
-                        text = errorMessage?.takeIf { it.isNotBlank() }
-                            ?: "Sumber video belum tersedia",
-                        color = Color.White.copy(alpha = 0.85f),
-                        style = MaterialTheme.typography.bodyMedium
+                        text = title ?: "Memutar",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Sumber streaming tidak menyediakan tautan untuk episode ini.",
-                        color = Color.White.copy(alpha = 0.55f),
-                        style = MaterialTheme.typography.labelMedium
+                    Box(
+                        Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(50))
+                            .clickable { isFullscreen = !isFullscreen },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isFullscreen)
+                                Icons.Rounded.FullscreenExit
+                            else
+                                Icons.Rounded.Fullscreen,
+                            contentDescription = "Layar penuh",
+                            tint = Color.White
+                        )
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                // ── Tengah: prev / play-pause / next ─────────────
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    PlayerRoundButton(
+                        icon = Icons.Rounded.SkipPrevious,
+                        contentDescription = "Episode sebelumnya",
+                        enabled = hasPrevious,
+                        onClick = {
+                            exoPlayer.seekTo(0)
+                            onPrevious()
+                        }
                     )
+                    Spacer(Modifier.width(28.dp))
+                    Box(
+                        Modifier
+                            .size(68.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color.White.copy(alpha = 0.18f))
+                            .clickable {
+                                if (isPlaying) exoPlayer.pause() else exoPlayer.play()
+                                showControls = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying)
+                                Icons.Rounded.Pause
+                            else
+                                Icons.Rounded.PlayArrow,
+                            contentDescription = if (isPlaying) "Jeda" else "Putar",
+                            tint = Color.White,
+                            modifier = Modifier.size(34.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(28.dp))
+                    PlayerRoundButton(
+                        icon = Icons.Rounded.SkipNext,
+                        contentDescription = "Episode berikutnya",
+                        enabled = hasNext,
+                        onClick = {
+                            exoPlayer.seekTo(0)
+                            onNext()
+                        }
+                    )
+                }
+
+                // ── Bawah: seekbar + waktu ───────────────────────
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Slider(
+                        value = if (duration > 0) position.toFloat() / duration else 0f,
+                        onValueChange = { fraction ->
+                            if (duration > 0) {
+                                exoPlayer.seekTo((fraction * duration).toLong())
+                                position = (fraction * duration).toLong()
+                            }
+                        },
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                        )
+                    )
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = formatTime(position),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = formatTime(duration),
+                            color = Color.White.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun PlayerRoundButton(
+    icon: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        Modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = if (enabled) 0.16f else 0.06f))
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White.copy(alpha = if (enabled) 1f else 0.35f)
+        )
+    }
+}
+
+private fun formatTime(ms: Long): String {
+    if (ms <= 0) return "0:00"
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
 }
