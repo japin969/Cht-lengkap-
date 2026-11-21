@@ -111,7 +111,7 @@ import com.jayra.app.ui.theme.IOSSecondarySystemGroupedBackground
 import com.jayra.app.ui.theme.IOSSystemGroupedBackground
 import com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
-import com.jayra.app.ui.theme.SquircleShape
+import com.jayra.app.ui.theme.squircle
 import kotlinx.coroutines.delay
 import java.util.Locale
 

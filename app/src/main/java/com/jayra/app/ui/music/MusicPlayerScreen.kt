@@ -68,7 +68,7 @@ import com.jayra.app.ui.theme.IOSGreenDark
 import com.jayra.app.ui.theme.IOSRedDark
 import com.jayra.app.ui.theme.IOSSecondaryLabelDark
 import com.jayra.app.ui.theme.JayraTheme
-import com.jayra.app.ui.theme.SquircleShape
+import com.jayra.app.ui.theme.squircle
 import java.util.Locale
 
 @Composable

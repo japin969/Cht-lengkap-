@@ -105,7 +105,7 @@ import com.jayra.app.ui.theme.IOSSystemGroupedBackground
 import com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark
 import com.jayra.app.ui.theme.JayraTheme
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
-import com.jayra.app.ui.theme.SquircleShape
+import com.jayra.app.ui.theme.squircle
 
 @Composable
 fun MusicHomeScreen(
