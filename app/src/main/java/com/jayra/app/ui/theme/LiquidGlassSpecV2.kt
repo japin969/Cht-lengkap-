@@ -87,6 +87,11 @@ data class LiquidGlassSpecV2(
 
         private val BTN_BLUE = Color(0xFF007AFF)
 
+        // ── Border / elevated surface tokens (spec V2) ─────────
+        val DarkBorderTop = Color(0x14FFFFFF)
+        val DarkGlassElevated = Color(0xFF1C1C1E)
+        val LightGlassElevated = Color(0xFFF2F2F7)
+
         // ── Factory utama ─────────────────────────────────────────
         fun forTier(tier: GlassTier, dark: Boolean): LiquidGlassSpecV2 = when (tier) {
             GlassTier.HIGH   -> high(dark)

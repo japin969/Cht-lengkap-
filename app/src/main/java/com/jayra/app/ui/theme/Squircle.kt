@@ -9,3 +9,10 @@ fun squircle(radius: Int = 12) = RoundedCornerShape(
     bottomStart = (radius * 1.2f).dp,
     bottomEnd = (radius * 1.2f).dp
 )
+
+class SquircleShape(radius: Dp) : RoundedCornerShape(
+    topStart = radius * 1.2f,
+    topEnd = radius * 1.2f,
+    bottomStart = radius * 1.2f,
+    bottomEnd = radius * 1.2f
+)
