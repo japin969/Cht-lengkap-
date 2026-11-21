@@ -161,6 +161,7 @@ class KomikViewModel : ViewModel() {
 
 data class KomikUiState(
     val isLoading: Boolean = false,
+    val isDetailLoading: Boolean = false,
     val isSearching: Boolean = false,
     val searchQuery: String = "",
     val activePage: Int = 1,

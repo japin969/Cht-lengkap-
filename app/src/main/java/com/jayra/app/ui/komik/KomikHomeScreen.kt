@@ -71,9 +71,9 @@ import com.jayra.app.ui.theme.IOSSystemGroupedBackground
 import com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark
 import com.jayra.app.ui.theme.JayraDangerRed
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.ui.theme.GlassSurfaceSpec
 import com.jayra.app.ui.theme.squircle
 import com.jayra.app.util.GlassEffectPrefs
-import com.jayra.app.util.GlassSurfaceSpec
 import com.jayra.app.util.glassSurfaceV2
 
 @Composable
