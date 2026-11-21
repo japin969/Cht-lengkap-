@@ -6,6 +6,8 @@ import com.jayra.app.data.ChannelRepository
 import com.jayra.app.data.ChatRepository
 import com.jayra.app.data.ContactRepository
 import com.jayra.app.data.GroupRepository
+import com.jayra.app.data.KomikApi
+import com.jayra.app.data.KomikItem
 import com.jayra.app.di.AppModule
 import com.jayra.app.model.Channel
 import com.jayra.app.model.Chat
@@ -39,6 +41,8 @@ class SearchViewModel(
     private val groupRepository: GroupRepository = AppModule.groupRepository,
     private val channelRepository: ChannelRepository = AppModule.channelRepository
 ) : ViewModel() {
+
+    private val komikApi = KomikApi.create()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -196,6 +200,13 @@ class SearchViewModel(
                     }
                 }
 
+                // 6. Komik - fetch from API
+                if (filter == SearchFilter.ALL || filter == SearchFilter.KOMIK) {
+                    // We'll handle komik search asynchronously and merge results
+                    // For now, return local results immediately and komik results will come via separate flow
+                    // This is a simplified approach - in production you'd want to combine properly
+                }
+
                 val distinctResults = results.distinctBy { "${it.type}_${it.targetId}_${it.subtitle}" }
                 if (distinctResults.isEmpty()) {
                     SearchUiState.Empty
@@ -206,6 +217,56 @@ class SearchViewModel(
                 _uiState.value = state
                 _isLoading.value = false
             }
+        }
+
+        // Separate flow for komik search
+        viewModelScope.launch {
+            _searchQuery.debounce(500L)
+                .distinctUntilChanged()
+                .filter { it.isNotBlank() }
+                .filter { _selectedFilter.value == SearchFilter.ALL || _selectedFilter.value == SearchFilter.KOMIK }
+                .flatMapLatest { query ->
+                    kotlinx.coroutines.flow.flow {
+                        _isLoading.value = true
+                        try {
+                            val res = komikApi.search(query)
+                            val response = res.body()
+                            if (res.isSuccessful && response != null && response.success == true) {
+                                val komikItems = response.results.orEmpty()
+                                val komikResults = komikItems.map { item ->
+                                    SearchResult(
+                                        id = "komik_${item.resolvedSlug}",
+                                        title = item.cleanTitle,
+                                        subtitle = "Komik • ${item.type ?: "Manga"} • ${item.latestChapter ?: "Update tersedia"}",
+                                        timestamp = "",
+                                        type = SearchResultType.KOMIK,
+                                        avatarUrl = item.cover ?: "",
+                                        targetId = item.resolvedSlug
+                                    )
+                                }
+                                emit(SearchUiState.Success(komikResults))
+                            } else {
+                                // Don't emit error for komik, just skip
+                            }
+                        } catch (e: Exception) {
+                            // Silently fail komik search, don't break main search
+                        } finally {
+                            _isLoading.value = false
+                        }
+                    }
+                }.collect { komikState ->
+                    // Merge komik results with existing results
+                    _uiState.value = when {
+                        _uiState.value is SearchUiState.Success -> {
+                            val current = _uiState.value as SearchUiState.Success
+                            val merged = (current.results + (komikState as? SearchUiState.Success)?.results.orEmpty())
+                                .distinctBy { "${it.type}_${it.targetId}_${it.subtitle}" }
+                            if (merged.isEmpty()) SearchUiState.Empty else SearchUiState.Success(merged)
+                        }
+                        komikState is SearchUiState.Success && komikState.results.isNotEmpty() -> komikState
+                        else -> _uiState.value
+                    }
+                }
         }
     }
 

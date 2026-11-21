@@ -351,7 +351,8 @@ enum class SearchFilter(
     CONTACTS(label = "Kontak", globalChipLabel = "Kontak"),
     FILES(label = "File", globalChipLabel = "File"),
     GROUPS(label = "Grup", globalChipLabel = "Grup"),
-    CHANNELS(label = "Saluran", globalChipLabel = "Saluran");
+    CHANNELS(label = "Saluran", globalChipLabel = "Saluran"),
+    KOMIK(label = "Komik", globalChipLabel = "Komik");
 
     companion object {
         val GLOBAL_SEARCH_FILTERS: List<SearchFilter> = listOf(
@@ -370,7 +371,8 @@ enum class SearchResultType {
     CONTACT,
     GROUP,
     CHANNEL,
-    FILE
+    FILE,
+    KOMIK
 }
 
 @Immutable
