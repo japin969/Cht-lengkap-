@@ -229,6 +229,7 @@ class MainViewModel(
             ROUTE_CHAT_LIST,
             ROUTE_CALLS,
             ROUTE_MUSIC_HOME,
+            ROUTE_DRAMA_HOME,
             ROUTE_SETTINGS
         )
     }
@@ -268,6 +269,16 @@ fun MainScreen(
             firebaseAuth.addAuthStateListener(listener)
             onDispose {
                 firebaseAuth.removeAuthStateListener(listener)
+            }
+        }
+    }
+
+    // 3. Global auth-state handling: sign-out dari screen mana pun arahkan ke login
+    LaunchedEffect(currentUser) {
+        if (currentUser == null && currentRoute != MainViewModel.ROUTE_SPLASH && currentRoute != "login") {
+            navController.navigate("login") {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
             }
         }
     }
@@ -337,7 +348,7 @@ fun MainScreen(
                             "chat_list" -> 0
                             "calls" -> 1
                             "music_home" -> 2
-                            "vidhub" -> 3
+                            "drama_home" -> 3
                             "settings" -> 4
                             else -> 0
                         },
@@ -346,7 +357,7 @@ fun MainScreen(
                                 0 -> "chat_list"
                                 1 -> "calls"
                                 2 -> "music_home"
-                                3 -> "vidhub"
+                                3 -> "drama_home"
                                 4 -> "settings"
                                 else -> "chat_list"
                             }
