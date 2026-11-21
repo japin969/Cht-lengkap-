@@ -216,37 +216,34 @@ private fun KomikDetailContent(
                 )
                 Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        komik.type?.let { t ->
-                            if (t.isNotBlank()) {
-                                Box(
-                                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Text(t, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                                }
+                        val type = komik.type
+                        if (type != null && type.isNotBlank()) {
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(type, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                             }
                         }
-                        komik.latestChapter?.let { ch ->
-                            if (ch.isNotBlank()) {
-                                Box(
-                                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Text(ch, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                }
+                        val latestChapter = komik.latestChapter
+                        if (latestChapter != null && latestChapter.isNotBlank()) {
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(latestChapter, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
-                        komik.rating?.let { rate ->
-                            if (rate.isNotBlank()) {
-                                Box(
-                                    modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IOSOrange.copy(alpha = 0.95f))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Star(contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                                        Spacer(modifier = Modifier.width(2.dp))
-                                        Text(rate, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                    }
+                        val rating = komik.rating
+                        if (rating != null && rating.isNotBlank()) {
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IOSOrange.copy(alpha = 0.95f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Star(contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(rating, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                             }
                         }
@@ -297,30 +294,28 @@ private fun KomikDetailContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                komik.type?.let { t ->
-                    if (t.isNotBlank()) {
-                        Text(
-                            text = t,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = subLabelColor
-                        )
-                    }
+                val type = komik.type
+                if (type != null && type.isNotBlank()) {
+                    Text(
+                        text = type,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = subLabelColor
+                    )
                 }
                 Text(
                     text = "•",
                     fontSize = 12.sp,
                     color = subLabelColor
                 )
-                komik.rating?.let { rate ->
-                    if (rate.isNotBlank()) {
-                        Text(
-                            text = "Rating $rate",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = subLabelColor
-                        )
-                    }
+                val rating = komik.rating
+                if (rating != null && rating.isNotBlank()) {
+                    Text(
+                        text = "Rating $rating",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = subLabelColor
+                    )
                 }
             }
         }

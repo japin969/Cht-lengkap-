@@ -190,7 +190,7 @@ fun KomikHomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(state.searchResults, key = { "sr_${it.resolvedSlug.ifBlank { it.cleanTitle }}" }) { komik ->
+                    items(state.searchResults) { komik ->
                         KomikCard(komik, isDark, labelColor, subLabelColor, accentBlue, glassSpec) {
                             onKomikClick(komik.resolvedSlug)
                         }
@@ -274,7 +274,7 @@ private fun KomikHomeContent(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(rest.take(8), key = { "pop_${it.resolvedSlug.ifBlank { it.cleanTitle }}" }) { komik ->
+                    items(rest.take(8)) { komik ->
                         KomikCard(komik, isDark, labelColor, subLabelColor, accentBlue, glassSpec) {
                             onKomikClick(komik.resolvedSlug)
                         }
@@ -294,7 +294,7 @@ private fun KomikHomeContent(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(rest2.take(8), key = { "upd_${it.resolvedSlug.ifBlank { it.cleanTitle }}" }) { komik ->
+                    items(rest2.take(8)) { komik ->
                         KomikCard(komik, isDark, labelColor, subLabelColor, accentBlue, glassSpec) {
                             onKomikClick(komik.resolvedSlug)
                         }
@@ -379,24 +379,22 @@ fun KomikHeroCard(
         )
         Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                komik.type?.let { t ->
-                    if (t.isNotBlank()) {
-                        Box(
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(t, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                        }
+                val type = komik.type
+                if (type != null && type.isNotBlank()) {
+                    Box(
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(type, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                     }
                 }
-                komik.latestChapter?.let { ch ->
-                    if (ch.isNotBlank()) {
-                        Box(
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(ch, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
+                val latestChapter = komik.latestChapter
+                if (latestChapter != null && latestChapter.isNotBlank()) {
+                    Box(
+                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(latestChapter, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -442,33 +440,31 @@ fun KomikCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            komik.latestChapter?.let { ch ->
-                if (ch.isNotBlank()) {
-                    Box(
-                        modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
-                            .clip(RoundedCornerShape(6.dp)).background(accentBlue.copy(alpha = 0.92f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(ch, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
-                    }
+            val latestChapter = komik.latestChapter
+            if (latestChapter != null && latestChapter.isNotBlank()) {
+                Box(
+                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp)
+                        .clip(RoundedCornerShape(6.dp)).background(accentBlue.copy(alpha = 0.92f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(latestChapter, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
                 }
             }
-            komik.rating?.let { rate ->
-                if (rate.isNotBlank()) {
-                    Box(
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                            .clip(RoundedCornerShape(6.dp)).background(Color(0xAA000000))
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material.icons.rounded.Star(
-                                contentDescription = null,
-                                tint = IOSOrange,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(rate, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
+            val rating = komik.rating
+            if (rating != null && rating.isNotBlank()) {
+                Box(
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
+                        .clip(RoundedCornerShape(6.dp)).background(Color(0xAA000000))
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material.icons.rounded.Star(
+                            contentDescription = null,
+                            tint = IOSOrange,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(rating, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
