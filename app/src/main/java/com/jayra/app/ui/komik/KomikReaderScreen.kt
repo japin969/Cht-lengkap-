@@ -88,14 +88,14 @@ fun KomikReaderScreen(
             .fillMaxSize()
             .background(if (isFullscreen) Color.Black else bgColor)
     ) {
-        if (state.isLoading && state.pages.isEmpty()) {
+        if (state.isLoading && state.streamPages.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = accentBlue)
             }
-        } else if (state.pages.isEmpty()) {
+        } else if (state.streamPages.isEmpty()) {
             // API doesn't provide chapter images - show helpful error state
             ReaderErrorView(
                 title = state.streamTitle ?: "Chapter",
@@ -108,7 +108,7 @@ fun KomikReaderScreen(
         } else {
             // This branch won't be reached with current API, but kept for future compatibility
             ReaderContent(
-                pages = state.pages,
+                pages = state.streamPages,
                 title = state.streamTitle ?: "",
                 accentBlue = accentBlue,
                 labelColor = labelColor,
