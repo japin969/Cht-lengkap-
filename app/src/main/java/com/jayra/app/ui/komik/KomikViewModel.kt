@@ -3,10 +3,8 @@ package com.jayra.app.ui.komik
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.KomikApi
-import com.jayra.app.data.KomikChapter
-import com.jayra.app.data.KomikDetailResponse
 import com.jayra.app.data.KomikItem
-import com.jayra.app.data.KomikNavigation
+import com.jayra.app.data.KomikResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,32 +15,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class KomikUiState(
-    val isLoading: Boolean = false,
-    val isLoadingMore: Boolean = false,
-    val isSearching: Boolean = false,
-    val searchQuery: String = "",
-    val activeCategory: String = "home",
-    val activeGenre: String = "action",
-    val currentPage: Int = 1,
-    val hasNext: Boolean = false,
-    val popular: List<KomikItem> = emptyList(),
-    val latest: List<KomikItem> = emptyList(),
-    val items: List<KomikItem> = emptyList(),
-    val searchResults: List<KomikItem> = emptyList(),
-    val detail: KomikDetailResponse? = null,
-    val chapters: List<KomikChapter> = emptyList(),
-    val isDetailLoading: Boolean = false,
-    val isStreamLoading: Boolean = false,
-    val streamTitle: String? = null,
-    val comicTitle: String? = null,
-    val images: List<String> = emptyList(),
-    val navigation: KomikNavigation? = null,
-    val error: String? = null,
-    val detailError: String? = null,
-    val streamError: String? = null
-)
-
 @OptIn(FlowPreview::class)
 class KomikViewModel : ViewModel() {
     private val api = KomikApi.create()
@@ -52,7 +24,7 @@ class KomikViewModel : ViewModel() {
     private val _searchFlow = MutableStateFlow("")
 
     init {
-        loadCategory("home", page = 1)
+        loadHome(page = 1)
         viewModelScope.launch {
             _searchFlow
                 .debounce(450L)
@@ -61,11 +33,7 @@ class KomikViewModel : ViewModel() {
                     if (q.isNotBlank()) {
                         performSearch(q)
                     } else {
-                        _uiState.value = _uiState.value.copy(
-                            isSearching = false,
-                            searchResults = emptyList(),
-                            error = null
-                        )
+                        loadHome(page = 1)
                     }
                 }
         }
@@ -83,15 +51,60 @@ class KomikViewModel : ViewModel() {
         }
     }
 
+    fun loadHome(page: Int = 1) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = page == 1,
+                error = null,
+                activePage = page
+            )
+            try {
+                val res = withContext(Dispatchers.IO) {
+                    api.list(mapOf("page" to page.toString()))
+                }
+                val body = res.body()
+                if (res.isSuccessful && body?.success == true) {
+                    val incoming = body.items
+                    val merged = if (page == 1) incoming else (_uiState.value.items + incoming)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        items = merged,
+                        activePage = page,
+                        hasNext = body.hasNext == true,
+                        error = if (merged.isEmpty()) "Data komik kosong" else null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Gagal memuat komik (HTTP ${res.code()})"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.localizedMessage ?: "Gagal memuat komik"
+                )
+            }
+        }
+    }
+
+    fun loadNextPage() {
+        val state = _uiState.value
+        if (state.hasNext && !state.isLoading && state.items.isNotEmpty()) {
+            loadHome(page = state.activePage + 1)
+        }
+    }
+
     private suspend fun performSearch(query: String) {
         _uiState.value = _uiState.value.copy(isSearching = true, error = null)
         try {
-            val res = withContext(Dispatchers.IO) { api.search(q = query) }
+            val res = withContext(Dispatchers.IO) { api.list(mapOf("q" to query)) }
             val body = res.body()
             if (res.isSuccessful && body?.success == true) {
                 _uiState.value = _uiState.value.copy(
                     isSearching = false,
-                    searchResults = body.results.orEmpty()
+                    searchResults = body.items,
+                    error = if (body.items.isEmpty()) "Komik \"$query\" tidak ditemukan" else null
                 )
             } else {
                 _uiState.value = _uiState.value.copy(
@@ -107,84 +120,6 @@ class KomikViewModel : ViewModel() {
         }
     }
 
-    fun loadCategory(category: String, page: Int = 1) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = page == 1,
-                isLoadingMore = page > 1,
-                activeCategory = category,
-                error = null
-            )
-            try {
-                if (category == "home") {
-                    val res = withContext(Dispatchers.IO) { api.home() }
-                    val body = res.body()
-                    if (res.isSuccessful && body?.success == true) {
-                        val pop = body.sections?.popular.orEmpty()
-                        val lat = body.sections?.latest.orEmpty()
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            isLoadingMore = false,
-                            popular = pop,
-                            latest = lat,
-                            hasNext = false,
-                            error = if (pop.isEmpty() && lat.isEmpty()) "Beranda komik kosong" else null
-                        )
-                    } else {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            isLoadingMore = false,
-                            error = "Gagal memuat komik (HTTP ${res.code()})"
-                        )
-                    }
-                    return@launch
-                }
-
-                val res = withContext(Dispatchers.IO) {
-                    if (category == "genre") api.genre(genre = _uiState.value.activeGenre, page = page)
-                    else api.list(endpoint = category, page = page)
-                }
-                val body = res.body()
-                if (res.isSuccessful && body?.success == true) {
-                    val incoming = body.results.orEmpty()
-                    val merged = if (page == 1) incoming else (_uiState.value.items + incoming).distinctBy { it.resolvedSlug }
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isLoadingMore = false,
-                        currentPage = page,
-                        hasNext = body.hasNext == true,
-                        items = merged,
-                        error = if (merged.isEmpty()) "Daftar komik kosong" else null
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isLoadingMore = false,
-                        error = "Gagal memuat komik (HTTP ${res.code()})"
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    isLoadingMore = false,
-                    error = e.localizedMessage ?: "Gagal memuat komik"
-                )
-            }
-        }
-    }
-
-    fun selectGenre(genre: String) {
-        _uiState.value = _uiState.value.copy(activeGenre = genre)
-        loadCategory("genre", page = 1)
-    }
-
-    fun loadNextPage() {
-        val state = _uiState.value
-        if (!state.isLoading && !state.isLoadingMore && state.hasNext) {
-            loadCategory(state.activeCategory, page = state.currentPage + 1)
-        }
-    }
-
     fun loadDetail(slug: String) {
         if (slug.isBlank()) {
             _uiState.value = _uiState.value.copy(detailError = "Slug komik tidak valid")
@@ -193,18 +128,21 @@ class KomikViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isDetailLoading = true, detailError = null)
             try {
-                val res = withContext(Dispatchers.IO) { api.detail(slug = slug) }
+                // Detail endpoint returns the same daftar-manga list; match by slug.
+                val res = withContext(Dispatchers.IO) { api.list(mapOf("slug" to slug)) }
                 val body = res.body()
-                if (res.isSuccessful && body?.success == true && !body.title.isNullOrBlank()) {
+                val matched = body?.items?.firstOrNull { it.resolvedSlug == slug }
+                if (res.isSuccessful && body?.success == true && matched != null) {
                     _uiState.value = _uiState.value.copy(
                         isDetailLoading = false,
-                        detail = body,
-                        chapters = body.chapters.orEmpty()
+                        komik = matched,
+                        chapters = emptyList(),
+                        detailError = null
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isDetailLoading = false,
-                        detailError = "Gagal memuat detail komik (HTTP ${res.code()})"
+                        detailError = "Komik tidak ditemukan (HTTP ${res.code()})"
                     )
                 }
             } catch (e: Exception) {
@@ -216,37 +154,28 @@ class KomikViewModel : ViewModel() {
         }
     }
 
-    fun loadStream(slug: String) {
-        if (slug.isBlank()) {
-            _uiState.value = _uiState.value.copy(streamError = "Slug chapter tidak valid")
-            return
-        }
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isStreamLoading = true, streamError = null)
-            try {
-                val res = withContext(Dispatchers.IO) { api.stream(slug = slug) }
-                val body = res.body()
-                val imgs = body?.images?.filter { it.isNotBlank() }.orEmpty()
-                if (res.isSuccessful && body?.success == true && imgs.isNotEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        isStreamLoading = false,
-                        streamTitle = body.displayTitle,
-                        comicTitle = body.comicTitle,
-                        images = imgs,
-                        navigation = body.navigation
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isStreamLoading = false,
-                        streamError = "Halaman chapter tidak tersedia"
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isStreamLoading = false,
-                    streamError = e.localizedMessage ?: "Gagal memuat halaman chapter"
-                )
-            }
-        }
+    fun clearDetail() {
+        _uiState.value = _uiState.value.copy(komik = null, chapters = emptyList(), detailError = null)
     }
 }
+
+data class KomikUiState(
+    val isLoading: Boolean = false,
+    val isSearching: Boolean = false,
+    val searchQuery: String = "",
+    val activePage: Int = 1,
+    val hasNext: Boolean = false,
+    val items: List<KomikItem> = emptyList(),
+    val searchResults: List<KomikItem> = emptyList(),
+    val komik: KomikItem? = null,
+    val chapters: List<KomikChapter> = emptyList(),
+    val error: String? = null,
+    val detailError: String? = null
+)
+
+data class KomikChapter(
+    val title: String? = null,
+    val slug: String? = null,
+    val link: String? = null,
+    val date: String? = null
+)

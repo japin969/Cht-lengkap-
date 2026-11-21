@@ -1,9 +1,13 @@
 package com.jayra.app.ui.komik
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,43 +17,53 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.jayra.app.ui.theme.IOSBlue
 import com.jayra.app.ui.theme.IOSBlueDark
-import com.jayra.app.ui.theme.IOSRed
+import com.jayra.app.ui.theme.IOSGray6
+import com.jayra.app.ui.theme.IOSGray6Dark
+import com.jayra.app.ui.theme.IOSLabel
+import com.jayra.app.ui.theme.IOSLabelDark
+import com.jayra.app.ui.theme.IOSOrange
+import com.jayra.app.ui.theme.IOSSecondaryLabel
 import com.jayra.app.ui.theme.IOSSecondaryLabelDark
+import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
+import com.jayra.app.ui.theme.IOSSecondarySystemGroupedBackground
+import com.jayra.app.ui.theme.IOSSystemGroupedBackground
+import com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark
+import com.jayra.app.ui.theme.JayraDangerRed
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.ui.theme.squircle
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassSurfaceSpec
+import com.jayra.app.util.glassSurfaceV2
 
 @Composable
 fun KomikReaderScreen(
@@ -58,135 +72,194 @@ fun KomikReaderScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var activeSlug by remember(slug) { mutableStateOf(slug) }
-    val listState = rememberLazyListState()
+    val isDark = isSystemInDarkTheme()
+    val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
+    val cardBg = if (isDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemGroupedBackground
+    val labelColor = if (isDark) IOSLabelDark else IOSLabel
+    val subLabelColor = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
+    val accentBlue = if (isDark) IOSBlueDark else IOSBlue
 
-    LaunchedEffect(activeSlug) {
-        viewModel.loadStream(activeSlug)
-        listState.scrollToItem(0)
+    val glassTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+    val glassSpec = remember(glassTier, isDark) { LiquidGlassSpecV2.forTier(glassTier, isDark).surface }
+
+    val komik = state.komik
+
+    LaunchedEffect(slug) {
+        viewModel.loadDetail(slug)
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0A0C))
+            .background(bgColor)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Row(
+        if (komik == null && state.detailError == null && !state.isDetailLoading) {
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, tint = subLabelColor, modifier = Modifier.size(44.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("Memuat komik...", color = labelColor, fontSize = 15.sp, textAlign = TextAlign.Center)
+            }
+            return@Box
+        }
+
+        if (komik == null && state.detailError != null) {
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(Icons.Rounded.Warning, contentDescription = null, tint = JayraDangerRed, modifier = Modifier.size(44.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(state.detailError ?: "Gagal memuat komik", color = labelColor, fontSize = 15.sp, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(14.dp))
+                Button(
+                    onClick = { viewModel.loadDetail(slug) },
+                    colors = ButtonDefaults.buttonColors(containerColor = accentBlue),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Coba Lagi", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            return@Box
+        }
+
+        val currentKomik = komik!!
+
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF141416))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = state.streamTitle ?: "Memuat chapter...",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
+                    .clip(squircle(18))
+                    .glassSurfaceV2(glassSpec, solidColor = if (isDark) IOSGray6Dark else IOSGray6, cornerRadius = 18.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(currentKomik.cover)
+                        .addHeader("Referer", "https://komikindo.ch/")
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = currentKomik.cleanTitle,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
-                state.comicTitle?.takeIf { it.isNotBlank() }?.let { comic ->
+                Box(
+                    modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)
+                ) {
                     Text(
-                        text = comic,
-                        fontSize = 12.sp,
-                        color = IOSSecondaryLabelDark,
-                        maxLines = 1,
+                        text = currentKomik.cleanTitle,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-            if (state.images.isNotEmpty()) {
-                Text(
-                    text = "${state.images.size} Hal",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = IOSBlueDark
-                )
-            }
-        }
 
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when {
-                state.isStreamLoading -> CircularProgressIndicator(
-                    color = IOSBlueDark,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                state.streamError != null -> Column(
-                    modifier = Modifier.align(Alignment.Center).padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(Icons.Rounded.Warning, contentDescription = null, tint = IOSRed, modifier = Modifier.size(44.dp))
-                    Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                currentKomik.type?.takeIf { it.isNotBlank() }?.let { t ->
                     Text(
-                        text = state.streamError ?: "Gagal memuat chapter",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center
+                        text = t,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = subLabelColor
                     )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Button(
-                        onClick = { viewModel.loadStream(activeSlug) },
-                        colors = ButtonDefaults.buttonColors(containerColor = IOSBlueDark),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Coba Lagi", color = Color.White, fontWeight = FontWeight.SemiBold)
-                    }
                 }
-                else -> LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    itemsIndexed(
-                        items = state.images,
-                        key = { index, url -> "${index}_$url" }
-                    ) { index, imageUrl ->
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(imageUrl)
-                                .addHeader("Referer", "https://komikindo.ch/")
-                                .crossfade(false)
-                                .build(),
-                            contentDescription = "Halaman ${index + 1}",
-                            modifier = Modifier.fillMaxWidth(),
-                            contentScale = ContentScale.FillWidth
-                        )
-                    }
+                currentKomik.rating?.takeIf { it.isNotBlank() }?.let { rate ->
+                    Text(
+                        text = "$rate",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = IOSOrange
+                    )
+                }
+            }
 
-                    val prevSlug = state.navigation?.prev?.resolvedSlug.orEmpty()
-                    val nextSlug = state.navigation?.next?.resolvedSlug.orEmpty()
-                    if (prevSlug.isNotBlank() || nextSlug.isNotBlank()) {
-                        item(key = "chapter_nav") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color(0xFF141416))
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                if (prevSlug.isNotBlank()) {
-                                    TextButton(onClick = { activeSlug = prevSlug }) {
-                                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null, tint = IOSBlueDark)
-                                        Text("Prev", color = IOSBlueDark, fontWeight = FontWeight.SemiBold)
-                                    }
-                                } else {
-                                    Spacer(Modifier.size(1.dp))
-                                }
+            Spacer(modifier = Modifier.height(16.dp))
 
-                                if (nextSlug.isNotBlank()) {
-                                    TextButton(onClick = { activeSlug = nextSlug }) {
-                                        Text("Next", color = IOSBlueDark, fontWeight = FontWeight.SemiBold)
-                                        Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, tint = IOSBlueDark)
-                                    }
-                                }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(squircle(14))
+                    .background(cardBg)
+                    .border(0.75.dp, if (isDark) LiquidGlassSpecV2.DarkBorderTop else Color(0x14000000), squircle(14))
+                    .padding(16.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, tint = subLabelColor, modifier = Modifier.size(40.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Baca Chapter",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = labelColor
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Gambar chapter belum tersedia dari API komik saat ini.",
+                        color = subLabelColor,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            val link = currentKomik.link
+                            if (link.isNotBlank()) {
+                                context.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(link)
+                                    )
+                                )
                             }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentBlue),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.OpenInNew,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Buka Chapter di Komikindo",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
                         }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

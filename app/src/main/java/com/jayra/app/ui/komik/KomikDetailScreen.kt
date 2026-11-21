@@ -19,13 +19,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -67,8 +67,13 @@ import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
 import com.jayra.app.ui.theme.IOSSecondarySystemGroupedBackground
 import com.jayra.app.ui.theme.IOSSystemGroupedBackground
 import com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark
+import com.jayra.app.ui.theme.JayraDangerRed
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.ui.theme.squircle
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassSurfaceSpec
+import com.jayra.app.util.glassSurfaceV2
+import kotlinx.coroutines.launch
 
 @Composable
 fun KomikDetailScreen(
@@ -86,7 +91,9 @@ fun KomikDetailScreen(
     val accentBlue = if (isDark) IOSBlueDark else IOSBlue
     val borderColor = if (isDark) LiquidGlassSpecV2.DarkBorderTop else Color(0x14000000)
 
-    var sortAscending by remember { mutableStateOf(false) }
+    val glassTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
+    val glassSpec = remember(glassTier, isDark) { LiquidGlassSpecV2.forTier(glassTier, isDark).surface }
+
     var expandSynopsis by remember { mutableStateOf(false) }
 
     LaunchedEffect(slug) { viewModel.loadDetail(slug) }
@@ -107,7 +114,7 @@ fun KomikDetailScreen(
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Rounded.Warning, contentDescription = null, tint = IOSRed, modifier = Modifier.size(44.dp))
+                Icon(Icons.Rounded.Warning, contentDescription = null, tint = JayraDangerRed, modifier = Modifier.size(44.dp))
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(state.detailError ?: "Gagal memuat detail", color = labelColor, fontSize = 15.sp, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(14.dp))
@@ -120,248 +127,280 @@ fun KomikDetailScreen(
                 }
             }
             else -> {
-                val detail = state.detail
-                val orderedChapters = remember(state.chapters, sortAscending) {
-                    if (sortAscending) state.chapters.reversed() else state.chapters
-                }
-                val firstChapter = state.chapters.lastOrNull()
-                val latestChapter = state.chapters.firstOrNull()
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item(key = "header") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(squircle(18))
-                                .background(cardBg)
-                                .border(0.75.dp, borderColor, squircle(18))
-                                .padding(14.dp)
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(detail?.cover)
-                                    .addHeader("Referer", "https://komikindo.ch/")
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = detail?.cleanTitle,
-                                modifier = Modifier
-                                    .width(114.dp)
-                                    .height(164.dp)
-                                    .clip(squircle(12))
-                                    .background(if (isDark) IOSGray6Dark else IOSGray6),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.width(14.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = detail?.cleanTitle ?: "Memuat...",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = labelColor,
-                                    maxLines = 3,
-                                    overflow = TextOverflow.Ellipsis
+                val komik = state.komik
+                if (komik == null) {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = subLabelColor, modifier = Modifier.size(44.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("Komik tidak ditemukan", color = labelColor, fontSize = 15.sp, textAlign = TextAlign.Center)
+                    }
+                } else {
+                    KomikDetailContent(
+                        komik = komik,
+                        glassSpec = glassSpec,
+                        isDark = isDark,
+                        cardBg = cardBg,
+                        labelColor = labelColor,
+                        subLabelColor = subLabelColor,
+                        accentBlue = accentBlue,
+                        borderColor = borderColor,
+                        expandSynopsis = expandSynopsis,
+                        onExpandSynopsis = { expandSynopsis = it },
+                        onChapterClick = onChapterClick,
+                        onReadExternal = {
+                            val link = komik.link
+                            if (link.isNotBlank()) {
+                                context.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(link)
+                                    )
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    detail?.rating?.takeIf { it.isNotBlank() }?.let { r ->
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(IOSOrange.copy(alpha = 0.16f))
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                        ) {
-                                            Icon(Icons.Rounded.Star, contentDescription = null, tint = IOSOrange, modifier = Modifier.size(14.dp))
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                            Text(r, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IOSOrange)
-                                        }
-                                    }
-                                    detail?.statusText?.takeIf { it.isNotBlank() }?.let { st ->
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(accentBlue.copy(alpha = 0.14f))
-                                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                        ) {
-                                            Text(st, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = accentBlue)
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                listOfNotNull(
-                                    detail?.type?.takeIf { it.isNotBlank() }?.let { "Tipe: $it" },
-                                    detail?.authorName?.takeIf { it.isNotBlank() }?.let { "Penulis: $it" },
-                                    detail?.artistName?.takeIf { it.isNotBlank() }?.let { "Ilustrator: $it" }
-                                ).forEach { line ->
-                                    Text(line, fontSize = 12.sp, color = subLabelColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
                             }
                         }
-                    }
+                    )
+                }
+            }
+        }
+    }
+}
 
-                    if (firstChapter != null || latestChapter != null) {
-                        item(key = "quick_read") {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+@Composable
+private fun KomikDetailContent(
+    komik: KomikItem,
+    glassSpec: GlassSurfaceSpec,
+    isDark: Boolean,
+    cardBg: Color,
+    labelColor: Color,
+    subLabelColor: Color,
+    accentBlue: Color,
+    borderColor: Color,
+    expandSynopsis: Boolean,
+    onExpandSynopsis: (Boolean) -> Unit,
+    onChapterClick: (String) -> Unit,
+    onReadExternal: () -> Unit
+) {
+    val context = LocalContext.current
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Hero cover header
+        item(key = "hero") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp)
+                    .clip(squircle(20))
+                    .clickable { onReadExternal() }
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(komik.cover)
+                        .addHeader("Referer", "https://komikindo.ch/")
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = komik.cleanTitle,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Box(
+                    modifier = Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(colors = listOf(Color(0x0A000000), Color(0x80000000)))
+                    )
+                )
+                Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        komik.type?.takeIf { it.isNotBlank() }?.let { t ->
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x55FFFFFF))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
-                                firstChapter?.let { ch ->
-                                    Button(
-                                        onClick = { ch.resolvedSlug.takeIf { it.isNotBlank() }?.let(onChapterClick) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = accentBlue),
-                                        shape = RoundedCornerShape(12.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text("Baca Awal", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                    }
-                                }
-                                latestChapter?.let { ch ->
-                                    Button(
-                                        onClick = { ch.resolvedSlug.takeIf { it.isNotBlank() }?.let(onChapterClick) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = cardBg),
-                                        shape = RoundedCornerShape(12.dp),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .border(0.75.dp, accentBlue, RoundedCornerShape(12.dp))
-                                    ) {
-                                        Text(
-                                            text = ch.title ?: "Terbaru",
-                                            color = accentBlue,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 13.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                Text(t, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            }
+                        }
+                        komik.latestChapter?.takeIf { it.isNotBlank() }?.let { ch ->
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(accentBlue)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(ch, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                        komik.rating?.takeIf { it.isNotBlank() }?.let { rate ->
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(IOSOrange.copy(alpha = 0.95f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Star(contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(rate, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                             }
                         }
                     }
-
-                    val genres = detail?.genres.orEmpty()
-                    if (genres.isNotEmpty()) {
-                        item(key = "genres") {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(genres, key = { it }) { g ->
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(cardBg)
-                                            .border(0.75.dp, borderColor, RoundedCornerShape(14.dp))
-                                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                                    ) {
-                                        Text(g, fontSize = 12.sp, color = labelColor, fontWeight = FontWeight.Medium)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    item(key = "synopsis") {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(squircle(16))
-                                .background(cardBg)
-                                .border(0.75.dp, borderColor, squircle(16))
-                                .clickable { expandSynopsis = !expandSynopsis }
-                                .padding(14.dp)
-                        ) {
-                            Text("Sinopsis", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = labelColor)
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = detail?.synopsis?.takeIf { it.isNotBlank() } ?: "Sinopsis belum tersedia.",
-                                fontSize = 13.sp,
-                                lineHeight = 19.sp,
-                                color = subLabelColor,
-                                maxLines = if (expandSynopsis) Int.MAX_VALUE else 4,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = if (expandSynopsis) "Tampilkan lebih sedikit" else "Baca selengkapnya",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = accentBlue
-                            )
-                        }
-                    }
-
-                    item(key = "ch_header") {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = komik.cleanTitle,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = onReadExternal,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(44.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Daftar Chapter (${detail?.totalChapters ?: state.chapters.size})",
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = labelColor
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(cardBg)
-                                    .border(0.75.dp, borderColor, RoundedCornerShape(10.dp))
-                                    .clickable { sortAscending = !sortAscending }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                            ) {
-                                Icon(Icons.Rounded.SwapVert, contentDescription = "Urutkan", tint = accentBlue, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (sortAscending) "Ch 1 Dulu" else "Terbaru",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = accentBlue
-                                )
-                            }
-                        }
-                    }
-
-                    items(
-                        items = orderedChapters,
-                        key = { it.resolvedSlug.ifBlank { it.title.orEmpty() } }
-                    ) { ch ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(squircle(14))
-                                .background(cardBg)
-                                .border(0.75.dp, borderColor, squircle(14))
-                                .clickable {
-                                    val target = ch.resolvedSlug
-                                    if (target.isNotBlank()) onChapterClick(target)
-                                }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, tint = accentBlue, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = ch.title ?: "Chapter",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = labelColor,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                ch.date?.takeIf { it.isNotBlank() }?.let { d ->
-                                    Text(text = d, fontSize = 12.sp, color = subLabelColor)
-                                }
-                            }
-                            Text("Baca", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = accentBlue)
+                            Icon(
+                                imageVector = Icons.Default.OpenInNew,
+                                contentDescription = null,
+                                tint = Color(0xFF007AFF),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Baca di Komikindo",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF007AFF)
+                            )
                         }
                     }
+                }
+            }
+        }
+
+        // Info row
+        item(key = "info") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                komik.type?.takeIf { it.isNotBlank() }?.let { t ->
+                    Text(
+                        text = t,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = subLabelColor
+                    )
+                }
+                Text(
+                    text = "•",
+                    fontSize = 12.sp,
+                    color = subLabelColor
+                )
+                komik.rating?.takeIf { it.isNotBlank() }?.let { rate ->
+                    Text(
+                        text = "Rating $rate",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = subLabelColor
+                    )
+                }
+            }
+        }
+
+        // Synopsis
+        item(key = "synopsis") {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(squircle(16))
+                    .background(cardBg)
+                    .border(0.75.dp, borderColor, squircle(16))
+                    .clickable { onExpandSynopsis(!expandSynopsis) }
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Sinopsis", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = labelColor)
+                    Text(
+                        text = if (expandSynopsis) "Tampilkan lebih sedikit" else "Baca selengkapnya",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accentBlue
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Sinopsis komik ini akan tersedia setelah data detail komik dimuat dari server.",
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = subLabelColor,
+                    maxLines = if (expandSynopsis) Int.MAX_VALUE else 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // Chapter list (API tidak menyediakan chapter images, tampilkan state kosong dengan aksi)
+        item(key = "ch_header") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Daftar Chapter",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = labelColor
+                )
+                Text(
+                    text = "Buka di Komikindo",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = accentBlue,
+                    modifier = Modifier.clickable { onReadExternal() }
+                )
+            }
+        }
+
+        item(key = "ch_empty") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(squircle(14))
+                    .background(cardBg)
+                    .border(0.75.dp, borderColor, squircle(14))
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, tint = subLabelColor, modifier = Modifier.size(32.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Chapter belum tersedia dari API komik",
+                        color = subLabelColor,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Klik \"Baca di Komikindo\" di atas untuk membaca chapter secara langsung.",
+                        color = subLabelColor,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2
+                    )
                 }
             }
         }
