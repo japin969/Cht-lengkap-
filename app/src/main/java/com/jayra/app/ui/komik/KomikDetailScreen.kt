@@ -23,7 +23,7 @@ import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -61,7 +61,6 @@ import com.jayra.app.ui.theme.IOSSecondarySystemBackgroundDark
 import com.jayra.app.ui.theme.IOSSecondarySystemGroupedBackground
 import com.jayra.app.ui.theme.IOSSystemGroupedBackground
 import com.jayra.app.ui.theme.IOSSystemGroupedBackgroundDark
-import com.jayra.app.util.glassSurfaceV2
 
 @Composable
 fun KomikDetailScreen(
@@ -428,7 +427,7 @@ private fun ChapterItem(
         },
         trailingContent = {
             Icon(
-                imageVector = Icons.Rounded.MenuBook,
+                imageVector = Icons.Rounded.AutoStories,
                 contentDescription = "Baca",
                 tint = accentBlue,
                 modifier = Modifier.size(20.dp).padding(end = 8.dp)

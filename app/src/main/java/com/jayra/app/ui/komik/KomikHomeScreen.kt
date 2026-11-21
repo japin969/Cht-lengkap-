@@ -25,7 +25,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -91,7 +91,6 @@ fun KomikHomeScreen(
     val subLabelColor = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
     val accentBlue = if (isDark) IOSBlueDark else IOSBlue
     val cardBg = if (isDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemGroupedBackground
-    val borderColor = if (isDark) Color(0x14FFFFFF) else Color(0x14000000)
     val glassTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
     val glassSpec = remember(glassTier, isDark) { LiquidGlassSpecV2.forTier(glassTier, isDark).surface }
     val context = LocalContext.current
@@ -189,7 +188,6 @@ fun KomikHomeScreen(
                 labelColor = labelColor,
                 subLabelColor = subLabelColor,
                 cardBg = cardBg,
-                borderColor = borderColor,
                 glassSpec = glassSpec,
                 isDark = isDark,
                 context = context,
@@ -211,7 +209,6 @@ private fun SearchResultsSection(
     onKomikClick: (String) -> Unit
 ) {
     Column(Modifier.fillMaxSize()) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -290,7 +287,6 @@ private fun HomeContentSection(
     labelColor: Color,
     subLabelColor: Color,
     cardBg: Color,
-    borderColor: Color,
     glassSpec: GlassSurfaceSpec,
     isDark: Boolean,
     context: android.content.Context,
