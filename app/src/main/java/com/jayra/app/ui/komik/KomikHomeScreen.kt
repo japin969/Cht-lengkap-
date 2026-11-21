@@ -190,7 +190,8 @@ fun KomikHomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(state.searchResults) { komik ->
+                    items(state.searchResults.size) { index ->
+                        val komik = state.searchResults[index]
                         KomikCard(komik, isDark, labelColor, subLabelColor, accentBlue, glassSpec) {
                             onKomikClick(komik.resolvedSlug)
                         }
@@ -274,7 +275,9 @@ private fun KomikHomeContent(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(rest.take(8)) { komik ->
+                    val popList = rest.take(8)
+                    items(popList.size) { index ->
+                        val komik = popList[index]
                         KomikCard(komik, isDark, labelColor, subLabelColor, accentBlue, glassSpec) {
                             onKomikClick(komik.resolvedSlug)
                         }
@@ -294,7 +297,9 @@ private fun KomikHomeContent(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(rest2.take(8)) { komik ->
+                    val updList = rest2.take(8)
+                    items(updList.size) { index ->
+                        val komik = updList[index]
                         KomikCard(komik, isDark, labelColor, subLabelColor, accentBlue, glassSpec) {
                             onKomikClick(komik.resolvedSlug)
                         }

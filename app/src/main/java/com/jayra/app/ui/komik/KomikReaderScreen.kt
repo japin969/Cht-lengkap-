@@ -177,25 +177,23 @@ fun KomikReaderScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                currentKomik.type?.let { t ->
-                    if (t.isNotBlank()) {
-                        Text(
-                            text = t,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = subLabelColor
-                        )
-                    }
+                val type = currentKomik.type
+                if (type != null && type.isNotBlank()) {
+                    Text(
+                        text = type,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = subLabelColor
+                    )
                 }
-                currentKomik.rating?.let { rate ->
-                    if (rate.isNotBlank()) {
-                        Text(
-                            text = "$rate",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = IOSOrange
-                        )
-                    }
+                val rating = currentKomik.rating
+                if (rating != null && rating.isNotBlank()) {
+                    Text(
+                        text = "$rating",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = IOSOrange
+                    )
                 }
             }
 
@@ -230,7 +228,7 @@ fun KomikReaderScreen(
                     Button(
                         onClick = {
                             val link = currentKomik.link
-                            if (link.isNotBlank()) {
+                            if (link != null && link.isNotBlank()) {
                                 context.startActivity(
                                     android.content.Intent(
                                         android.content.Intent.ACTION_VIEW,

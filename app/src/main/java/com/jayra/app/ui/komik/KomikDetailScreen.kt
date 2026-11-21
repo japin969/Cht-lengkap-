@@ -153,7 +153,7 @@ fun KomikDetailScreen(
                         onChapterClick = onChapterClick,
                         onReadExternal = {
                             val link = komik.link
-                            if (link.isNotBlank()) {
+                            if (link != null && link.isNotBlank()) {
                                 context.startActivity(
                                     android.content.Intent(
                                         android.content.Intent.ACTION_VIEW,
