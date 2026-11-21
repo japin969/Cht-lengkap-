@@ -730,7 +730,95 @@ private fun MainNavigationGraph(
                 },
                 onKomikClick = { slug ->
                     navController.navigate("komik_detail?slug=$slug")
-                }
+                },
+                onAnimeSearchClick = { navController.navigate("anime_search") },
+                onAnimeBookmarkClick = { navController.navigate("anime_bookmark") },
+                onAnimeHistoryClick = { navController.navigate("anime_history") },
+                onAnimeViewAllClick = { navController.navigate("anime_list") },
+                onKomikSearchClick = { navController.navigate("komik_search") },
+                onKomikBookmarkClick = { navController.navigate("komik_bookmark") },
+                onKomikHistoryClick = { navController.navigate("komik_history") },
+                onKomikViewAllClick = { navController.navigate("komik_list") }
+            )
+        }
+
+        composable("anime_search") {
+            com.jayra.app.ui.anime.AnimeSearchScreen(
+                onAnimeClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("anime_list") {
+            com.jayra.app.ui.anime.AnimeListScreen(
+                onAnimeClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("anime_bookmark") {
+            com.jayra.app.ui.anime.AnimeBookmarkScreen(
+                onAnimeClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onBack = { navController.popBackStack() },
+                onBrowseClick = { navController.popBackStack() }
+            )
+        }
+
+        composable("anime_history") {
+            com.jayra.app.ui.anime.AnimeHistoryScreen(
+                onAnimeClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onBack = { navController.popBackStack() },
+                onBrowseClick = { navController.popBackStack() }
+            )
+        }
+
+        composable("komik_search") {
+            com.jayra.app.ui.komik.KomikSearchScreen(
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("komik_list") {
+            com.jayra.app.ui.komik.KomikListScreen(
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("komik_bookmark") {
+            com.jayra.app.ui.komik.KomikBookmarkScreen(
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
+                },
+                onBack = { navController.popBackStack() },
+                onBrowseClick = { navController.popBackStack() }
+            )
+        }
+
+        composable("komik_history") {
+            com.jayra.app.ui.komik.KomikHistoryScreen(
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
+                },
+                onBack = { navController.popBackStack() },
+                onBrowseClick = { navController.popBackStack() }
             )
         }
 
@@ -745,7 +833,8 @@ private fun MainNavigationGraph(
                 onPlayEpisode = { epUrl ->
                     val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                     navController.navigate("anime_player?url=$epEncoded")
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -755,17 +844,12 @@ private fun MainNavigationGraph(
         ) { backStackEntry ->
             val url = backStackEntry.arguments?.getString("url") ?: ""
             val decoded = java.net.URLDecoder.decode(url, "UTF-8")
-            val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-            val state by vm.uiState.collectAsState()
-            LaunchedEffect(decoded) { vm.loadStream(decoded) }
-            val stream = state.streamUrl
-            if (stream.isNullOrBlank()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream ?: "")
-            }
+            // Pemutar native (ExoPlayer). Bila sumber tidak menyediakan tautan,
+            // layar akan menampilkan pesan, bukan crash / WebView.
+            com.jayra.app.ui.anime.AnimePlayerScreen(
+                videoUrl = "",
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable(
@@ -786,7 +870,8 @@ private fun MainNavigationGraph(
                 slug = slug,
                 onChapterClick = { chapterSlug ->
                     navController.navigate("komik_reader?slug=$chapterSlug")
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -795,7 +880,10 @@ private fun MainNavigationGraph(
             arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
         ) { backStackEntry ->
             val slug = backStackEntry.arguments?.getString("slug") ?: ""
-            com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
+            com.jayra.app.ui.komik.KomikReaderScreen(
+                slug = slug,
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable("archived_chats") {

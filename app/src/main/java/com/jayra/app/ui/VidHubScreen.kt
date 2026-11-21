@@ -8,11 +8,26 @@ import com.jayra.app.ui.drama.DramaScreen
 import com.jayra.app.ui.anime.AnimeHomeScreen
 import com.jayra.app.ui.komik.KomikHomeScreen
 
+/**
+ * VidHub: wadah tab Drama / Anime / Komik.
+ *
+ * Setiap tab punya aksi menuju halaman pendukungnya:
+ *  - Anime : Search, Bookmark, History, Lihat semua
+ *  - Komik : Search, Bookmark, History, Lihat semua
+ */
 @Composable
 fun VidHubScreen(
     onDramaClick: (String) -> Unit,
     onAnimeClick: (String) -> Unit,
-    onKomikClick: (String) -> Unit
+    onKomikClick: (String) -> Unit,
+    onAnimeSearchClick: () -> Unit = {},
+    onAnimeBookmarkClick: () -> Unit = {},
+    onAnimeHistoryClick: () -> Unit = {},
+    onAnimeViewAllClick: () -> Unit = {},
+    onKomikSearchClick: () -> Unit = {},
+    onKomikBookmarkClick: () -> Unit = {},
+    onKomikHistoryClick: () -> Unit = {},
+    onKomikViewAllClick: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Drama", "Anime", "Komik")
@@ -30,8 +45,20 @@ fun VidHubScreen(
 
         when (selectedTab) {
             0 -> DramaScreen(onDramaClick = onDramaClick)
-            1 -> AnimeHomeScreen(onAnimeClick = onAnimeClick)
-            2 -> KomikHomeScreen(onKomikClick = onKomikClick)
+            1 -> AnimeHomeScreen(
+                onAnimeClick = onAnimeClick,
+                onSearchClick = onAnimeSearchClick,
+                onBookmarkClick = onAnimeBookmarkClick,
+                onHistoryClick = onAnimeHistoryClick,
+                onViewAllClick = onAnimeViewAllClick
+            )
+            2 -> KomikHomeScreen(
+                onKomikClick = onKomikClick,
+                onSearchClick = onKomikSearchClick,
+                onBookmarkClick = onKomikBookmarkClick,
+                onHistoryClick = onKomikHistoryClick,
+                onViewAllClick = onKomikViewAllClick
+            )
         }
     }
 }

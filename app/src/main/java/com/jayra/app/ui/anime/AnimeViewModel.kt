@@ -7,6 +7,7 @@ import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeSearchItem
 import com.jayra.app.data.KitsuAnime
 import com.jayra.app.data.KitsuApi
+import com.jayra.app.data.KitsuEpisode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -18,8 +19,13 @@ data class AnimeUiState(
     val completed: List<AnimeSearchItem> = emptyList(),
     val detail: AnimeDetailData? = null,
     val episodes: List<AnimeEpisode> = emptyList(),
+    /** Menandakan episode sedang dimuat. */
+    val episodesLoading: Boolean = false,
     val streamUrl: String? = null,
-    val error: String? = null
+    /** Error umum (home / detail). */
+    val error: String? = null,
+    val homeError: String? = null,
+    val detailError: String? = null
 )
 
 class AnimeViewModel : ViewModel() {
@@ -28,11 +34,13 @@ class AnimeViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
+    private var lastAnimeId: String? = null
+
     init { loadHome() }
 
     fun loadHome() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
             try {
                 val popular = runCatching {
                     api.list(limit = 20, sort = "-userCount").body()?.data.orEmpty()
@@ -46,18 +54,27 @@ class AnimeViewModel : ViewModel() {
                         .body()?.data.orEmpty()
                 }.getOrDefault(emptyList())
 
-                val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
+                val mappedPopular = popular.map { it.toItem() }
+                val mappedOngoing = ongoing.map { it.toItem() }
+                val mappedCompleted = completed.map { it.toItem() }
+                val hasData = mappedPopular.isNotEmpty() ||
+                    mappedOngoing.isNotEmpty() ||
+                    mappedCompleted.isNotEmpty()
+
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    popular = popular.map { it.toItem() },
-                    ongoing = ongoing.map { it.toItem() },
-                    completed = completed.map { it.toItem() },
-                    error = if (hasData) null else "Gagal memuat daftar anime"
+                    popular = mappedPopular,
+                    ongoing = mappedOngoing,
+                    completed = mappedCompleted,
+                    error = if (hasData) null else "Gagal memuat daftar anime",
+                    homeError = if (hasData) null else "Gagal memuat daftar anime"
                 )
             } catch (e: Exception) {
+                val msg = e.localizedMessage ?: "Koneksi bermasalah"
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.localizedMessage ?: "Koneksi bermasalah"
+                    error = msg,
+                    homeError = msg
                 )
             }
         }
@@ -66,8 +83,16 @@ class AnimeViewModel : ViewModel() {
     fun retry() = loadHome()
 
     fun loadDetail(url: String) {
+        if (url.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                detailError = "Anime tidak ditemukan"
+            )
+            return
+        }
+        lastAnimeId = url
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, detailError = null)
             try {
                 val res = api.detail(url)
                 val data = res.body()?.data
@@ -77,6 +102,7 @@ class AnimeViewModel : ViewModel() {
                         attrs?.status?.let { put("Status", it) }
                         attrs?.startDate?.let { put("Mulai", it) }
                         attrs?.episodeCount?.let { put("Episode", "$it") }
+                        attrs?.subtype?.let { put("Tipe", it) }
                     }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -91,26 +117,59 @@ class AnimeViewModel : ViewModel() {
                             info = info,
                             episodes = emptyList()
                         ),
-                        episodes = emptyList()
+                        episodes = emptyList(),
+                        detailError = null
                     )
+                    // Episode dimuat menyusul agar detail cepat tampil.
+                    loadEpisodes(url)
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = "Gagal memuat detail anime"
+                        detailError = "Gagal memuat detail anime"
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.localizedMessage ?: "Gagal memuat detail anime"
+                    detailError = e.localizedMessage ?: "Gagal memuat detail anime"
                 )
             }
+        }
+    }
+
+    fun retryDetail() {
+        lastAnimeId?.let { loadDetail(it) }
+    }
+
+    /** Muat ulang hanya daftar episode (dipakai tombol Retry di section episode). */
+    fun retryEpisodes() {
+        lastAnimeId?.let { loadEpisodes(it) }
+    }
+
+    private fun loadEpisodes(animeId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(episodesLoading = true)
+            val list = runCatching {
+                api.episodes(animeId).body()?.data.orEmpty()
+            }.getOrDefault(emptyList())
+            _uiState.value = _uiState.value.copy(
+                episodesLoading = false,
+                episodes = list.map { it.toEpisode() }
+            )
         }
     }
 
     fun loadStream(url: String) {
         // Kitsu tidak menyediakan streaming; detail tetap bisa dibuka.
         _uiState.value = _uiState.value.copy(streamUrl = null)
+    }
+
+    /** Pencarian Kitsu. Return hasil agar screen bisa menampilkan state sendiri. */
+    suspend fun search(query: String): List<AnimeSearchItem> {
+        if (query.isBlank()) return emptyList()
+        return runCatching {
+            api.search(query.trim()).body()?.data.orEmpty().map { it.toItem() }
+        }.getOrElse { emptyList() }
     }
 
     private fun KitsuAnime.toItem(): AnimeSearchItem = AnimeSearchItem(
@@ -121,4 +180,15 @@ class AnimeViewModel : ViewModel() {
         latestEpisode = attributes?.episodeCount?.let { "$it eps" } ?: attributes?.status,
         type = attributes?.subtype
     )
+
+    private fun KitsuEpisode.toEpisode(): AnimeEpisode {
+        val number = attributes?.number
+        return AnimeEpisode(
+            episode = number?.toString(),
+            title = attributes?.displayTitle()?.takeIf { it.isNotBlank() }
+                ?: number?.let { "Episode $it" }
+                ?: "Episode",
+            episodeUrl = id
+        )
+    }
 }

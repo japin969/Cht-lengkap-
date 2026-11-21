@@ -35,6 +35,14 @@ interface KitsuApi {
     @GET("anime/{id}")
     suspend fun detail(@Path("id") id: String): Response<KitsuSingleResponse>
 
+    /** Daftar episode sebuah anime. */
+    @GET("anime/{id}/episodes")
+    suspend fun episodes(
+        @Path("id") id: String,
+        @Query("page[limit]") limit: Int = 100,
+        @Query("sort") sort: String = "number"
+    ): Response<KitsuEpisodeListResponse>
+
     companion object {
         private const val BASE_URL = "https://kitsu.io/api/edge/"
 
@@ -103,4 +111,31 @@ data class KitsuImage(
     val original: String? = null
 ) {
     fun best(): String = large ?: original ?: medium ?: small ?: tiny ?: ""
+}
+
+@JsonClass(generateAdapter = true)
+data class KitsuEpisodeListResponse(val data: List<KitsuEpisode>? = null)
+
+@JsonClass(generateAdapter = true)
+data class KitsuEpisode(
+    val id: String? = null,
+    val attributes: KitsuEpisodeAttributes? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class KitsuEpisodeAttributes(
+    @Json(name = "canonicalTitle") val canonicalTitle: String? = null,
+    @Json(name = "seasonNumber") val seasonNumber: Int? = null,
+    @Json(name = "number") val number: Int? = null,
+    val synopsis: String? = null,
+    val airdate: String? = null,
+    val length: Int? = null,
+    val thumbnail: KitsuImage? = null
+) {
+    fun displayTitle(): String? =
+        canonicalTitle?.takeIf { it.isNotBlank() }
+    fun displayNumber(): Int? = number
+    fun thumbnailUrl(): String? =
+        thumbnail?.original?.takeIf { it.isNotBlank() }
+            ?: thumbnail?.best()?.takeIf { it.isNotBlank() }
 }
