@@ -1,9 +1,9 @@
 package com.jayra.app.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.CornerRadius
 import androidx.compose.ui.graphics.drawscope.Outline
 import androidx.compose.ui.graphics.shape.Shape
 import androidx.compose.ui.layout.Density
