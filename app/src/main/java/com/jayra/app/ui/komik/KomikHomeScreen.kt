@@ -30,7 +30,7 @@ import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,12 +41,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -89,7 +89,7 @@ fun KomikHomeScreen(
     viewModel: KomikViewModel = viewModel(),
     onKomikClick: (String) -> Unit
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isDark = isSystemInDarkTheme()
     val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
     val labelColor = if (isDark) IOSLabelDark else IOSLabel
