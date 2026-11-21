@@ -862,7 +862,7 @@ fun GlobalSearchKomikItemRow(
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Rounded.MenuBook,
+                    imageVector = Icons.Rounded.Bookmark,
                     contentDescription = result.title,
                     tint = Color(0xFF8B5CF6),
                     modifier = Modifier.size(28.dp)
@@ -950,7 +950,7 @@ private fun GlobalSearchAvatar(
                         SearchResultType.MESSAGE -> Icons.Rounded.Forum
                         SearchResultType.CHAT -> Icons.Rounded.Person
                         SearchResultType.FILE -> Icons.Rounded.Description
-                        SearchResultType.KOMIK -> Icons.Rounded.MenuBook
+                        SearchResultType.KOMIK -> Icons.Rounded.Bookmark
                     },
                     contentDescription = title,
                     tint = Color(0xFFFFFFFF),

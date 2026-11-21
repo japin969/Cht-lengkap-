@@ -70,7 +70,7 @@ fun KomikDetailScreen(
     viewModel: KomikViewModel = viewModel(),
     onChapterClick: (String) -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state = viewModel.uiState.collectAsStateWithLifecycle()
     val isDark = isSystemInDarkTheme()
     val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
     val labelColor = if (isDark) IOSLabelDark else IOSLabel
@@ -80,20 +80,21 @@ fun KomikDetailScreen(
 
     LaunchedEffect(slug) { viewModel.loadDetail(slug) }
 
-    if (state.isLoading && state.detailItem == null) {
+    val uiState = state.value
+    if (uiState.isLoading && uiState.detailItem == null) {
         Box(
             modifier = Modifier.fillMaxSize().background(bgColor),
             contentAlignment = Alignment.Center
         ) {
             CircularProgressIndicator(color = accentBlue)
         }
-    } else if (state.detailItem == null && state.error != null) {
+    } else if (uiState.detailItem == null && uiState.error != null) {
         Box(
             modifier = Modifier.fillMaxSize().background(bgColor),
             contentAlignment = Alignment.Center
         ) {
             DetailErrorView(
-                message = state.error ?: "Gagal memuat detail",
+                message = uiState.error ?: "Gagal memuat detail",
                 accentBlue = accentBlue,
                 labelColor = labelColor,
                 subLabelColor = subLabelColor,
@@ -101,7 +102,7 @@ fun KomikDetailScreen(
             )
         }
     } else {
-        val item = state.detailItem
+        val item = uiState.detailItem
         if (item != null) {
             DetailContent(
                 item = item,

@@ -70,7 +70,7 @@ fun KomikReaderScreen(
     slug: String,
     viewModel: KomikViewModel = viewModel()
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state = viewModel.uiState.collectAsStateWithLifecycle()
     val isDark = isSystemInDarkTheme()
     val bgColor = if (isDark) IOSSystemGroupedBackgroundDark else IOSSystemGroupedBackground
     val labelColor = if (isDark) IOSLabelDark else IOSLabel
@@ -83,23 +83,24 @@ fun KomikReaderScreen(
 
     LaunchedEffect(slug) { viewModel.loadStream(slug) }
 
+    val uiState = state.value
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(if (isFullscreen) Color.Black else bgColor)
     ) {
-        if (state.isLoading && state.streamPages.isEmpty()) {
+        if (uiState.isLoading && uiState.streamPages.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = accentBlue)
             }
-        } else if (state.streamPages.isEmpty()) {
+        } else if (uiState.streamPages.isEmpty()) {
             // API doesn't provide chapter images - show helpful error state
             ReaderErrorView(
-                title = state.streamTitle ?: "Chapter",
-                message = state.error ?: "API tidak menyediakan gambar chapter",
+                title = uiState.streamTitle ?: "Chapter",
+                message = uiState.error ?: "API tidak menyediakan gambar chapter",
                 accentBlue = accentBlue,
                 labelColor = labelColor,
                 subLabelColor = subLabelColor,
@@ -108,8 +109,8 @@ fun KomikReaderScreen(
         } else {
             // This branch won't be reached with current API, but kept for future compatibility
             ReaderContent(
-                pages = state.streamPages,
-                title = state.streamTitle ?: "",
+                pages = uiState.streamPages,
+                title = uiState.streamTitle ?: "",
                 accentBlue = accentBlue,
                 labelColor = labelColor,
                 subLabelColor = subLabelColor,
@@ -124,7 +125,7 @@ fun KomikReaderScreen(
         // Top Controls
         if (showControls && !isFullscreen) {
             ReaderTopBar(
-                title = state.streamTitle ?: "Chapter",
+                title = uiState.streamTitle ?: "Chapter",
                 accentBlue = accentBlue,
                 labelColor = labelColor,
                 onBack = { /* handled by navigation */ },
