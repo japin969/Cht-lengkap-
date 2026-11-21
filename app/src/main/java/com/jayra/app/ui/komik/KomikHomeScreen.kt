@@ -268,7 +268,7 @@ private fun KomikHomeContent(
 
         val rest = state.items.drop(1)
         if (rest.isNotEmpty()) {
-            item(key = "section_populer") {
+            item("section_populer") {
                 KomikSectionHeader(title = "Populer", labelColor = labelColor, accentBlue = accentBlue)
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -290,7 +290,7 @@ private fun KomikHomeContent(
 
         val rest2 = state.items.drop(9)
         if (rest2.isNotEmpty()) {
-            item(key = "section_terbaru") {
+            item("section_terbaru") {
                 KomikSectionHeader(title = "Update Terbaru", labelColor = labelColor, accentBlue = accentBlue)
             }
             Spacer(modifier = Modifier.height(8.dp))

@@ -280,7 +280,7 @@ private fun KomikDetailContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.OpenInNew,
+                                imageVector = Icons.Rounded.OpenInNew,
                                 contentDescription = null,
                                 tint = Color(0xFF007AFF),
                                 modifier = Modifier.size(18.dp)
