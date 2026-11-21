@@ -134,7 +134,12 @@ fun KomikDetailScreen(
                         modifier = Modifier.align(Alignment.Center).padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = subLabelColor, modifier = Modifier.size(44.dp))
+                        Icon(
+                                imageVector = MenuBook,
+                                contentDescription = null,
+                                tint = subLabelColor,
+                                modifier = Modifier.size(44.dp)
+                            )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text("Komik tidak ditemukan", color = labelColor, fontSize = 15.sp, textAlign = TextAlign.Center)
                     }
@@ -241,7 +246,12 @@ private fun KomikDetailContent(
                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Star(contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Icon(
+                                        imageVector = Star,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(12.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(2.dp))
                                     Text(rating, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
@@ -270,7 +280,7 @@ private fun KomikDetailContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.OpenInNew,
+                                imageVector = OpenInNew,
                                 contentDescription = null,
                                 tint = Color(0xFF007AFF),
                                 modifier = Modifier.size(18.dp)
