@@ -82,6 +82,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
@@ -93,6 +94,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.jayra.app.R
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeStreamServer
 import com.jayra.app.data.NetworkClient
@@ -219,7 +221,7 @@ fun AnimeDetailScreen(
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current).data(detail?.image)
                                     .crossfade(true)
-                                    .header("Referer", "https://animasu.love/")
+                                    .addHeader("Referer", "https://animasu.love/")
                                     .build(),
                                 contentDescription = detail?.title,
                                 modifier = Modifier

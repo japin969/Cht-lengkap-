@@ -60,9 +60,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.jayra.app.R
 import com.jayra.app.data.AnimeSearchItem
 import com.jayra.app.ui.theme.IOSBlue
 import com.jayra.app.ui.theme.IOSBlueDark
@@ -352,7 +354,7 @@ private fun AnimeHeroCard(anime: AnimeSearchItem, accentBlue: Color, onClick: ()
             model = ImageRequest.Builder(LocalContext.current)
                 .data(anime.image)
                 .crossfade(true)
-                .header("Referer", "https://animasu.love/")
+                .addHeader("Referer", "https://animasu.love/")
                 .build(),
             contentDescription = anime.title,
             contentScale = ContentScale.Crop,
