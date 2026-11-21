@@ -349,10 +349,16 @@ private fun AnimeHeroCard(anime: AnimeSearchItem, accentBlue: Color, onClick: ()
             .clickable { onClick() }
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(anime.image).crossfade(true).build(),
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(anime.image)
+                .crossfade(true)
+                .header("Referer", "https://animasu.love/")
+                .build(),
             contentDescription = anime.title,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            placeholder = painterResource(id = R.drawable.ic_placeholder_image),
+            error = painterResource(id = R.drawable.ic_placeholder_image)
         )
         Box(
             modifier = Modifier.fillMaxSize().background(

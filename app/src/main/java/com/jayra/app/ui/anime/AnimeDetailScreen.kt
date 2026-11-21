@@ -217,14 +217,19 @@ fun AnimeDetailScreen(
                                 .padding(14.dp)
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current).data(detail?.image).crossfade(true).build(),
+                                model = ImageRequest.Builder(LocalContext.current).data(detail?.image)
+                                    .crossfade(true)
+                                    .header("Referer", "https://animasu.love/")
+                                    .build(),
                                 contentDescription = detail?.title,
                                 modifier = Modifier
                                     .width(116.dp)
                                     .height(168.dp)
                                     .clip(squircle(12))
                                     .background(if (isDark) IOSGray6Dark else IOSGray6),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                placeholder = painterResource(id = R.drawable.ic_placeholder_image),
+                                error = painterResource(id = R.drawable.ic_placeholder_image)
                             )
                             Spacer(modifier = Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
