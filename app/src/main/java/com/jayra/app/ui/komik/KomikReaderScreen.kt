@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,14 +88,14 @@ fun KomikReaderScreen(
             .fillMaxSize()
             .background(if (isFullscreen) Color.Black else bgColor)
     ) {
-        if (state.isLoading && state.streamPages.isEmpty()) {
+        if (state.isLoading && state.pages.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = accentBlue)
             }
-        } else if (state.streamPages.isEmpty()) {
+        } else if (state.pages.isEmpty()) {
             // API doesn't provide chapter images - show helpful error state
             ReaderErrorView(
                 title = state.streamTitle ?: "Chapter",
@@ -107,7 +108,7 @@ fun KomikReaderScreen(
         } else {
             // This branch won't be reached with current API, but kept for future compatibility
             ReaderContent(
-                pages = state.streamPages,
+                pages = state.pages,
                 title = state.streamTitle ?: "",
                 accentBlue = accentBlue,
                 labelColor = labelColor,

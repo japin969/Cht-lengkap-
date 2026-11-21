@@ -30,6 +30,8 @@ import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,12 +41,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -91,13 +96,13 @@ fun KomikHomeScreen(
     val subLabelColor = if (isDark) IOSSecondaryLabelDark else IOSSecondaryLabel
     val accentBlue = if (isDark) IOSBlueDark else IOSBlue
     val cardBg = if (isDark) IOSSecondarySystemBackgroundDark else IOSSecondarySystemGroupedBackground
-    val borderColor = if (isDark) LiquidGlassSpecV2.DarkBorderTop else Color(0x14000000)
+    val borderColor = if (isDark) LiquidGlassSpecV2.DarkBorder else Color(0x14000000)
     val glassTier = remember(GlassEffectPrefs.enabledState.value) { GlassEffectPrefs.resolveTier() }
     val glassSpec = remember(glassTier, isDark) { LiquidGlassSpecV2.forTier(glassTier, isDark).surface }
     val context = LocalContext.current
 
     var searchText by remember { mutableStateOf("") }
-    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(state.searchQuery) {
         if (state.searchQuery.isNotEmpty() && searchText != state.searchQuery) {
@@ -671,7 +676,7 @@ private fun KomikCard(
 private fun EmptyView(
     title: String,
     subtitle: String,
-    icon: androidx.compose.material.icons.Icons.Rounded,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     accentBlue: Color,
     labelColor: Color,
     subLabelColor: Color,

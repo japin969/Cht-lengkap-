@@ -900,6 +900,7 @@ private fun MainNavigationGraph(
                                 navController.navigate("chat/$targetId")
                             }
                         }
+                        SearchResultType.KOMIK -> navController.navigate("komik_detail?slug=$targetId")
                     }
                 }
             )
@@ -922,6 +923,7 @@ private fun MainNavigationGraph(
                                 navController.navigate("chat/${result.targetId}")
                             }
                         }
+                        SearchResultType.KOMIK -> navController.navigate("komik_detail?slug=${result.targetId}")
                     }
                 }
             )

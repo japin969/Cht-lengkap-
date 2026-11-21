@@ -668,6 +668,7 @@ class GlobalSearchViewModel(
                 SearchFilter.FILES -> result.type == SearchResultType.FILE
                 SearchFilter.GROUPS -> result.type == SearchResultType.GROUP
                 SearchFilter.CHANNELS -> result.type == SearchResultType.CHANNEL
+                SearchFilter.KOMIK -> result.type == SearchResultType.KOMIK
             }
         }
     }

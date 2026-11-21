@@ -500,6 +500,14 @@ fun GlobalSearchResultsList(
                         onClick = onItemClick
                     )
                 }
+
+                SearchResultType.KOMIK -> {
+                    GlobalSearchKomikItemRow(
+                        result = result,
+                        searchQuery = searchQuery,
+                        onClick = onItemClick
+                    )
+                }
             }
 
             HorizontalDivider(
@@ -820,6 +828,81 @@ fun GlobalSearchFileItemRow(
 }
 
 @Composable
+fun GlobalSearchKomikItemRow(
+    result: SearchResult,
+    searchQuery: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = isSystemInDarkTheme()
+    val primaryTextColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp)
+            .testTag("global_search_item_komik_${result.id}"),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF8B5CF6).copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (result.avatarUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = result.avatarUrl,
+                    contentDescription = result.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.LibraryBooks,
+                    contentDescription = result.title,
+                    tint = Color(0xFF8B5CF6),
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = buildHighlightedText(
+                    text = result.title,
+                    query = searchQuery,
+                    normalColor = primaryTextColor,
+                    isDark = isDark
+                ),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = result.subtitle,
+                fontSize = 15.sp,
+                color = JayraSubtext,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
 private fun GlobalSearchAvatar(
     title: String,
     avatarUrl: String,
@@ -832,6 +915,7 @@ private fun GlobalSearchAvatar(
         SearchResultType.CONTACT -> Color(0xFF8E44AD)
         SearchResultType.MESSAGE -> Color(0xFF2980B9)
         SearchResultType.FILE -> JayraBlue
+        SearchResultType.KOMIK -> Color(0xFF8B5CF6)
     }
 
     Box(
@@ -866,6 +950,7 @@ private fun GlobalSearchAvatar(
                         SearchResultType.MESSAGE -> Icons.Rounded.Forum
                         SearchResultType.CHAT -> Icons.Rounded.Person
                         SearchResultType.FILE -> Icons.Rounded.Description
+                        SearchResultType.KOMIK -> Icons.Rounded.LibraryBooks
                     },
                     contentDescription = title,
                     tint = Color(0xFFFFFFFF),

@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
 private data class SearchDataBundle(
@@ -221,7 +223,8 @@ class SearchViewModel(
 
         // Separate flow for komik search
         viewModelScope.launch {
-            _searchQuery.debounce(500L)
+            _searchQuery
+                .debounce(500L)
                 .distinctUntilChanged()
                 .filter { it.isNotBlank() }
                 .filter { _selectedFilter.value == SearchFilter.ALL || _selectedFilter.value == SearchFilter.KOMIK }
