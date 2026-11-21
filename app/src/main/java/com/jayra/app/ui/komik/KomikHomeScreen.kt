@@ -481,3 +481,4 @@ fun KomikCard(
         )
     }
 }
+
