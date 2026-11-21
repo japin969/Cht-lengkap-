@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.align
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -289,21 +291,19 @@ private fun ReaderContent(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        items(pages.size) { index ->
+        items(pages.size, key = { index -> "page_$index" }) { index ->
             val pageUrl = pages[index]
-            item(key = "page_$index") {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onToggleControls() }
-                ) {
-                    AsyncImage(
-                        model = pageUrl,
-                        contentDescription = "Page ${index + 1}",
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleControls() }
+            ) {
+                AsyncImage(
+                    model = pageUrl,
+                    contentDescription = "Page ${index + 1}",
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
