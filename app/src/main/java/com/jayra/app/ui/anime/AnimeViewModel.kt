@@ -103,6 +103,9 @@ class AnimeViewModel : ViewModel() {
 
     /** Cache hasil search agar tidak nembak API berulang untuk query yang sama. */
     private val searchCache = LinkedHashMap<String, List<AnimeSearchItem>>()
+    /** Cache detail agar buka lagi tidak loading ulang dari nol. */
+    private val detailCache = LinkedHashMap<String, AnimeDetailData>()
+    private val episodeCache = LinkedHashMap<String, List<AnimeEpisode>>()
     private val enriching = mutableSetOf<String>()
     private var lastAnimeUrl: String? = null
     private var lastStreamEpisodeUrl: String? = null
@@ -329,28 +332,30 @@ class AnimeViewModel : ViewModel() {
             return
         }
         lastAnimeUrl = url
+        // Buka lagi -> langsung tampil dari cache tanpa loading putih.
+        detailCache[url]?.let { cached ->
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                detail = cached,
+                episodes = episodeCache[url] ?: cached.episodes.orEmpty(),
+                detailError = null
+            )
+            return
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, detailError = null)
+            // Semua sumber dicoba PARALEL. Tidak ada sumber yang diprioritaskan
+            // secara eksklusif — begitu satu sumber mengembalikan detail valid,
+            // itu dipakai; sumber lain tetap dilengkapi (genre/episode).
+            // Kegagalan satu sumber TIDAK menggagalkan keseluruhan.
             val data: List<AnimeDetailData> = coroutineScope {
-                val a = async {
-                    try {
-                        nexadev.getAnimeDetail(details = url).body()?.data
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-                val b = async {
-                    try {
-                        sankavollerei.animeDetail(animeId = url.removePrefix("/anime/anime/"))
-                            .body()?.data?.asAnimeDetail()
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
+                val a = async { fetchNexadevDetail(url) }
+                val b = async { fetchSankaAnimeDetail(url) }
                 val c = async { fetchSamehadakuDetail(url) }
                 val d = async { fetchOploverzDetail(url) }
                 val e = async { fetchNimegamiDetail(url) }
                 listOfNotNull(a.await(), b.await(), c.await(), d.await(), e.await())
+                    .filter { it.title != null || it.episodes != null || it.sinopsis != null }
             }
             if (data.isNotEmpty()) {
                 val first = data.first()
@@ -372,6 +377,8 @@ class AnimeViewModel : ViewModel() {
                         rating = first.rating
                     )
                 )
+                detailCache[url] = _uiState.value.detail ?: first
+                episodeCache[url] = mergedEpisodes
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -381,34 +388,71 @@ class AnimeViewModel : ViewModel() {
         }
     }
 
+    /** Detail Nexadev (animasu): menerima URL penuh animasu.love. */
+    private suspend fun fetchNexadevDetail(url: String): AnimeDetailData? = try {
+        nexadev.getAnimeDetail(details = url).body()?.data
+            ?.takeIf { it.title != null || it.episodes != null || it.sinopsis != null }
+    } catch (e: Exception) {
+        null
+    }
+
+    /** Detail Sankavollerei (otakudesu): animeId diekstrak dari href. */
+    private suspend fun fetchSankaAnimeDetail(url: String): AnimeDetailData? {
+        val id = extractSlug(url, "/anime/anime/") ?: return null
+        return try {
+            sankavollerei.animeDetail(animeId = id).body()?.data?.asAnimeDetail()
+                ?.takeIf { it.title != null || it.episodes != null || it.sinopsis != null }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Detail samehadaku: slug diambil dari href. */
     private suspend fun fetchSamehadakuDetail(url: String): AnimeDetailData? {
-        val slug = url.substringAfter("/anime/").substringAfter("samehadaku/anime/")
-            .ifBlank { url.substringAfterLast("/") }
+        val slug = extractSlug(url, "samehadaku/anime/") ?: return null
         return try {
             sankavollerei.samehadakuDetail(slug = slug).body()?.data?.asAnimeDetail()
+                ?.takeIf { it.title != null || it.episodes != null || it.sinopsis != null }
         } catch (e: Exception) {
             null
         }
     }
 
     private suspend fun fetchOploverzDetail(url: String): AnimeDetailData? {
-        val slug = url.substringAfter("oploverz/anime/").ifBlank { url.substringAfterLast("/") }
+        val slug = extractSlug(url, "oploverz/anime/") ?: return null
         return try {
             sankavollerei.oploverzDetail(slug = slug).body()?.data?.asAnimeDetail()
+                ?.takeIf { it.title != null || it.episodes != null || it.sinopsis != null }
         } catch (e: Exception) {
             null
         }
     }
 
     private suspend fun fetchNimegamiDetail(url: String): AnimeDetailData? {
-        val slug = url.substringAfter("nimegami/detail/").ifBlank { url.substringAfterLast("/") }
+        val slug = extractSlug(url, "nimegami/detail/") ?: return null
         return try {
             val resp = sankavollerei.nimegamiDetail(slug = slug).body()
             resp?.detail?.asAnimeDetail()
+                ?.takeIf { it.title != null || it.episodes != null || it.sinopsis != null }
         } catch (e: Exception) {
             null
         }
+    }
+
+    /**
+     * Ekstrak slug/id dari URL/link yang formatnya bisa berbeda antar sumber.
+     * Mendukung URL penuh (https://animasu.love/anime/xxx/) maupun path relatif
+     * (/anime/anime/xxx, /samehadaku/anime/xxx, dst).
+     * Mengembalikan segmen terakhir yang bersih (tanpa query/slash).
+     */
+    private fun extractSlug(url: String, marker: String): String? {
+        val afterMarker = if (url.contains(marker)) url.substringAfter(marker)
+            else url.substringAfterLast("/")
+        val cleaned = afterMarker
+            .substringBefore("?")
+            .substringBefore("#")
+            .trim('/')
+        return cleaned.ifBlank { null }
     }
 
     private fun SankavollereiSamehadakuDetail.asAnimeDetail(): AnimeDetailData = AnimeDetailData(

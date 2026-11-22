@@ -340,13 +340,13 @@ private fun AnimeRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         items.chunked(3).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 rowItems.forEach { anime ->
                     Box(Modifier.weight(1f)) {
@@ -494,7 +494,7 @@ fun AnimePosterCard(
 ) {
     Column(
         modifier = Modifier
-            .width(126.dp)
+            .fillMaxWidth()
             .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
             .background(com.jayra.app.ui.media.MediaGlassColors.Surface)
             .border(1.dp, com.jayra.app.ui.media.MediaGlassColors.GlassBorder, RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))

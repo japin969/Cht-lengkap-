@@ -12,20 +12,20 @@ import java.util.concurrent.TimeUnit
 
 interface NexadevApi {
 
-    @GET("api/spotifyplay")
+    @GET("api/spotifyplay/")
     suspend fun searchSpotify(@Query("q") query: String): Response<SpotifyResponse>
 
-    @GET("api/ytplay")
+    @GET("api/ytplay/")
     suspend fun searchYouTube(@Query("q") query: String): Response<YouTubeResponse>
 
-    @GET("api/spotify")
+    @GET("api/spotify/")
     suspend fun getSpotifyByUrl(@Query("url") url: String): Response<SpotifyResponse>
 
 
-    @GET("api/dramabox/home")
+    @GET("api/dramabox/home/")
     suspend fun getDramaHome(): Response<DramaHomeResponse>
 
-    @GET("api/dramabox/detail")
+    @GET("api/dramabox/detail/")
     suspend fun getDramaDetail(@Query("url") url: String): Response<DramaDetailResponse>
 
     // ═══════════════════════════════════════════════════════════════
@@ -34,22 +34,22 @@ interface NexadevApi {
     // ═══════════════════════════════════════════════════════════════
 
     /** Daftar komik terbaru. `page` mulai dari 1. */
-    @GET("komik")
+    @GET("komik/")
     suspend fun getKomikList(@Query("page") page: Int = 1): Response<KomikListResponse>
 
     /** Cari komik berdasarkan judul. */
-    @GET("komik")
+    @GET("komik/")
     suspend fun searchKomik(@Query("q") query: String): Response<KomikListResponse>
 
     /** Detail komik: sinopsis, genre, dan daftar chapter. */
-    @GET("komik")
+    @GET("komik/")
     suspend fun getKomikDetail(
         @Query("slug") slug: String,
         @Query("type") type: String = "detail"
     ): Response<KomikDetailResponse>
 
     /** Halaman gambar untuk satu chapter (dipakai reader). */
-    @GET("komik")
+    @GET("komik/")
     suspend fun getKomikPages(
         @Query("slug") slug: String,
         @Query("type") type: String = "stream"
@@ -60,43 +60,43 @@ interface NexadevApi {
     // ═══════════════════════════════════════════════════════════════
 
     /** Anime sedang tayang. */
-    @GET("animasu")
+    @GET("animasu/")
     suspend fun getAnimeOngoing(
         @Query("ongoing") ongoing: Int = 1,
         @Query("page") page: Int = 1
     ): Response<AnimeListResponse>
 
     /** Anime yang sudah selesai tayang. */
-    @GET("animasu")
+    @GET("animasu/")
     suspend fun getAnimeCompleted(
         @Query("completed") completed: Int = 1,
         @Query("page") page: Int = 1
     ): Response<AnimeListResponse>
 
     /** Anime populer. */
-    @GET("animasu")
+    @GET("animasu/")
     suspend fun getAnimePopular(
         @Query("popular") popular: Int = 1,
         @Query("page") page: Int = 1
     ): Response<AnimeListResponse>
 
     /** Anime terbaru (recent). */
-    @GET("animasu")
+    @GET("animasu/")
     suspend fun getAnimeRecent(
         @Query("recent") recent: Int = 1,
         @Query("page") page: Int = 1
     ): Response<AnimeListResponse>
 
     /** Cari anime berdasarkan judul. */
-    @GET("animasu")
+    @GET("animasu/")
     suspend fun searchAnime(@Query("search") query: String): Response<AnimeSearchResponse>
 
     /** Detail anime: info, genre, sinopsis, daftar episode. */
-    @GET("animasu")
+    @GET("animasu/")
     suspend fun getAnimeDetail(@Query("details") details: String): Response<AnimeDetailResponse>
 
     /** Link streaming satu episode anime. */
-    @GET("animasu")
+    @GET("animasu/")
     suspend fun getAnimeStream(@Query("stream") stream: String): Response<AnimeStreamResponse>
 
     companion object {

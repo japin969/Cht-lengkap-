@@ -57,6 +57,9 @@ class KomikViewModel : ViewModel() {
 
     /** Cache search agar query yang sama tidak menembak API berulang. */
     private val searchCache = LinkedHashMap<String, List<KomikItem>>()
+    /** Cache detail & chapter agar buka lagi langsung muncul (tidak loading ulang). */
+    private val detailCache = LinkedHashMap<String, KomikDetailResponse>()
+    private val chapterCache = LinkedHashMap<String, List<KomikChapter>>()
     private var lastSlug: String? = null
     private var homeLoaded = false
 
@@ -292,6 +295,16 @@ class KomikViewModel : ViewModel() {
             return
         }
         lastSlug = slug
+        // Buka lagi -> langsung dari cache.
+        detailCache[slug]?.let { cached ->
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                detail = cached,
+                chapters = chapterCache[slug] ?: cached.chapters.orEmpty(),
+                error = null
+            )
+            return
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             // Semua sumber detail dipanggil PARALEL.
@@ -312,6 +325,8 @@ class KomikViewModel : ViewModel() {
                     chapters = first.chapters.orEmpty(),
                     error = null
                 )
+                detailCache[slug] = _uiState.value.detail ?: first
+                chapterCache[slug] = first.chapters.orEmpty()
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

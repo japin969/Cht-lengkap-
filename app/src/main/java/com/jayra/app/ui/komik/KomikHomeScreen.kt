@@ -380,11 +380,11 @@ private fun KomikContent(
     ) {
         if (hasSearched) {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
+                columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 items(filtered, key = { it.slug ?: it.title ?: "" }) { komik ->
                     KomikCard(komik) { onKomikClick(it) }
@@ -450,20 +450,20 @@ fun KomikGrid(items: List<KomikItem>, onClick: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        items.chunked(3).forEach { rowItems ->
+        items.chunked(2).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 rowItems.forEach { komik ->
                     Box(Modifier.weight(1f)) {
                         KomikCard(komik) { onClick(it) }
                     }
                 }
-                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                repeat(2 - rowItems.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
