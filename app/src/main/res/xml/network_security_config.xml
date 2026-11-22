@@ -1,34 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Base config: dipakai semua domain yang TIDAK punya domain-config sendiri.
-         Ini termasuk api.deezer.com (Music) dan api.nexadev.my.id (Komik/Anime). -->
+    <!--
+        ═══════════════════════════════════════════════════════════════════
+        KONFIGURASI TRUST ANCHOR — api.nexadev.my.id
+
+        LATAR BELAKANG
+        api.nexadev.my.id memakai sertifikat Let's Encrypt dengan rantai:
+            api.nexadev.my.id
+              <- YR1 (Let's Encrypt)
+              <- Root YR (ISRG)
+              <- ISRG Root X1 (root, cross-signed)
+
+        ISRG Root X1 adalah CA publik yang sudah ada di system store Android
+        7+ (SSL Labs: grade A, Android isTrusted = true). Namun sebagian device
+        (ROM custom, device lama, atau update CA tertunda) belum punya root ini,
+        sehingga muncul:
+            CertPathValidatorException: Trust Anchor for certification path
+            not found
+
+        PENYELESAIAN
+        Root ISRG X1 ditanam sebagai trust anchor TAMBAHAN lewat mekanisme
+        resmi Android (raw resource), sehingga device yang system store-nya
+        belum punya root ini tetap bisa memvalidasi rantai secara PENUH.
+
+        Ini BUKAN trust-all-certs:
+          - `system` tetap dipakai (CA publik resmi).
+          - `user` tetap dipakai (default Android).
+          - Hanya SATU CA publik yang sah (ISRG Root X1) yang ditambahkan,
+            dan hanya untuk domain api.nexadev.my.id.
+          - Tidak ada SSLSocketFactory custom, tidak ada TrustManager yang
+            menerima semua, tidak ada HostnameVerifier yang selalu true.
+    -->
+    <domain-config>
+        <domain includeSubdomains="true">api.nexadev.my.id</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+            <certificates src="@raw/isrg_root_x1" />
+        </trust-anchors>
+    </domain-config>
+
+    <!-- Domain lain memakai base-config (system + user). -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />
         </trust-anchors>
     </base-config>
+
     <domain-config>
         <domain includeSubdomains="true">api.siputzx.my.id</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </domain-config>
-    <!--
-        CATATAN: domain-config untuk api.nexadev.my.id DIHAPUS.
-
-        Sebelumnya domain ini dibatasi hanya `system` trust anchor. Akibatnya
-        sertifikat api.nexadev.my.id (rantai: api.nexadev.my.id <- YR1 Let's
-        Encrypt <- Root YR ISRG <- ISRG Root X1) hanya bisa divalidasi oleh CA
-        yang ada di system store, sehingga device dengan CA user-install
-        (proxy/VPN/antivirus) mendapat
-        CertPathValidatorException: Trust Anchor ... not found.
-
-        api.deezer.com (Music) TIDAK punya domain-config, jadi memakai base-config
-        (system + user) dan tidak mengalami masalah ini. Itulah bedanya.
-
-        Dengan domain-config dihapus, api.nexadev.my.id memakai base-config yang
-        sama dengan domain lain. Ini BUKAN trust-all-certs: `system` tetap wajib,
-        hanya CA user yang sah ikut dipercaya (default Android).
-    -->
 </network-security-config>
