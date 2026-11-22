@@ -22,11 +22,6 @@ interface NexadevApi {
     suspend fun getSpotifyByUrl(@Query("url") url: String): Response<SpotifyResponse>
 
 
-    @GET("api/dramabox/home/")
-    suspend fun getDramaHome(): Response<DramaHomeResponse>
-
-    @GET("api/dramabox/detail/")
-    suspend fun getDramaDetail(@Query("url") url: String): Response<DramaDetailResponse>
 
     // ═══════════════════════════════════════════════════════════════
     // KOMIK — parlemen komikindo (endpoint yang sama, dibedakan

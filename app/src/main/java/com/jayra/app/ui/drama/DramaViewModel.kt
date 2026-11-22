@@ -1,109 +1,145 @@
 package com.jayra.app.ui.drama
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.DramaEpisode
 import com.jayra.app.data.DramaItem
-import com.jayra.app.data.TvmazeApi
-import com.jayra.app.data.TvmazeShow
+import com.jayra.app.data.DramaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class DramaUiState(
     val isLoading: Boolean = false,
-    val featured: List<DramaItem> = emptyList(),
+    /** Section home: nama -> daftar drama. */
+    val sections: Map<String, List<DramaItem>> = emptyMap(),
+    val offline: Boolean = false,
+    val homeError: String? = null,
+
+    // Search
+    val searchResults: List<DramaItem> = emptyList(),
+    val searchOffline: Boolean = false,
+
+    // Detail
+    val detailLoading: Boolean = false,
     val detail: DramaItem? = null,
     val episodes: List<DramaEpisode> = emptyList(),
-    val error: String? = null
+    val detailOffline: Boolean = false,
+    val detailError: String? = null,
+
+    // Play
+    val streamLoading: Boolean = false,
+    val streamUrl: String? = null,
+    val streamError: String? = null
 )
 
-class DramaViewModel : ViewModel() {
-    // Sumber data baru: TVMaze API. API lama api.nexadev.my.id bermasalah
-    // sertifikat (CertPathValidatorException: trust anchor not found).
-    private val api = TvmazeApi.create()
+class DramaViewModel(app: Application) : AndroidViewModel(app) {
+
+    private val repo = DramaRepository.get(app)
+
     private val _uiState = MutableStateFlow(DramaUiState())
-    val uiState: StateFlow<DramaUiState> = _uiState
+    val uiState: StateFlow<DramaUiState> = _uiState.asStateFlow()
+
+    private var homeLoaded = false
+    private var lastDramaId: String? = null
+    private var lastStreamKey: String? = null
 
     init { loadHome() }
 
-    fun loadHome() {
+    fun loadHome(force: Boolean = false) {
+        if (homeLoaded && !force) return
+        homeLoaded = true
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            try {
-                val shows = api.shows(page = 0).body().orEmpty()
-                val items = shows
-                    .filter { !it.image?.original.isNullOrBlank() || !it.image?.medium.isNullOrBlank() }
-                    .map { it.toItem() }
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    featured = items,
-                    error = if (items.isEmpty()) "Gagal memuat daftar drama" else null
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.localizedMessage ?: "Koneksi bermasalah"
-                )
-            }
+            _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
+            val result = repo.home()
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                sections = result.sections,
+                offline = result.offline,
+                homeError = if (result.empty) "Gagal memuat daftar drama" else null
+            )
         }
     }
 
-    fun retry() = loadHome()
+    fun retry() {
+        homeLoaded = false
+        loadHome(force = true)
+    }
 
-    fun loadDetail(url: String) {
-        val id = url.toLongOrNull()
-        if (id == null) {
-            _uiState.value = _uiState.value.copy(error = "Drama tidak ditemukan")
+    // ── Search ──────────────────────────────────────────────────────────
+
+    suspend fun search(query: String): List<DramaItem> {
+        if (query.isBlank()) {
+            _uiState.value = _uiState.value.copy(searchResults = emptyList())
+            return emptyList()
+        }
+        val result = repo.search(query)
+        _uiState.value = _uiState.value.copy(
+            searchResults = result.items,
+            searchOffline = result.offline
+        )
+        return result.items
+    }
+
+    // ── Detail ──────────────────────────────────────────────────────────
+
+    fun loadDetail(id: String) {
+        if (id.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                detailLoading = false,
+                detailError = "Drama tidak ditemukan"
+            )
             return
         }
+        lastDramaId = id
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            try {
-                val res = api.detail(id)
-                val show = res.body()
-                if (res.isSuccessful && show != null) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        detail = show.toItem(),
-                        episodes = show.embedded?.episodes.orEmpty().map { ep ->
-                            DramaEpisode(
-                                index = ep.number,
-                                name = ep.name,
-                                unlock = false,
-                                mp4 = null,
-                                videoUrl = null
-                            )
-                        }
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Gagal memuat detail drama"
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.localizedMessage ?: "Gagal memuat detail drama"
-                )
-            }
+            _uiState.value = _uiState.value.copy(detailLoading = true, detailError = null)
+            val result = repo.detail(id)
+            _uiState.value = _uiState.value.copy(
+                detailLoading = false,
+                detail = result.detail,
+                episodes = result.episodes,
+                detailOffline = result.offline,
+                detailError = if (result.empty) "Gagal memuat detail drama" else null
+            )
         }
     }
 
-    private fun TvmazeShow.toItem(): DramaItem = DramaItem(
-        id = id?.toString(),
-        title = name,
-        cover = image?.original ?: image?.medium,
-        intro = summary?.let { stripHtml(it) },
-        chapterCount = embedded?.episodes?.size,
-        url = id?.toString()
-    )
+    fun retryDetail() { lastDramaId?.let { loadDetail(it) } }
 
-    private fun stripHtml(raw: String): String =
-        raw.replace(Regex("<[^>]*>"), "")
-            .replace("&nbsp;", " ")
-            .replace("&amp;", "&")
-            .replace("&quot;", "\"")
-            .trim()
+    // ── Episode / Play ──────────────────────────────────────────────────
+
+    /** Resolve URL mp4 untuk satu episode (lewat rate limiter + cache). */
+    fun loadStream(dramaId: String, ep: Int) {
+        val key = "$dramaId:$ep"
+        if (lastStreamKey == key && _uiState.value.streamUrl != null) return
+        lastStreamKey = key
+        _uiState.value = _uiState.value.copy(
+            streamLoading = true,
+            streamUrl = null,
+            streamError = null
+        )
+        viewModelScope.launch {
+            val url = repo.episode(dramaId, ep)
+            _uiState.value = _uiState.value.copy(
+                streamLoading = false,
+                streamUrl = url,
+                streamError = if (url == null) "Sumber video belum tersedia" else null
+            )
+        }
+    }
+
+    fun retryStream() {
+        val id = lastDramaId ?: return
+        val ep = lastStreamKey?.substringAfterLast(":")?.toIntOrNull() ?: 1
+        lastStreamKey = null
+        loadStream(id, ep)
+    }
+
+    fun clearStream() {
+        lastStreamKey = null
+        _uiState.value = _uiState.value.copy(streamUrl = null, streamError = null)
+    }
 }
