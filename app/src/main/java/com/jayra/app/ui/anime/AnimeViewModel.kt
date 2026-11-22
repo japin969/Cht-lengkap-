@@ -51,12 +51,31 @@ data class AnimeSourceResult(
     val ok: Boolean get() = error == null && items.isNotEmpty()
 }
 
+/**
+ * Hasil satu sumber, dikelompokkan per kategori (tidak digabung) supaya
+ * Home bisa menampilkan section yang berbeda-beda dan tetap terisi.
+ */
+data class AnimeFetch(
+    val ongoing: List<AnimeSearchItem> = emptyList(),
+    val popular: List<AnimeSearchItem> = emptyList(),
+    val recent: List<AnimeSearchItem> = emptyList(),
+    val completed: List<AnimeSearchItem> = emptyList()
+) {
+    val all: List<AnimeSearchItem>
+        get() = (ongoing + popular + recent + completed)
+            .distinctBy { it.link ?: it.title }
+}
+
 data class AnimeUiState(
     val isLoading: Boolean = false,
     val ongoing: List<AnimeSearchItem> = emptyList(),
     val popular: List<AnimeSearchItem> = emptyList(),
     val completed: List<AnimeSearchItem> = emptyList(),
     val recent: List<AnimeSearchItem> = emptyList(),
+    /** Section tambahan agar Home selalu ramai. */
+    val topRated: List<AnimeSearchItem> = emptyList(),
+    val recommendations: List<AnimeSearchItem> = emptyList(),
+    val genres: List<String> = emptyList(),
     val detail: AnimeDetailData? = null,
     val episodes: List<AnimeEpisode> = emptyList(),
     val streamUrl: String? = null,
@@ -104,140 +123,161 @@ class AnimeViewModel : ViewModel() {
                 listOf(a.await(), b.await())
             }
             mergeHome(results)
+            // Genre (untuk section Genre) — best effort, tidak memblokir.
+            val genres = runCatching { loadGenres() }.getOrDefault(emptyList())
+            if (genres.isNotEmpty()) {
+                _uiState.value = _uiState.value.copy(genres = genres)
+            }
         }
     }
 
     private suspend fun fetchNexadevHome(): AnimeSourceResult {
         return try {
-            val ongoing = nexadev.getAnimeOngoing().body()?.data?.animeList.orEmpty()
-            val popular = nexadev.getAnimePopular().body()?.data?.animeList.orEmpty()
-            val completed = nexadev.getAnimeCompleted().body()?.data?.animeList.orEmpty()
+            // Ambil tiap kategori terpisah; kegagalan satu kategori tidak
+            // menggagalkan yang lain.
+            val ongoing = runCatching {
+                nexadev.getAnimeOngoing().body()?.data?.animeList.orEmpty()
+            }.getOrDefault(emptyList())
+            val popular = runCatching {
+                nexadev.getAnimePopular().body()?.data?.animeList.orEmpty()
+            }.getOrDefault(emptyList())
+            val completed = runCatching {
+                nexadev.getAnimeCompleted().body()?.data?.animeList.orEmpty()
+            }.getOrDefault(emptyList())
+            val recent = runCatching {
+                nexadev.getAnimeRecent().body()?.data?.animeList.orEmpty()
+            }.getOrDefault(emptyList())
+            val fetch = AnimeFetch(
+                ongoing = ongoing,
+                popular = popular,
+                recent = recent,
+                completed = completed
+            )
             AnimeSourceResult(
                 source = "nexadev",
-                items = (ongoing + popular + completed).distinctBy { it.link ?: it.title },
-                error = if (ongoing + popular + completed == emptyList<AnimeSearchItem>())
-                    "kosong" else null
-            )
+                items = fetch.all,
+                error = if (fetch.all.isEmpty()) "kosong" else null
+            ).also { _nexadevCache = fetch }
         } catch (e: Exception) {
             AnimeSourceResult("nexadev", emptyList(), e.localizedMessage ?: "gagal")
         }
     }
 
+    /** Cache kategori Nexadev terakhir (dipakai mergeHome). */
+    private var _nexadevCache: AnimeFetch = AnimeFetch()
+
     private suspend fun fetchSankavollereiHome(): AnimeSourceResult {
         return try {
-            // Ambil SEMUA sumber anime Sankavollerei secara PARALEL.
-            val sources: List<List<AnimeSearchItem>> = coroutineScope {
-                val a = async {
-                    fetchHomeFromSankavollerei()
+            // Ambil SEMUA sumber anime Sankavollerei secara PARALEL,
+            // dikelompokkan per kategori agar section-nya berbeda.
+            data class Grouped(
+                val ongoing: List<AnimeSearchItem>,
+                val popular: List<AnimeSearchItem>,
+                val recent: List<AnimeSearchItem>,
+                val completed: List<AnimeSearchItem>
+            )
+            val grouped = coroutineScope {
+                val home = async {
+                    val d = runCatching { sankavollerei.animeHome().body()?.data }.getOrNull()
+                    Grouped(
+                        ongoing = d?.ongoing?.animeList?.map { it.toItem() }.orEmpty(),
+                        popular = emptyList(),
+                        recent = emptyList(),
+                        completed = d?.completed?.animeList?.map { it.toItem() }.orEmpty()
+                    )
                 }
-                val b = async {
-                    fetchHomeFromSamehadaku()
+                val samehadaku = async {
+                    // samehadaku home punya recent/popular/ongoing/completed.
+                    val d = runCatching { sankavollerei.samehadakuHome().body()?.data }.getOrNull()
+                    Grouped(
+                        ongoing = d?.ongoing?.animeList?.map { it.toItem("Ongoing") }.orEmpty(),
+                        popular = d?.popular?.animeList?.map { it.toItem("Ongoing") }.orEmpty(),
+                        recent = d?.recent?.animeList?.map { it.toItem("Ongoing") }.orEmpty(),
+                        completed = d?.completed?.animeList?.map { it.toItem("Completed") }.orEmpty()
+                    )
                 }
-                val c = async {
-                    fetchHomeFromOploverz()
+                val oploverz = async {
+                    Grouped(
+                        ongoing = runCatching {
+                            sankavollerei.oploverzOngoing().body()?.allItems
+                                ?.map { it.toItem() }.orEmpty()
+                        }.getOrDefault(emptyList()),
+                        popular = emptyList(),
+                        recent = emptyList(),
+                        completed = runCatching {
+                            sankavollerei.oploverzCompleted().body()?.allItems
+                                ?.map { it.toItem() }.orEmpty()
+                        }.getOrDefault(emptyList())
+                    )
                 }
-                val d = async {
-                    fetchHomeFromNimegami()
+                val nimegami = async {
+                    Grouped(
+                        ongoing = emptyList(),
+                        popular = emptyList(),
+                        recent = runCatching {
+                            sankavollerei.nimegamiHome().body()?.allItems
+                                ?.map { it.toItem() }.orEmpty()
+                        }.getOrDefault(emptyList()),
+                        completed = emptyList()
+                    )
                 }
-                listOf(a.await(), b.await(), c.await(), d.await())
+                listOf(home.await(), samehadaku.await(), oploverz.await(), nimegami.await())
             }
-            val merged = sources.flatten().distinctBy { it.link ?: it.title }
+            val fetch = AnimeFetch(
+                ongoing = grouped.flatMap { it.ongoing },
+                popular = grouped.flatMap { it.popular },
+                recent = grouped.flatMap { it.recent },
+                completed = grouped.flatMap { it.completed }
+            )
+            _sankaCache = fetch
             AnimeSourceResult(
                 source = "sankavollerei",
-                items = merged,
-                error = if (merged.isEmpty()) "kosong" else null
+                items = fetch.all,
+                error = if (fetch.all.isEmpty()) "kosong" else null
             )
         } catch (e: Exception) {
             AnimeSourceResult("sankavollerei", emptyList(), e.localizedMessage ?: "gagal")
         }
     }
 
-    private suspend fun fetchHomeFromSankavollerei(): List<AnimeSearchItem> {
-        val out: MutableList<AnimeSearchItem> = mutableListOf()
-        val data: SankavollereiAnimeHomeData? =
-            runCatching { sankavollerei.animeHome().body()?.data }.getOrNull()
-        if (data != null) {
-            data.ongoing?.animeList?.forEach { item: SankavollereiAnimeItem ->
-                out.add(item.toItem())
-            }
-            data.completed?.animeList?.forEach { item: SankavollereiAnimeItem ->
-                out.add(item.toItem())
-            }
-        }
-        return out
-    }
-
-    private suspend fun fetchHomeFromSamehadaku(): List<AnimeSearchItem> {
-        return try {
-            val items: List<SankavollereiAnimeItem>? =
-                sankavollerei.samehadakuHome().body()?.allItems
-            items?.map { item: SankavollereiAnimeItem -> item.toItem("Ongoing") } ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    private suspend fun fetchHomeFromOploverz(): List<AnimeSearchItem> {
-        return try {
-            val items: List<SankavollereiOploverzItem>? =
-                sankavollerei.oploverzHome().body()?.allItems
-            items?.map { item: SankavollereiOploverzItem -> item.toItem() } ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    private suspend fun fetchHomeFromNimegami(): List<AnimeSearchItem> {
-        return try {
-            val items: List<SankavollereiNimegamiItem>? =
-                sankavollerei.nimegamiHome().body()?.allItems
-            items?.map { item: SankavollereiNimegamiItem -> item.toItem() } ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
+    private var _sankaCache: AnimeFetch = AnimeFetch()
 
     private fun mergeHome(results: List<AnimeSourceResult>) {
-        // Dedup longgar: judul dinormalisasi (tanpa spasi/karakter aneh).
+        val nexadev = _nexadevCache
+        val sanka = _sankaCache
+
+        // Gabungkan tiap kategori dari kedua sumber lalu dedup longgar.
         // Item dengan image terisi diprioritaskan.
-        val all = mergeDedupe(
-            lists = results.map { it.items },
-            keyOf = { normalizeKey(it.title) },
-            scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
-        )
+        fun merge(vararg lists: List<AnimeSearchItem>): List<AnimeSearchItem> =
+            mergeDedupe(
+                lists = lists.toList(),
+                keyOf = { normalizeKey(it.title) },
+                scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
+            )
 
-        // Ongoing / completed dipisah berdasarkan status, tanpa duplikat.
-        val ongoing = mergeDedupe(
-            lists = listOf(
-                results.firstOrNull { it.source == "nexadev" }
-                    ?.items?.filter { it.status.equals("Ongoing", true) }.orEmpty(),
-                results.firstOrNull { it.source == "sankavollerei" }
-                    ?.items?.filter { it.status.equals("Ongoing", true) }.orEmpty()
-            ),
-            keyOf = { normalizeKey(it.title) },
-            scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
-        )
+        val ongoing = merge(nexadev.ongoing, sanka.ongoing)
+        val popular = merge(nexadev.popular, sanka.popular).ifEmpty { ongoing }
+        val recent = merge(nexadev.recent, sanka.recent).ifEmpty { ongoing }
+        val completed = merge(nexadev.completed, sanka.completed)
+        val all = merge(nexadev.all, sanka.all)
 
-        val completed = mergeDedupe(
-            lists = listOf(
-                results.firstOrNull { it.source == "nexadev" }
-                    ?.items?.filter { !it.status.equals("Ongoing", true) }.orEmpty(),
-                results.firstOrNull { it.source == "sankavollerei" }
-                    ?.items?.filter { !it.status.equals("Ongoing", true) }.orEmpty()
-            ),
-            keyOf = { normalizeKey(it.title) },
-            scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
-        )
+        // Top Rated: yang punya rating, diurutkan tertinggi ke terendah.
+        val topRated = all
+            .filter { it.rating != null && it.rating!!.toDoubleOrNull() != null }
+            .sortedByDescending { it.rating!!.toDoubleOrNull() ?: 0.0 }
+            .ifEmpty { all }
 
-        val popular = all
-        val recent = all
+        // Rekomendasi: gabungan populer + ongoing (diambil dari yang belum jadi hero).
+        val recommendations = merge(popular, ongoing, recent).ifEmpty { all }
 
         _uiState.value = _uiState.value.copy(
             isLoading = false,
-            ongoing = ongoing.ifEmpty { all },
+            ongoing = ongoing,
             completed = completed,
             popular = popular,
             recent = recent,
+            topRated = topRated,
+            recommendations = recommendations,
             sources = results
         )
     }

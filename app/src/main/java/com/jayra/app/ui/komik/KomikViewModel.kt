@@ -77,9 +77,15 @@ class KomikViewModel : ViewModel() {
         }
     }
 
+    /** Cache kategori terakhir (dipakai mergeHome). */
+    private var _nexadevLatest: List<KomikItem> = emptyList()
+    private var _sankaLatest: List<KomikItem> = emptyList()
+    private var _sankaPopular: List<KomikItem> = emptyList()
+
     private suspend fun fetchNexadevList(): KomikSourceResult {
         return try {
             val items = nexadev.getKomikList(page = 1).body()?.results.orEmpty()
+            _nexadevLatest = items
             KomikSourceResult(
                 source = "nexadev",
                 items = items,
@@ -91,30 +97,46 @@ class KomikViewModel : ViewModel() {
     }
 
     private suspend fun fetchSankavollereiList(): KomikSourceResult {
-        // Ambil SEMUA source komik Sankavollerei secara PARALEL.
-        val lists: List<List<KomikItem>> = coroutineScope {
-            val a = async { safeKomikList { sankavollerei.comicLatest(page = 1, limit = 20) } }
-            val b = async { safeKomikList { sankavollerei.comicPopular(page = 1, limit = 20) } }
-            val c = async { safeKomikList { sankavollerei.komikindoLatest(1) } }
-            val d = async { safeKomikList { sankavollerei.komikindoPopular(1) } }
-            val e = async { safeKomikList { sankavollerei.bacakomikLatest() } }
-            val f = async { safeKomikList { sankavollerei.bacakomikPopular() } }
-            val g = async { safeKomikList { sankavollerei.shinigamiLatest() } }
-            val h = async { safeKomikList { sankavollerei.mangasusukuLatest() } }
-            val i = async { safeKomikList { sankavollerei.kiryuuLatest() } }
-            val j = async { safeKomikList { sankavollerei.kiryuuPopular() } }
-            val k = async { safeKomikList { sankavollerei.komikstationHome() } }
-            val l = async { safeKomikList { sankavollerei.komikstationPopular() } }
-            val m = async { safeKomikList { sankavollerei.westmangaLatest() } }
-            val n = async { safeKomikList { sankavollerei.softkomikList() } }
-            val o = async { safeKomikList { sankavollerei.mangakitaList() } }
-            val p = async { safeKomikList { sankavollerei.maidHome() } }
-            listOf(a.await(), b.await(), c.await(), d.await(), e.await(), f.await(),
-                g.await(), h.await(), i.await(), j.await(), k.await(), l.await(),
-                m.await(), n.await(), o.await(), p.await())
+        // Ambil SEMUA source komik Sankavollerei secara PARALEL, dipisah
+        // latest vs popular supaya Home punya section berbeda & terisi.
+        val latestLists: List<List<KomikItem>>
+        val popularLists: List<List<KomikItem>>
+        coroutineScope {
+            val latest = listOf(
+                async { safeKomikList { sankavollerei.comicLatest(page = 1, limit = 20) } },
+                async { safeKomikList { sankavollerei.komikindoLatest(1) } },
+                async { safeKomikList { sankavollerei.bacakomikLatest() } },
+                async { safeKomikList { sankavollerei.shinigamiLatest() } },
+                async { safeKomikList { sankavollerei.mangasusukuLatest() } },
+                async { safeKomikList { sankavollerei.kiryuuLatest() } },
+                async { safeKomikList { sankavollerei.komikstationHome() } },
+                async { safeKomikList { sankavollerei.westmangaLatest() } },
+                async { safeKomikList { sankavollerei.softkomikList() } },
+                async { safeKomikList { sankavollerei.mangakitaList() } },
+                async { safeKomikList { sankavollerei.maidHome() } }
+            )
+            val popular = listOf(
+                async { safeKomikList { sankavollerei.comicPopular(page = 1, limit = 20) } },
+                async { safeKomikList { sankavollerei.komikindoPopular(1) } },
+                async { safeKomikList { sankavollerei.bacakomikPopular() } },
+                async { safeKomikList { sankavollerei.kiryuuPopular() } },
+                async { safeKomikList { sankavollerei.komikstationPopular() } }
+            )
+            latestLists = latest.map { it.await() }
+            popularLists = popular.map { it.await() }
         }
+        _sankaLatest = mergeDedupe(
+            lists = latestLists,
+            keyOf = { normalizeKey(it.title) },
+            scoreOf = { if (it.cover.isNullOrBlank()) 0 else 1 }
+        )
+        _sankaPopular = mergeDedupe(
+            lists = popularLists,
+            keyOf = { normalizeKey(it.title) },
+            scoreOf = { if (it.cover.isNullOrBlank()) 0 else 1 }
+        )
         val items = mergeDedupe(
-            lists = lists,
+            lists = listOf(_sankaLatest, _sankaPopular),
             keyOf = { normalizeKey(it.title) },
             scoreOf = { if (it.cover.isNullOrBlank()) 0 else 1 }
         )
@@ -140,8 +162,16 @@ class KomikViewModel : ViewModel() {
     }
 
     private fun mergeHome(results: List<KomikSourceResult>) {
-        val all = results.flatMap { it.items }
-            .distinctBy { it.slug ?: it.title }
+        fun merge(vararg lists: List<KomikItem>): List<KomikItem> =
+            mergeDedupe(
+                lists = lists.toList(),
+                keyOf = { normalizeKey(it.title) },
+                scoreOf = { if (it.cover.isNullOrBlank()) 0 else 1 }
+            )
+
+        val all = merge(_nexadevLatest, _sankaLatest, _sankaPopular)
+        val latest = merge(_nexadevLatest, _sankaLatest).ifEmpty { all }
+        val popular = merge(_sankaPopular, _sankaLatest, _nexadevLatest).ifEmpty { all }
 
         val anyOk = results.any { it.ok }
         val msgs = results.filter { !it.ok }.mapNotNull { r ->
@@ -150,8 +180,8 @@ class KomikViewModel : ViewModel() {
 
         _uiState.value = _uiState.value.copy(
             isLoading = false,
-            latest = all,
-            popular = all,
+            latest = latest,
+            popular = popular,
             sources = results,
             homeError = if (anyOk || all.isNotEmpty()) null
             else msgs.firstOrNull() ?: "Gagal memuat daftar komik"

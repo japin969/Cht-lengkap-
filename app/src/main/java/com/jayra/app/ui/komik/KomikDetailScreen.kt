@@ -57,10 +57,15 @@ fun KomikDetailScreen(
         bookmarked = MediaLibraryStore.isBookmarked(context, "komik", slug)
     }
 
+    com.jayra.app.ui.media.MediaGlassTheme {
     Column(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                Brush.verticalGradient(
+                    com.jayra.app.ui.media.MediaGlassColors.BackgroundGradient
+                )
+            )
     ) {
         MediaTopBar(
             title = state.detail?.title ?: "Detail Komik",
@@ -112,6 +117,7 @@ fun KomikDetailScreen(
                 )
             }
         }
+    }
     }
 }
 

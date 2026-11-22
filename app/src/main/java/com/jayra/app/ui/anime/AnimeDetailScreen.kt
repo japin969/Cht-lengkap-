@@ -83,10 +83,15 @@ fun AnimeDetailScreen(
         }
     }
 
+    com.jayra.app.ui.media.MediaGlassTheme {
     Column(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                Brush.verticalGradient(
+                    com.jayra.app.ui.media.MediaGlassColors.BackgroundGradient
+                )
+            )
     ) {
         MediaTopBar(
             title = state.detail?.title ?: "Detail Anime",
@@ -154,6 +159,7 @@ fun AnimeDetailScreen(
                 )
             }
         }
+    }
     }
 }
 
@@ -633,10 +639,15 @@ fun AnimePlayerScreen(
 
     BackHandler(enabled = true) { onBack() }
 
+    com.jayra.app.ui.media.MediaGlassTheme {
     LazyColumn(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                Brush.verticalGradient(
+                    com.jayra.app.ui.media.MediaGlassColors.BackgroundGradient
+                )
+            )
     ) {
         // ── Player 16:9 ────────────────────────────────────────
         item(key = "player") {
@@ -985,6 +996,7 @@ fun AnimePlayerScreen(
                 )
             }
         }
+    }
     }
 }
 

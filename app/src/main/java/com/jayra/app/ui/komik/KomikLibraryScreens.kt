@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -48,10 +49,15 @@ private fun KomikSubPageScaffold(
     onBack: () -> Unit,
     content: @Composable () -> Unit
 ) {
+    com.jayra.app.ui.media.MediaGlassTheme {
     Column(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                Brush.verticalGradient(
+                    com.jayra.app.ui.media.MediaGlassColors.BackgroundGradient
+                )
+            )
     ) {
         Surface(color = MaterialTheme.colorScheme.background) {
                 Row(
@@ -95,6 +101,7 @@ private fun KomikSubPageScaffold(
             }
             Box(Modifier.fillMaxSize()) { content() }
         }
+    }
 }
 
 /** Daftar semua komik (grid) + pencarian. */

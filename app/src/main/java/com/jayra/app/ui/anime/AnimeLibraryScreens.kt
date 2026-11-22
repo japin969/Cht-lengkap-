@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -565,16 +566,22 @@ fun AnimeSubPage(
     onBack: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        MediaTopBar(
-            title = title,
-            subtitle = subtitle,
-            onBack = onBack
-        )
-        Box(Modifier.fillMaxSize()) { content() }
+    com.jayra.app.ui.media.MediaGlassTheme {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        com.jayra.app.ui.media.MediaGlassColors.BackgroundGradient
+                    )
+                )
+        ) {
+            MediaTopBar(
+                title = title,
+                subtitle = subtitle,
+                onBack = onBack
+            )
+            Box(Modifier.fillMaxSize()) { content() }
+        }
     }
 }

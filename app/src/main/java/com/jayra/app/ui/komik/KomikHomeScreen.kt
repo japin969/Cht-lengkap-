@@ -1,6 +1,7 @@
 package com.jayra.app.ui.komik
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -48,6 +49,9 @@ import com.jayra.app.ui.media.MediaErrorState
 import com.jayra.app.ui.media.NetworkImage
 import com.jayra.app.ui.media.MediaLoading
 import com.jayra.app.ui.media.jellyClick
+import com.jayra.app.ui.media.MediaGlassTheme
+import com.jayra.app.ui.media.MediaGlassColors
+import com.jayra.app.ui.media.normalizeKey
 import kotlinx.coroutines.delay
 
 /** Aksen warna untuk bagian komik. */
@@ -125,13 +129,12 @@ fun KomikHomeScreen(
         }
     }
 
+    MediaGlassTheme {
     Column(
         Modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(
-                    com.jayra.app.ui.media.MediaTheme.BackgroundGradient
-                )
+                Brush.verticalGradient(MediaGlassColors.BackgroundGradient)
             )
     ) {
         KomikTopBar(
@@ -191,6 +194,7 @@ fun KomikHomeScreen(
                     else -> KomikContent(
                         latest = state.latest,
                         filtered = filtered,
+                        popular = state.popular,
                         hasSearched = hasSearched,
                         onKomikClick = onKomikClick,
                         onViewAllClick = onViewAllClick,
@@ -199,6 +203,7 @@ fun KomikHomeScreen(
                 }
             }
         }
+    }
 }
 
 @Composable
@@ -365,52 +370,79 @@ private fun FilterRow(
 
 @Composable
 private fun KomikContent(
-    latest: List<KomikItem>,
-    filtered: List<KomikItem>,
-    hasSearched: Boolean,
-    onKomikClick: (String) -> Unit,
-    onViewAllClick: () -> Unit,
-    onLoadMore: () -> Unit
-) {
-    if (hasSearched) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+        latest: List<KomikItem>,
+        filtered: List<KomikItem>,
+        popular: List<KomikItem>,
+        hasSearched: Boolean,
+        onKomikClick: (String) -> Unit,
+        onViewAllClick: () -> Unit,
+        onLoadMore: () -> Unit
+    ) {
+        if (hasSearched) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filtered, key = { it.slug ?: it.title ?: "" }) { komik ->
+                    KomikCard(komik) { onKomikClick(it) }
+                }
+            }
+            return
+        }
+
+        // Hero tidak diulang di section lain.
+        val heroKey = latest.firstOrNull()?.let { normalizeKey(it.title) }
+        fun withoutHero(list: List<KomikItem>): List<KomikItem> =
+            if (heroKey == null) list
+            else list.filterNot { normalizeKey(it.title) == heroKey }
+
+        val latestList = withoutHero(filtered)
+        val popularList = withoutHero(popular)
+
+        LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            items(filtered, key = { it.slug ?: it.title ?: "" }) { komik ->
-                KomikCard(komik) { onKomikClick(it) }
+            // Hero
+            latest.firstOrNull()?.let { hero ->
+                item(key = "hero") { KomikHero(hero) { onKomikClick(it) } }
+            }
+
+            // Populer
+            if (popularList.isNotEmpty()) {
+                item(key = "popular_header") {
+                    SectionHeader(
+                        title = "Populer",
+                        subtitle = "Paling banyak dibaca",
+                        actionLabel = "Lihat semua",
+                        onAction = onViewAllClick
+                    )
+                }
+                item(key = "popular_grid") {
+                    KomikGrid(popularList, onClick = onKomikClick)
+                }
+            }
+
+            // Terbaru / Update
+            if (latestList.isNotEmpty()) {
+                item(key = "latest_header") {
+                    SectionHeader(
+                        title = "Komik Terbaru",
+                        subtitle = "${latestList.size} judul",
+                        actionLabel = "Lihat semua",
+                        onAction = onViewAllClick
+                    )
+                }
+                item(key = "latest_grid") {
+                    KomikGrid(latestList, onClick = onKomikClick)
+                }
             }
         }
-        return
     }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        // Hero
-        latest.firstOrNull()?.let { hero ->
-            item(key = "hero") { KomikHero(hero) { onKomikClick(it) } }
-        }
-
-        // Terbaru grid
-        item(key = "latest_header") {
-            SectionHeader(
-                title = "Komik Terbaru",
-                subtitle = "${filtered.size} judul",
-                actionLabel = "Lihat semua",
-                onAction = onViewAllClick
-            )
-        }
-        item(key = "latest_grid") {
-            KomikGrid(filtered, onClick = onKomikClick)
-        }
-    }
-}
 
 /** Grid 3 kolom non-lazy (dipakai di dalam LazyColumn). */
 @Composable
@@ -552,25 +584,27 @@ fun SectionHeader(
 /** Kartu komik — TIDAK diubah dari versi sebelumnya. */
 @Composable
 fun KomikCard(komik: KomikItem, onClick: (String) -> Unit) {
+    val context = LocalContext.current
     Column(
         Modifier
             .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
-            .background(Color.White)
+            .background(com.jayra.app.ui.media.MediaGlassColors.Surface)
+            .border(1.dp, com.jayra.app.ui.media.MediaGlassColors.GlassBorder, RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
             .shadow(
-                elevation = 2.dp,
+                elevation = 6.dp,
                 shape = RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius),
-                ambientColor = Color.Black.copy(alpha = 0.08f),
-                spotColor = Color.Black.copy(alpha = 0.08f)
+                ambientColor = Color.Black.copy(alpha = 0.35f),
+                spotColor = Color.Black.copy(alpha = 0.35f)
             )
             .jellyClick(onClick = { onClick(komik.slug ?: "") }, pressedScale = 0.96f)
     ) {
-        // Lapisan placeholder di belakang gambar supaya tidak pernah putih polos.
+        // Placeholder gelap di belakang gambar -> tidak pernah putih polos.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.7f)
                 .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(com.jayra.app.ui.media.MediaGlassColors.SurfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -580,10 +614,16 @@ fun KomikCard(komik: KomikItem, onClick: (String) -> Unit) {
                 modifier = Modifier.size(26.dp)
             )
             AsyncImage(
-                model = komik.cover,
+                // Shared ImageLoader (cache memori + disk) -> poster konsisten
+                // cepat & langsung tampil lagi saat scroll balik.
+                model = coil.request.ImageRequest.Builder(context)
+                    .data(komik.cover)
+                    .crossfade(false)
+                    .build(),
                 contentDescription = komik.title,
                 modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                imageLoader = com.jayra.app.ui.media.LocalMediaImageLoader.current
             )
         }
         Spacer(Modifier.height(5.dp))
@@ -592,15 +632,17 @@ fun KomikCard(komik: KomikItem, onClick: (String) -> Unit) {
             maxLines = 2,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF111111),
-            overflow = TextOverflow.Ellipsis
+            color = com.jayra.app.ui.media.MediaGlassColors.OnSurface,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
         Text(
             komik.updatedAt ?: "",
             style = MaterialTheme.typography.labelSmall,
-            color = Color(0xFF555555),
+            color = com.jayra.app.ui.media.MediaGlassColors.OnSurfaceVariant,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
         Spacer(Modifier.height(5.dp))
     }

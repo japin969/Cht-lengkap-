@@ -1,6 +1,7 @@
 package com.jayra.app.ui.anime
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -14,6 +15,10 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.TrendingUp
 import com.jayra.app.ui.media.jellyClick
+import com.jayra.app.ui.media.MediaGlassTheme
+import com.jayra.app.ui.media.MediaGlassColors
+import com.jayra.app.ui.media.MediaFilterChip
+import com.jayra.app.ui.media.normalizeKey
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,57 +54,63 @@ fun AnimeHomeScreen(
     val enrichment by viewModel.enrichment.collectAsStateWithLifecycle()
 
     // Isi genre/rating untuk kartu yang terlihat (lazy, per item).
-    val items = remember(state.popular, state.ongoing, state.completed) {
-        (state.ongoing + state.popular + state.completed).distinctBy { it.link ?: it.title }
+    val items = remember(state.popular, state.ongoing, state.completed, state.recent) {
+        (state.ongoing + state.popular + state.completed + state.recent)
+            .distinctBy { it.link ?: it.title }
     }
     LaunchedEffect(items) {
         items.take(12).forEach { viewModel.ensureEnriched(it.link) }
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(com.jayra.app.ui.media.MediaTheme.BackgroundGradient))
-    ) {
-        AnimeHomeTopBar(onSearchClick = onSearchClick)
+    MediaGlassTheme {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(MediaGlassColors.BackgroundGradient))
+        ) {
+            AnimeHomeTopBar(onSearchClick = onSearchClick)
 
-        // Banner sumber: menunjukkan API mana yang aktif.
-        val activeSources = state.sources.filter { it.ok }.map { it.source }
-        if (activeSources.isNotEmpty()) {
-            SourceBanner(sources = activeSources)
-        }
+            // Banner sumber: menunjukkan API mana yang aktif.
+            val activeSources = state.sources.filter { it.ok }.map { it.source }
+            if (activeSources.isNotEmpty()) {
+                SourceBanner(sources = activeSources)
+            }
 
-        Box(Modifier.fillMaxSize()) {
-            val empty = state.ongoing.isEmpty() &&
-                state.popular.isEmpty() &&
-                state.completed.isEmpty() &&
-                state.recent.isEmpty()
+            Box(Modifier.fillMaxSize()) {
+                val empty = state.ongoing.isEmpty() &&
+                    state.popular.isEmpty() &&
+                    state.completed.isEmpty() &&
+                    state.recent.isEmpty()
 
-            when {
-                state.isLoading && empty -> AnimeLoading()
+                when {
+                    state.isLoading && empty -> AnimeLoading()
 
-                state.homeError != null && empty -> AnimeErrorState(
-                    message = state.homeError,
-                    title = "Gagal memuat anime",
-                    onRetry = { viewModel.retry() }
-                )
+                    state.homeError != null && empty -> AnimeErrorState(
+                        message = state.homeError,
+                        title = "Gagal memuat anime",
+                        onRetry = { viewModel.retry() }
+                    )
 
-                empty -> AnimeEmptyState(
-                    title = "Belum ada anime",
-                    message = "Daftar anime sedang kosong. Coba muat ulang.",
-                    actionLabel = "Coba Lagi",
-                    onAction = { viewModel.retry() }
-                )
+                    empty -> AnimeEmptyState(
+                        title = "Belum ada anime",
+                        message = "Daftar anime sedang kosong. Coba muat ulang.",
+                        actionLabel = "Coba Lagi",
+                        onAction = { viewModel.retry() }
+                    )
 
-                else -> AnimeHomeContent(
-                    ongoing = state.ongoing,
-                    popular = state.popular,
-                    completed = state.completed,
-                    recent = state.recent,
-                    enrichment = enrichment,
-                    onAnimeClick = onAnimeClick,
-                    onViewAllClick = onViewAllClick
-                )
+                    else -> AnimeHomeContent(
+                        ongoing = state.ongoing,
+                        popular = state.popular,
+                        completed = state.completed,
+                        recent = state.recent,
+                        topRated = state.topRated,
+                        recommendations = state.recommendations,
+                        genres = state.genres,
+                        enrichment = enrichment,
+                        onAnimeClick = onAnimeClick,
+                        onViewAllClick = onViewAllClick
+                    )
+                }
             }
         }
     }
@@ -157,26 +168,39 @@ private fun AnimeHomeContent(
     popular: List<AnimeSearchItem>,
     completed: List<AnimeSearchItem>,
     recent: List<AnimeSearchItem>,
+    topRated: List<AnimeSearchItem>,
+    recommendations: List<AnimeSearchItem>,
+    genres: List<String>,
     enrichment: Map<String, AnimeEnrichment>,
     onAnimeClick: (String) -> Unit,
     onViewAllClick: () -> Unit
 ) {
+    // Judul hero tidak diulang di section lain agar tidak terlihat dobel.
+    val hero = ongoing.firstOrNull() ?: popular.firstOrNull()
+    val heroKey = hero?.let { normalizeKey(it.title) }
+
+    fun withoutHero(list: List<AnimeSearchItem>): List<AnimeSearchItem> =
+        if (heroKey == null) list
+        else list.filterNot { normalizeKey(it.title) == heroKey }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        (ongoing.firstOrNull() ?: popular.firstOrNull())?.let { hero ->
+        hero?.let { h ->
             item(key = "hero") {
                 AnimeHero(
-                    anime = hero,
-                    enrichment = enrichment[hero.link],
-                    onClick = { onAnimeClick(hero.link ?: "") }
+                    anime = h,
+                    enrichment = enrichment[h.link],
+                    onClick = { onAnimeClick(h.link ?: "") }
                 )
             }
         }
 
-        if (ongoing.isNotEmpty()) {
+        // ── Sedang Tayang ─────────────────────────────────────
+        val ongoingList = withoutHero(ongoing)
+        if (ongoingList.isNotEmpty()) {
             item(key = "ongoing_head") {
                 AnimeSectionHeader(
                     title = "Sedang Tayang",
@@ -186,11 +210,13 @@ private fun AnimeHomeContent(
                 )
             }
             item(key = "ongoing_row") {
-                AnimeRow(ongoing, enrichment, onAnimeClick)
+                AnimeRow(ongoingList, enrichment, onAnimeClick)
             }
         }
 
-        if (popular.isNotEmpty()) {
+        // ── Populer ───────────────────────────────────────────
+        val popularList = withoutHero(popular)
+        if (popularList.isNotEmpty()) {
             item(key = "popular_head") {
                 AnimeSectionHeader(
                     title = "Populer",
@@ -200,11 +226,61 @@ private fun AnimeHomeContent(
                 )
             }
             item(key = "popular_row") {
-                AnimeRow(popular, enrichment, onAnimeClick)
+                AnimeRow(popularList, enrichment, onAnimeClick)
             }
         }
 
-        if (completed.isNotEmpty()) {
+        // ── Terbaru / Update ──────────────────────────────────
+        val recentList = withoutHero(recent)
+        if (recentList.isNotEmpty()) {
+            item(key = "recent_head") {
+                AnimeSectionHeader(
+                    title = "Terbaru",
+                    subtitle = "Baru diupdate",
+                    actionLabel = "Lihat semua",
+                    onAction = onViewAllClick
+                )
+            }
+            item(key = "recent_row") {
+                AnimeRow(recentList, enrichment, onAnimeClick)
+            }
+        }
+
+        // ── Top Rated ─────────────────────────────────────────
+        val topRatedList = withoutHero(topRated)
+        if (topRatedList.isNotEmpty()) {
+            item(key = "toprated_head") {
+                AnimeSectionHeader(
+                    title = "Top Rated",
+                    subtitle = "Rating tertinggi",
+                    actionLabel = "Lihat semua",
+                    onAction = onViewAllClick
+                )
+            }
+            item(key = "toprated_row") {
+                AnimeRow(topRatedList, enrichment, onAnimeClick)
+            }
+        }
+
+        // ── Rekomendasi ───────────────────────────────────────
+        val recList = recommendations.filter { normalizeKey(it.title) != heroKey }
+        if (recList.isNotEmpty()) {
+            item(key = "rec_head") {
+                AnimeSectionHeader(
+                    title = "Rekomendasi",
+                    subtitle = "Pilihan untukmu",
+                    actionLabel = "Lihat semua",
+                    onAction = onViewAllClick
+                )
+            }
+            item(key = "rec_row") {
+                AnimeRow(recList, enrichment, onAnimeClick)
+            }
+        }
+
+        // ── Selesai ───────────────────────────────────────────
+        val completedList = withoutHero(completed)
+        if (completedList.isNotEmpty()) {
             item(key = "completed_head") {
                 AnimeSectionHeader(
                     title = "Selesai",
@@ -214,21 +290,41 @@ private fun AnimeHomeContent(
                 )
             }
             item(key = "completed_row") {
-                AnimeRow(completed, enrichment, onAnimeClick)
+                AnimeRow(completedList, enrichment, onAnimeClick)
             }
         }
 
-        if (recent.isNotEmpty()) {
-            item(key = "recent_head") {
+        // ── Genre (chip, wrap tanpa scroll horizontal) ──────────
+        if (genres.isNotEmpty()) {
+            item(key = "genre_head") {
                 AnimeSectionHeader(
-                    title = "Rekomendasi",
-                    subtitle = "Baru diupdate",
-                    actionLabel = "Lihat semua",
-                    onAction = onViewAllClick
+                    title = "Genre",
+                    subtitle = "Jelajahi berdasarkan genre"
                 )
             }
-            item(key = "recent_row") {
-                AnimeRow(recent, enrichment, onAnimeClick)
+            item(key = "genre_row") {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    genres.chunked(3).forEach { rowGenres ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowGenres.forEach { g ->
+                                MediaFilterChip(
+                                    label = g,
+                                    selected = false,
+                                    onClick = onViewAllClick
+                                )
+                            }
+                            repeat(3 - rowGenres.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
             }
         }
     }
@@ -400,12 +496,13 @@ fun AnimePosterCard(
         modifier = Modifier
             .width(126.dp)
             .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
-            .background(Color.White)
+            .background(com.jayra.app.ui.media.MediaGlassColors.Surface)
+            .border(1.dp, com.jayra.app.ui.media.MediaGlassColors.GlassBorder, RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
             .shadow(
                 elevation = 2.dp,
                 shape = RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius),
-                ambientColor = Color.Black.copy(alpha = 0.10f),
-                spotColor = Color.Black.copy(alpha = 0.10f)
+                ambientColor = Color.Black.copy(alpha = 0.35f),
+                spotColor = Color.Black.copy(alpha = 0.35f)
             )
             .jellyClick(onClick = onClick, pressedScale = 0.96f)
     ) {
@@ -414,7 +511,7 @@ fun AnimePosterCard(
                 .fillMaxWidth()
                 .aspectRatio(0.7f)
                 .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
-                .background(Color.White)
+                .background(com.jayra.app.ui.media.MediaGlassColors.Surface)
         ) {
             AnimePoster(
                 url = anime.image,
@@ -462,7 +559,7 @@ fun AnimePosterCard(
             text = anime.title ?: "Tanpa judul",
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF111111),
+            color = com.jayra.app.ui.media.MediaGlassColors.OnSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 3.dp)
@@ -472,7 +569,7 @@ fun AnimePosterCard(
             Text(
                 text = genres.take(2).joinToString(", "),
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF5A5A5A),
+                color = com.jayra.app.ui.media.MediaGlassColors.OnSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 3.dp)
@@ -482,7 +579,7 @@ fun AnimePosterCard(
             Text(
                 text = anime.latestEpisode ?: "",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF555555),
+                color = com.jayra.app.ui.media.MediaGlassColors.OnSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 3.dp)

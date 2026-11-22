@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +49,7 @@ fun AnimePoster(
     iconSize: Dp = 30.dp,
     showPlaceholderIcon: Boolean = true
 ) {
+    val context = LocalContext.current
     var loadState by remember(url) { mutableStateOf(LoadState.EMPTY) }
     // Fade-in halus saat gambar pertama kali siap (ringan, sekali jalan).
     val alpha by animateFloatAsState(
@@ -73,12 +75,19 @@ fun AnimePoster(
         }
         if (!url.isNullOrBlank()) {
             AsyncImage(
-                model = url,
+                // Pakai ImageRequest -> shared ImageLoader (cache memori + disk
+                // yang sama dengan Komik). Poster yang pernah muncul langsung
+                // tampil lagi tanpa kedip putih.
+                model = coil.request.ImageRequest.Builder(context)
+                    .data(url)
+                    .crossfade(false)
+                    .build(),
                 contentDescription = contentDescription,
                 modifier = Modifier
                     .matchParentSize()
                     .alpha(alpha),
                 contentScale = contentScale,
+                imageLoader = com.jayra.app.ui.media.LocalMediaImageLoader.current,
                 onState = { state ->
                     loadState = when (state) {
                         is AsyncImagePainter.State.Success -> LoadState.READY
