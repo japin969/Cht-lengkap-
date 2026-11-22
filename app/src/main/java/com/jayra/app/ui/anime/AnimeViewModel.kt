@@ -9,85 +9,89 @@ import com.jayra.app.data.NexadevApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import kotlinx.coroutines.withContext
+
+/** Status tayang sebuah anime. */
+enum class AnimeStatus { ONGOING, COMPLETED, POPULAR }
+
+/** Sort untuk daftar anime. */
+enum class AnimeSort(val label: String) {
+    TERBARU("Terbaru"),
+    TERPOPULER("Terpopuler"),
+    AZ("A-Z")
+}
+
+/** Genre sebuah anime (hasil enrich dari endpoint detail). */
+data class AnimeEnrichment(
+    val genres: List<String> = emptyList(),
+    val rating: Double? = null
+)
 
 data class AnimeUiState(
     val isLoading: Boolean = false,
     val ongoing: List<AnimeSearchItem> = emptyList(),
     val popular: List<AnimeSearchItem> = emptyList(),
     val completed: List<AnimeSearchItem> = emptyList(),
+    val recent: List<AnimeSearchItem> = emptyList(),
     val detail: AnimeDetailData? = null,
     val episodes: List<AnimeEpisode> = emptyList(),
     val streamUrl: String? = null,
-    /** Menandakan proses resolve stream sedang berjalan. */
     val streamLoading: Boolean = false,
-    /** Pesan bila stream tidak bisa diputar. */
     val streamError: String? = null,
     val error: String? = null,
-    /** Error khusus daftar anime di home. */
-    val homeError: String? = null
+    val homeError: String? = null,
+    val detailError: String? = null
 )
 
 class AnimeViewModel : ViewModel() {
-    // Sumber data: Nexadev API (https://api.nexadev.my.id) — client & base URL
-    // yang sama persis dengan fitur Music yang sudah jalan di project ini.
+
     private val api = NexadevApi.create()
     private val _uiState = MutableStateFlow(AnimeUiState())
-    val uiState: StateFlow<AnimeUiState> = _uiState
+    val uiState: StateFlow<AnimeUiState> = _uiState.asStateFlow()
 
+    /** Genre & rating per link anime, diisi bertahap dari endpoint detail. */
+    private val _enrichment = MutableStateFlow<Map<String, AnimeEnrichment>>(emptyMap())
+    val enrichment: StateFlow<Map<String, AnimeEnrichment>> = _enrichment.asStateFlow()
+
+    private val enriching = mutableSetOf<String>()
     private var lastAnimeUrl: String? = null
+    private var lastStreamEpisodeUrl: String? = null
 
     init { loadHome() }
 
     fun loadHome() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
             try {
-                val popularRes = api.getAnimePopular()
-                val ongoingRes = api.getAnimeOngoing()
-                val completedRes = api.getAnimeCompleted()
+                val popular = runCatching {
+                    api.getAnimePopular().body()?.data?.animeList.orEmpty()
+                }.getOrDefault(emptyList())
+                val ongoing = runCatching {
+                    api.getAnimeOngoing().body()?.data?.animeList.orEmpty()
+                }.getOrDefault(emptyList())
+                val completed = runCatching {
+                    api.getAnimeCompleted().body()?.data?.animeList.orEmpty()
+                }.getOrDefault(emptyList())
+                val recent = runCatching {
+                    api.getAnimeRecent().body()?.data?.animeList.orEmpty()
+                }.getOrDefault(emptyList())
 
-                val popular = popularRes.body()?.data?.animeList.orEmpty()
-                val ongoing = ongoingRes.body()?.data?.animeList.orEmpty()
-                val completed = completedRes.body()?.data?.animeList.orEmpty()
+                val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() ||
+                    completed.isNotEmpty() || recent.isNotEmpty()
 
-                val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
-
-                if (hasData) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        popular = popular,
-                        ongoing = ongoing,
-                        completed = completed,
-                        error = null,
-                        homeError = null
-                    )
-                } else {
-                    // Susun pesan yang menyebutkan sebab konkret, bukan generik.
-                    val codes = listOf(popularRes, ongoingRes, completedRes)
-                        .joinToString { it.code().toString() }
-                    val detail = popularRes.errorBody()?.string()
-                        ?: ongoingRes.errorBody()?.string()
-                        ?: completedRes.errorBody()?.string()
-                    Timber.e(
-                        "loadHome: semua daftar anime kosong. HTTP=%s body=%s",
-                        codes,
-                        detail?.take(300).orEmpty()
-                    )
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        popular = emptyList(),
-                        ongoing = emptyList(),
-                        completed = emptyList(),
-                        error = "Gagal memuat daftar anime (HTTP $codes, daftar kosong)",
-                        homeError = "Gagal memuat daftar anime (HTTP $codes, daftar kosong)"
-                    )
-                }
+                val msg = if (hasData) null else "Gagal memuat daftar anime"
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    popular = popular,
+                    ongoing = ongoing,
+                    completed = completed,
+                    recent = recent,
+                    error = msg,
+                    homeError = msg
+                )
             } catch (e: Exception) {
-                // JANGAN telan exception: tampilkan sebab asli (mis. SSL / timeout).
-                Timber.e(e, "loadHome gagal: %s", e.javaClass.simpleName)
                 val msg = e.javaClass.simpleName + ": " +
                     (e.localizedMessage ?: "Koneksi bermasalah")
                 _uiState.value = _uiState.value.copy(
@@ -101,17 +105,40 @@ class AnimeViewModel : ViewModel() {
 
     fun retry() = loadHome()
 
+    /**
+     * Ambil genre + rating sebuah anime dari endpoint detail, lalu simpan di cache.
+     * Aman dipanggil berkali-kali: hanya request pertama yang benar-benar jalan.
+     */
+    fun ensureEnriched(link: String?) {
+        if (link.isNullOrBlank()) return
+        if (_enrichment.value.containsKey(link)) return
+        if (!enriching.add(link)) return
+        viewModelScope.launch {
+            val result = runCatching { api.getAnimeDetail(details = link).body()?.data }
+                .getOrNull()
+            enriching.remove(link)
+            if (result != null) {
+                _enrichment.value = _enrichment.value + mapOf(
+                    link to AnimeEnrichment(
+                        genres = result.genres.orEmpty(),
+                        rating = result.rating
+                    )
+                )
+            }
+        }
+    }
+
     fun loadDetail(url: String) {
         if (url.isBlank()) {
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                error = "Anime tidak ditemukan"
+                detailError = "Anime tidak ditemukan"
             )
             return
         }
         lastAnimeUrl = url
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, detailError = null)
             try {
                 val data = api.getAnimeDetail(details = url).body()?.data
                 if (data != null) {
@@ -119,18 +146,25 @@ class AnimeViewModel : ViewModel() {
                         isLoading = false,
                         detail = data,
                         episodes = data.episodes.orEmpty(),
-                        error = null
+                        detailError = null
+                    )
+                    // Simpan genre & rating ke cache agar kartu terkait ikut terbarui.
+                    _enrichment.value = _enrichment.value + mapOf(
+                        url to AnimeEnrichment(
+                            genres = data.genres.orEmpty(),
+                            rating = data.rating
+                        )
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = "Gagal memuat detail anime"
+                        detailError = "Gagal memuat detail anime"
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.localizedMessage ?: "Gagal memuat detail anime"
+                    detailError = e.localizedMessage ?: "Gagal memuat detail anime"
                 )
             }
         }
@@ -141,16 +175,11 @@ class AnimeViewModel : ViewModel() {
     }
 
     /**
-     * Ambil link streaming episode dari Nexadev lalu ubah ke URL mp4 yang
-     * bisa diputar ExoPlayer.
+     * Ambil link streaming lalu ubah ke URL mp4 yang bisa diputar ExoPlayer.
      *
-     * Nexadev mengembalikan `streamUrl` berupa halaman Blogger. Di dalam
-     * halaman itu ada URL googlevideo (video/mp4). Bila tidak ditemukan,
-     * streamUrl dibiarkan null agar UI bisa menampilkan pesan.
+     * PENTING: googlevideo menolak User-Agent selain okhttp, jadi URL hasil
+     * resolve harus diputar dengan UA okhttp (lihat AnimePlayerScreen).
      */
-    /** Episode yang sedang diputar, dipakai untuk judul & navigasi prev/next. */
-    private var lastStreamEpisodeUrl: String? = null
-
     fun loadStream(url: String) {
         if (url.isBlank()) {
             _uiState.value = _uiState.value.copy(
@@ -190,7 +219,6 @@ class AnimeViewModel : ViewModel() {
         lastStreamEpisodeUrl?.let { loadStream(it) }
     }
 
-    /** Pencarian anime. */
     suspend fun search(query: String): List<AnimeSearchItem> {
         if (query.isBlank()) return emptyList()
         return runCatching {
@@ -202,31 +230,34 @@ class AnimeViewModel : ViewModel() {
      * Ubah halaman blogger menjadi URL mp4 langsung.
      * Mengembalikan null bila tidak ada URL video yang bisa diputar.
      */
-    private suspend fun resolvePlayableUrl(pageUrl: String): String? = withContext(Dispatchers.IO) {
-        runCatching {
-            val client = okhttp3.OkHttpClient.Builder()
-                .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
-                .build()
-            val request = okhttp3.Request.Builder()
-                .url(pageUrl)
-                .header("User-Agent", USER_AGENT)
-                .build()
-            client.newCall(request).execute().use { response ->
-                val html = response.body?.string() ?: return@use null
-                // Unescape HTML entity yang umum dipakai di halaman blogger.
-                val decoded = html
-                    .replace("&quot;", "\"")
-                    .replace("\\u0026", "&")
-                    .replace("\\u003d", "=")
-                    .replace("&amp;", "&")
-                GOOGLEVIDEO_REGEX.find(decoded)?.value?.takeIf { it.isNotBlank() }
-            }
-        }.getOrNull()
-    }
+    private suspend fun resolvePlayableUrl(pageUrl: String): String? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                val request = okhttp3.Request.Builder()
+                    .url(pageUrl)
+                    .header("User-Agent", USER_AGENT)
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    val html = response.body?.string() ?: return@use null
+                    val decoded = html
+                        .replace("&quot;", "\"")
+                        .replace("\\u0026", "&")
+                        .replace("\\u003d", "=")
+                        .replace("&amp;", "&")
+                    GOOGLEVIDEO_REGEX.find(decoded)?.value?.takeIf { it.isNotBlank() }
+                }
+            }.getOrNull()
+        }
 
     companion object {
-        private const val USER_AGENT = "okhttp/4.12.0"
+        /** googlevideo hanya menerima User-Agent okhttp. */
+        const val USER_AGENT = "okhttp/4.12.0"
+
+        /** Regex di PCRE: cocokkan URL googlevideo tanpa escaping berlebih. */
         private val GOOGLEVIDEO_REGEX = Regex(
             """https://rr\d+---[a-z0-9-]+\.googlevideo\.com/videoplayback\?[^"\\\s]*"""
         )

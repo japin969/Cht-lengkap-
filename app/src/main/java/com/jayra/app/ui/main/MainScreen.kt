@@ -738,7 +738,41 @@ private fun MainNavigationGraph(
                 onKomikSearchClick = { navController.navigate("komik_search") },
                 onKomikBookmarkClick = { navController.navigate("komik_bookmark") },
                 onKomikHistoryClick = { navController.navigate("komik_history") },
-                onKomikViewAllClick = { navController.navigate("komik_list") }
+                onKomikViewAllClick = { navController.navigate("komik_list") },
+                onAnimeSearchClick = { navController.navigate("anime_search") },
+                onAnimeBookmarkClick = { navController.navigate("anime_bookmark") },
+                onAnimeViewAllClick = { navController.navigate("anime_list") }
+            )
+        }
+
+        composable("anime_search") {
+            com.jayra.app.ui.anime.AnimeSearchScreen(
+                onAnimeClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("anime_list") {
+            com.jayra.app.ui.anime.AnimeListScreen(
+                onAnimeClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("anime_bookmark") {
+            com.jayra.app.ui.anime.AnimeBookmarkScreen(
+                onAnimeClick = { url ->
+                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onBack = { navController.popBackStack() },
+                onBrowseClick = { navController.popBackStack() }
             )
         }
 
@@ -754,7 +788,14 @@ private fun MainNavigationGraph(
                     val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                     navController.navigate("anime_player?url=$epEncoded")
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onAnimeClick = { other ->
+                    val encoded = java.net.URLEncoder.encode(other, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded") {
+                        popUpTo("anime_detail") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
@@ -770,25 +811,29 @@ private fun MainNavigationGraph(
             val vm: com.jayra.app.ui.anime.AnimeViewModel =
                 androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner = parentEntry)
             val state by vm.uiState.collectAsState()
+            val enrichment by vm.enrichment.collectAsState()
             LaunchedEffect(decoded) { vm.loadStream(decoded) }
 
-            // Daftar episode untuk navigasi prev / next.
             val episodes = state.episodes
             val currentIndex = episodes.indexOfFirst { it.episodeUrl == decoded }
             val hasPrevious = currentIndex > 0
             val hasNext = currentIndex in 0 until episodes.lastIndex
-            val currentTitle = episodes.getOrNull(currentIndex)?.title
-                ?: episodes.getOrNull(currentIndex)?.let { "Episode ${it.episode}" }
+            val activeEp = episodes.getOrNull(currentIndex)
+            val activeTitle = state.detail?.title
+            val activeSub = activeEp?.let { ep ->
+                ep.title?.takeIf { it.isNotBlank() }
+                    ?: ep.episode?.let { "Episode $it" }
+            }
 
             val stream = state.streamUrl
             when {
                 state.streamLoading && stream == null -> {
                     Box(
-                        Modifier.fillMaxSize(),
+                        Modifier.fillMaxSize().background(Color.Black),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(color = Color.White)
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 text = "Menyiapkan video...",
@@ -799,10 +844,11 @@ private fun MainNavigationGraph(
                     }
                 }
 
-                stream != null -> {
+                stream != null || state.streamError != null -> {
                     com.jayra.app.ui.anime.AnimePlayerScreen(
-                        videoUrl = stream,
-                        title = currentTitle,
+                        videoUrl = stream ?: "",
+                        title = activeTitle,
+                        subtitle = activeSub,
                         onBack = { navController.popBackStack() },
                         hasPrevious = hasPrevious,
                         hasNext = hasNext,
@@ -823,13 +869,31 @@ private fun MainNavigationGraph(
                                     launchSingleTop = true
                                 }
                             }
+                        },
+                        episodes = episodes,
+                        activeEpisodeUrl = decoded,
+                        recommendations = state.popular,
+                        enrichment = enrichment,
+                        onEpisodeClick = { epUrl ->
+                            val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
+                            navController.navigate("anime_player?url=$epEncoded") {
+                                popUpTo("anime_player") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onAnimeClick = { other ->
+                            val encoded = java.net.URLEncoder.encode(other, "UTF-8")
+                            navController.navigate("anime_detail?url=$encoded") {
+                                popUpTo("anime_detail") { inclusive = true }
+                                launchSingleTop = true
+                            }
                         }
                     )
                 }
 
                 else -> {
                     Box(
-                        Modifier.fillMaxSize(),
+                        Modifier.fillMaxSize().background(Color.Black),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(

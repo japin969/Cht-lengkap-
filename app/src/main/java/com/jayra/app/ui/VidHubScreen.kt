@@ -13,6 +13,9 @@ fun VidHubScreen(
     onDramaClick: (String) -> Unit,
     onAnimeClick: (String) -> Unit,
     onKomikClick: (String) -> Unit,
+    onAnimeSearchClick: () -> Unit = {},
+    onAnimeBookmarkClick: () -> Unit = {},
+    onAnimeViewAllClick: () -> Unit = {},
     onKomikSearchClick: () -> Unit = {},
     onKomikBookmarkClick: () -> Unit = {},
     onKomikHistoryClick: () -> Unit = {},
@@ -34,7 +37,11 @@ fun VidHubScreen(
 
         when (selectedTab) {
             0 -> DramaScreen(onDramaClick = onDramaClick)
-            1 -> AnimeHomeScreen(onAnimeClick = onAnimeClick)
+            1 -> AnimeHomeScreen(
+                onAnimeClick = onAnimeClick,
+                onSearchClick = onAnimeSearchClick,
+                onViewAllClick = onAnimeViewAllClick
+            )
             2 -> KomikHomeScreen(
                 onKomikClick = onKomikClick,
                 onSearchClick = onKomikSearchClick,
