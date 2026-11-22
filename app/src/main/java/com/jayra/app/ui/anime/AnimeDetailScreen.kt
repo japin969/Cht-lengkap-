@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -34,58 +36,359 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.compose.ui.viewinterop.AndroidView
 import android.view.ViewGroup
-import coil.compose.AsyncImage
+import coil.compose.LocalImageLoader
+import com.jayra.app.data.AnimeEpisode
+import com.jayra.app.ui.media.*
 
 @Composable
 fun AnimeDetailScreen(
     animeUrl: String,
     viewModel: AnimeViewModel = viewModel(),
-    onPlayEpisode: (String) -> Unit
+    onPlayEpisode: (String) -> Unit,
+    onBack: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // ImageLoader khusus anime (tidak mengubah konfigurasi global app).
+    val mediaLoader = remember(context) { createMediaImageLoader(context) }
 
     LaunchedEffect(animeUrl) { viewModel.loadDetail(animeUrl) }
 
-    if (state.isLoading) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-    } else if (state.error != null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Error: ${state.error}") }
-    } else {
-        LazyColumn(Modifier.fillMaxSize()) {
-            item {
-                Row(Modifier.padding(16.dp)) {
-                    AsyncImage(
-                        model = state.detail?.image,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .width(120.dp)
-                            .height(180.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(androidx.compose.ui.graphics.Color.White),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Column {
-                        Text(state.detail?.title ?: "", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Rating: ${state.detail?.rating ?: "-"}", style = MaterialTheme.typography.bodySmall)
-                        Text("Total: ${state.detail?.totalEpisodes ?: 0} Episode", style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(8.dp))
-                        Text(state.detail?.synopsis ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 6)
+    androidx.compose.runtime.CompositionLocalProvider(LocalImageLoader provides mediaLoader) {
+        if (state.isLoading && state.detail == null) {
+            MediaLoading()
+        } else if (state.error != null && state.detail == null) {
+            MediaErrorState(
+                message = state.error,
+                title = "Detail tidak bisa dimuat",
+                onRetry = { viewModel.loadDetail(animeUrl) }
+            )
+        } else if (state.detail == null) {
+            MediaEmptyState(
+                title = "Anime tidak ditemukan",
+                message = "Detail anime tidak tersedia.",
+                icon = Icons.Rounded.Movie,
+                actionLabel = "Coba Lagi",
+                onAction = { viewModel.loadDetail(animeUrl) }
+            )
+        } else {
+            val detail = state.detail ?: return@CompositionLocalProvider
+            LazyColumn(
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                // ── Hero: cover + judul + meta ─────────────────────
+                item(key = "hero") {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                            )
+                    ) {
+                        MediaImage(
+                            url = detail.image,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(210.dp),
+                            contentScale = ContentScale.Crop,
+                            shape = RoundedCornerShape(0.dp),
+                            fallbackIcon = Icons.Rounded.Movie
+                        )
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        0.15f to Color.Transparent,
+                                        1f to MaterialTheme.colorScheme.background
+                                    )
+                                )
+                        )
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            MediaImage(
+                                url = detail.image,
+                                contentDescription = detail.title,
+                                modifier = Modifier
+                                    .width(112.dp)
+                                    .height(164.dp),
+                                contentScale = ContentScale.Crop,
+                                shape = RoundedCornerShape(12.dp),
+                                fallbackIcon = Icons.Rounded.Movie
+                            )
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Spacer(Modifier.height(28.dp))
+                                Text(
+                                    text = detail.title ?: "Tanpa judul",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(10.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    AnimeRatingChip(detail.rating)
+                                    AnimeInfoChip(
+                                        detail.totalEpisodes?.let { "$it eps" } ?: "TV"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── Info ───────────────────────────────────────────
+                val info = detail.info
+                if (!info.isNullOrEmpty()) {
+                    item(key = "info") {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            info["Status"]?.let { AnimeInfoChip(it) }
+                            info["Tipe"]?.let { AnimeInfoChip(it) }
+                            info["Mulai"]?.let { AnimeInfoChip(it.take(10)) }
+                        }
+                    }
+                }
+
+                // ── Sinopsis ───────────────────────────────────────
+                val synopsis = detail.synopsis?.takeIf { it.isNotBlank() }
+                if (!synopsis.isNullOrBlank()) {
+                    item(key = "synopsis") {
+                        var expanded by remember(animeUrl) { mutableStateOf(false) }
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = "Sinopsis",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = synopsis,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = if (expanded) Int.MAX_VALUE else 5,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (synopsis.length > 160) {
+                                TextButton(onClick = { expanded = !expanded }) {
+                                    Text(
+                                        if (expanded) "Tutup" else "Selengkapnya",
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+                        )
+                    }
+                }
+
+                // ── Daftar episode ─────────────────────────────────
+                item(key = "episode_header") {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.PlayArrow,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Daftar Episode",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "${state.episodes.size}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (state.episodes.isEmpty()) {
+                    item(key = "episode_empty") {
+                        MediaEmptyState(
+                            title = "Episode belum tersedia",
+                            message = "Daftar episode untuk anime ini belum bisa dimuat.",
+                            icon = Icons.Rounded.Movie,
+                            actionLabel = "Coba Lagi",
+                            onAction = { viewModel.loadDetail(animeUrl) },
+                            modifier = Modifier.height(240.dp)
+                        )
+                    }
+                } else {
+                    items(
+                        items = state.episodes,
+                        key = { it.episodeUrl ?: it.episode ?: it.title ?: "" }
+                    ) { ep ->
+                        AnimeEpisodeRow(
+                            episode = ep,
+                            posterUrl = detail.image,
+                            onClick = { ep.episodeUrl?.let { onPlayEpisode(it) } }
+                        )
                     }
                 }
             }
-            item { Text("Daftar Episode", Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            items(state.episodes) { ep ->
-                ListItem(
-                    headlineContent = { Text(ep.title ?: "Episode ${ep.episode}") },
-                    leadingContent = { Icon(Icons.Rounded.PlayArrow, null) },
-                    modifier = Modifier.clickable {
-                        ep.episodeUrl?.let { onPlayEpisode(it) }
-                    }
+        }
+    }
+}
+
+/** Chip kecil untuk info anime (rating / jumlah episode). */
+@Composable
+fun AnimeInfoChip(text: String) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            maxLines = 1
+        )
+    }
+}
+
+/** Chip rating bintang untuk anime. */
+@Composable
+fun AnimeRatingChip(rating: Double?) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Star,
+                contentDescription = null,
+                tint = Color(0xFFFACC15),
+                modifier = Modifier.size(13.dp)
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = rating?.let { String.format("%.1f", it) } ?: "-",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+/**
+ * Baris episode bergaya YouTube: thumbnail + judul + nomor + durasi.
+ * Bila Nexadev tidak menyediakan thumbnail per-episode, dipakai poster anime.
+ */
+@Composable
+private fun AnimeEpisodeRow(
+    episode: AnimeEpisode,
+    posterUrl: String?,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(132.dp)
+                .height(78.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            MediaImage(
+                url = posterUrl,
+                contentDescription = episode.title,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+                shape = RoundedCornerShape(10.dp),
+                fallbackIcon = Icons.Rounded.Movie,
+                iconSize = 22.dp
+            )
+            // Overlay tombol play
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
                 )
-                Divider()
             }
+            // Badge nomor episode
+            episode.episode?.let { num ->
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(5.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color.Black.copy(alpha = 0.65f)
+                ) {
+                    Text(
+                        text = num,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = episode.title?.takeIf { it.isNotBlank() }
+                    ?: episode.episode?.let { "Episode $it" }
+                    ?: "Episode",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = episode.episode?.let { "Episode $it" } ?: "Putar",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

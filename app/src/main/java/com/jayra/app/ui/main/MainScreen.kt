@@ -734,7 +734,11 @@ private fun MainNavigationGraph(
                 },
                 onKomikClick = { slug ->
                     navController.navigate("komik_detail?slug=$slug")
-                }
+                },
+                onKomikSearchClick = { navController.navigate("komik_search") },
+                onKomikBookmarkClick = { navController.navigate("komik_bookmark") },
+                onKomikHistoryClick = { navController.navigate("komik_history") },
+                onKomikViewAllClick = { navController.navigate("komik_list") }
             )
         }
 
@@ -749,7 +753,8 @@ private fun MainNavigationGraph(
                 onPlayEpisode = { epUrl ->
                     val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                     navController.navigate("anime_player?url=$epEncoded")
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -880,6 +885,44 @@ private fun MainNavigationGraph(
         ) { backStackEntry ->
             val slug = backStackEntry.arguments?.getString("slug") ?: ""
             com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
+        }
+
+        composable("komik_list") {
+            com.jayra.app.ui.komik.KomikListScreen(
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("komik_search") {
+            com.jayra.app.ui.komik.KomikSearchScreen(
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("komik_bookmark") {
+            com.jayra.app.ui.komik.KomikBookmarkScreen(
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
+                },
+                onBack = { navController.popBackStack() },
+                onBrowseClick = { navController.popBackStack() }
+            )
+        }
+
+        composable("komik_history") {
+            com.jayra.app.ui.komik.KomikHistoryScreen(
+                onKomikClick = { slug ->
+                    navController.navigate("komik_detail?slug=$slug")
+                },
+                onBack = { navController.popBackStack() },
+                onBrowseClick = { navController.popBackStack() }
+            )
         }
 
         composable("archived_chats") {

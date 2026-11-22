@@ -25,7 +25,9 @@ data class AnimeUiState(
     val streamLoading: Boolean = false,
     /** Pesan bila stream tidak bisa diputar. */
     val streamError: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    /** Error khusus daftar anime di home. */
+    val homeError: String? = null
 )
 
 class AnimeViewModel : ViewModel() {
@@ -59,7 +61,8 @@ class AnimeViewModel : ViewModel() {
                         popular = popular,
                         ongoing = ongoing,
                         completed = completed,
-                        error = null
+                        error = null,
+                        homeError = null
                     )
                 } else {
                     // Susun pesan yang menyebutkan sebab konkret, bukan generik.
@@ -78,16 +81,19 @@ class AnimeViewModel : ViewModel() {
                         popular = emptyList(),
                         ongoing = emptyList(),
                         completed = emptyList(),
-                        error = "Gagal memuat daftar anime (HTTP $codes, daftar kosong)"
+                        error = "Gagal memuat daftar anime (HTTP $codes, daftar kosong)",
+                        homeError = "Gagal memuat daftar anime (HTTP $codes, daftar kosong)"
                     )
                 }
             } catch (e: Exception) {
                 // JANGAN telan exception: tampilkan sebab asli (mis. SSL / timeout).
                 Timber.e(e, "loadHome gagal: %s", e.javaClass.simpleName)
+                val msg = e.javaClass.simpleName + ": " +
+                    (e.localizedMessage ?: "Koneksi bermasalah")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.javaClass.simpleName + ": " +
-                        (e.localizedMessage ?: "Koneksi bermasalah")
+                    error = msg,
+                    homeError = msg
                 )
             }
         }

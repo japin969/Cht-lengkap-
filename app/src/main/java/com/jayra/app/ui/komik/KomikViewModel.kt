@@ -66,6 +66,27 @@ class KomikViewModel : ViewModel() {
         }
     }
 
+    /** Muat satu halaman daftar komik. */
+    fun loadPage(page: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val res = api.getKomikList(page = page)
+                val mapped = res.body()?.results.orEmpty()
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    latest = mapped,
+                    error = if (mapped.isEmpty()) "Daftar komik kosong" else null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.localizedMessage ?: "Koneksi bermasalah"
+                )
+            }
+        }
+    }
+
     fun retry() = loadHome()
 
     fun loadDetail(slug: String) {
@@ -152,7 +173,7 @@ class KomikViewModel : ViewModel() {
         lastSlug?.let { loadStream(it) }
     }
 
-    /** Pencarian komik (dipakai bila halaman search diaktifkan). */
+    /** Pencarian komik via Nexadev (`/komik?q=`). */
     suspend fun search(query: String): List<KomikItem> {
         if (query.isBlank()) return emptyList()
         return runCatching {
