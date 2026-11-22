@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -47,6 +48,7 @@ import com.jayra.app.ui.media.MediaEmptyState
 import com.jayra.app.ui.media.MediaErrorState
 import com.jayra.app.ui.media.CoverImage
 import com.jayra.app.ui.media.MediaLoading
+import com.jayra.app.ui.media.jellyClick
 import kotlinx.coroutines.delay
 
 /** Aksen warna untuk bagian komik. */
@@ -127,7 +129,11 @@ fun KomikHomeScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                Brush.verticalGradient(
+                    com.jayra.app.ui.media.MediaTheme.BackgroundGradient
+                )
+            )
     ) {
         KomikTopBar(
                 onBookmarkClick = onBookmarkClick,
@@ -540,26 +546,38 @@ fun SectionHeader(
 fun KomikCard(komik: KomikItem, onClick: (String) -> Unit) {
     Column(
         Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
             .background(Color.White)
             .shadow(
                 elevation = 2.dp,
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius),
                 ambientColor = Color.Black.copy(alpha = 0.08f),
                 spotColor = Color.Black.copy(alpha = 0.08f)
             )
-            .clickable { onClick(komik.slug ?: "") }
+            .jellyClick(onClick = { onClick(komik.slug ?: "") }, pressedScale = 0.96f)
     ) {
-        AsyncImage(
-            model = komik.cover,
-            contentDescription = komik.title,
+        // Lapisan placeholder di belakang gambar supaya tidak pernah putih polos.
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.7f)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.White),
-            contentScale = ContentScale.Crop
-        )
+                .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.MenuBook,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                modifier = Modifier.size(26.dp)
+            )
+            AsyncImage(
+                model = komik.cover,
+                contentDescription = komik.title,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
         Spacer(Modifier.height(5.dp))
         Text(
             komik.title ?: "",

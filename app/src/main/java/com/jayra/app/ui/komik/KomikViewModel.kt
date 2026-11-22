@@ -7,87 +7,174 @@ import com.jayra.app.data.KomikDetailResponse
 import com.jayra.app.data.KomikItem
 import com.jayra.app.data.KomikPage
 import com.jayra.app.data.NexadevApi
+import com.jayra.app.data.SankavollereiApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import timber.log.Timber
+
+/** Hasil satu sumber API komik. */
+data class KomikSourceResult(
+    val source: String,
+    val items: List<KomikItem>,
+    val error: String? = null
+) {
+    val ok: Boolean get() = error == null && items.isNotEmpty()
+}
 
 data class KomikUiState(
     val isLoading: Boolean = false,
     val latest: List<KomikItem> = emptyList(),
+    val popular: List<KomikItem> = emptyList(),
     val detail: KomikDetailResponse? = null,
     val chapters: List<KomikChapter> = emptyList(),
     val streamTitle: String? = null,
     val pages: List<KomikPage> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val detailError: String? = null,
+    val detailLoading: Boolean = false,
+    val homeError: String? = null,
+    /** Status per sumber, dipakai untuk banner "sebagian sumber gagal". */
+    val sources: List<KomikSourceResult> = emptyList()
 )
 
 class KomikViewModel : ViewModel() {
-    // Sumber data: Nexadev API (https://api.nexadev.my.id) — client & base URL
-    // yang sama persis dengan fitur Music yang sudah jalan di project ini.
-    private val api = NexadevApi.create()
+    // Sumber 1 (lama) — tetap dipakai.
+    private val nexadev = NexadevApi.create()
+    // Sumber 2 (baru) — ditambahkan di sampingnya.
+    private val sankavollerei = SankavollereiApi.create()
+
     private val _uiState = MutableStateFlow(KomikUiState())
     val uiState: StateFlow<KomikUiState> = _uiState
 
-    /** Slug terakhir yang diminta, dipakai untuk retry. */
+    /** Cache search agar query yang sama tidak menembak API berulang. */
+    private val searchCache = LinkedHashMap<String, List<KomikItem>>()
     private var lastSlug: String? = null
+    private var homeLoaded = false
 
     init { loadHome() }
 
-    fun loadHome() {
+    fun loadHome(force: Boolean = false) {
+        if (homeLoaded && !force) return
+        homeLoaded = true
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
+            // Kedua sumber dipanggil PARALEL.
+            val results = coroutineScope {
+                val a = async { fetchNexadevList() }
+                val b = async { fetchSankavollereiList() }
+                listOf(a.await(), b.await())
+            }
+            mergeHome(results)
+        }
+    }
+
+    private suspend fun fetchNexadevList(): KomikSourceResult {
+        return try {
+            val items = nexadev.getKomikList(page = 1).body()?.results.orEmpty()
+            KomikSourceResult(
+                source = "nexadev",
+                items = items,
+                error = if (items.isEmpty()) "kosong" else null
+            )
+        } catch (e: Exception) {
+            KomikSourceResult("nexadev", emptyList(), e.localizedMessage ?: "gagal")
+        }
+    }
+
+    private suspend fun fetchSankavollereiList(): KomikSourceResult {
+        return try {
+            val items = sankavollerei.comicLatest(page = 1, limit = 20)
+                .body()?.allItems.orEmpty().map { it.toItem() }
+            KomikSourceResult(
+                source = "sankavollerei",
+                items = items,
+                error = if (items.isEmpty()) "kosong" else null
+            )
+        } catch (e: Exception) {
+            KomikSourceResult("sankavollerei", emptyList(), e.localizedMessage ?: "gagal")
+        }
+    }
+
+    private fun mergeHome(results: List<KomikSourceResult>) {
+        val all = results.flatMap { it.items }
+            .distinctBy { it.slug ?: it.title }
+
+        val anyOk = results.any { it.ok }
+        val msgs = results.filter { !it.ok }.mapNotNull { r ->
+            r.error?.takeIf { it != "kosong" }?.let { "${r.source}: $it" }
+        }
+
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            latest = all,
+            popular = all,
+            sources = results,
+            homeError = if (anyOk || all.isNotEmpty()) null
+            else msgs.firstOrNull() ?: "Gagal memuat daftar komik"
+        )
+    }
+
+    /** Muat satu halaman daftar komik dari Nexadev. */
+    fun loadPage(page: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, homeError = null)
             try {
-                val res = api.getKomikList(page = 1)
-                val items = res.body()?.results.orEmpty()
-                if (items.isEmpty()) {
-                    Timber.e(
-                        "loadHome: daftar komik kosong. HTTP=%d body=%s",
-                        res.code(),
-                        res.errorBody()?.string()?.take(300).orEmpty()
-                    )
-                }
+                val items = nexadev.getKomikList(page = page).body()?.results.orEmpty()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     latest = items,
-                    error = if (items.isEmpty()) {
-                        "Gagal memuat daftar komik (HTTP ${res.code()}, daftar kosong)"
-                    } else null
+                    popular = items,
+                    homeError = if (items.isEmpty()) "Daftar komik kosong" else null
                 )
             } catch (e: Exception) {
-                // JANGAN telan exception: tampilkan sebab asli (mis. SSL / timeout).
-                Timber.e(e, "loadHome gagal: %s", e.javaClass.simpleName)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.javaClass.simpleName + ": " +
-                        (e.localizedMessage ?: "Koneksi bermasalah")
+                    homeError = e.localizedMessage ?: "Koneksi bermasalah"
                 )
             }
         }
     }
 
-    /** Muat satu halaman daftar komik. */
-    fun loadPage(page: Int) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            try {
-                val res = api.getKomikList(page = page)
-                val mapped = res.body()?.results.orEmpty()
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    latest = mapped,
-                    error = if (mapped.isEmpty()) "Daftar komik kosong" else null
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.localizedMessage ?: "Koneksi bermasalah"
-                )
-            }
-        }
+    fun retry() {
+        homeLoaded = false
+        loadHome(force = true)
     }
 
-    fun retry() = loadHome()
+    /**
+     * Pencarian PARALEL dari kedua sumber, hasil digabung, duplikat dibuang.
+     */
+    suspend fun search(query: String, force: Boolean = false): List<KomikItem> {
+        if (query.isBlank()) return emptyList()
+        val key = query.trim().lowercase()
+        if (!force) searchCache[key]?.let { return it }
+
+        val results = coroutineScope {
+            val a = async {
+                runCatching {
+                    nexadev.searchKomik(query.trim()).body()?.results.orEmpty()
+                }.getOrElse { emptyList() }
+            }
+            val b = async {
+                runCatching {
+                    sankavollerei.comicSearch(query.trim(), page = 1, limit = 20)
+                        .body()?.allItems.orEmpty().map { it.toItem() }
+                }.getOrElse { emptyList() }
+            }
+            listOf(a.await(), b.await())
+        }
+        val merged = results.flatten().distinctBy { it.slug ?: it.title }
+        searchCache[key] = merged
+        return merged
+    }
+
+    /** Versi tanpa cache (tombol coba lagi). */
+    suspend fun searchFresh(query: String): List<KomikItem> {
+        searchCache.remove(query.trim().lowercase())
+        return search(query, force = true)
+    }
 
     fun loadDetail(slug: String) {
         if (slug.isBlank()) {
@@ -100,30 +187,31 @@ class KomikViewModel : ViewModel() {
         lastSlug = slug
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            try {
-                val res = api.getKomikDetail(slug = slug, type = "detail")
-                val body = res.body()
-                val detailCode = res.code()
-                if (body != null && body.success == true) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        detail = body,
-                        chapters = body.chapters.orEmpty(),
-                        error = null
-                    )
-                } else {
-                    Timber.e("loadDetail: body null / sukses=false. HTTP=%d", detailCode)
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Gagal memuat detail komik (HTTP $detailCode)"
-                    )
+            val results = coroutineScope {
+                val a = async {
+                    runCatching { nexadev.getKomikDetail(slug = slug, type = "detail").body() }
+                        .getOrNull()
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "loadDetail gagal: %s", e.javaClass.simpleName)
+                val b = async {
+                    runCatching {
+                        sankavollerei.comicDetail(slug = slug).body()?.data
+                            ?.let { KomikDetailResponse(success = true, title = it.title, cover = it.bestCover, synopsis = it.plainSynopsis, chapters = it.allChapters.map { c -> KomikChapter(title = c.title, link = c.link ?: c.href, slug = c.slug) }) }
+                    }.getOrNull()
+                }
+                listOfNotNull(a.await(), b.await())
+            }
+            if (results.isNotEmpty()) {
+                val first = results.first()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.javaClass.simpleName + ": " +
-                        (e.localizedMessage ?: "Gagal memuat detail komik")
+                    detail = first,
+                    chapters = first.chapters.orEmpty(),
+                    error = null
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Gagal memuat detail komik"
                 )
             }
         }
@@ -144,28 +232,36 @@ class KomikViewModel : ViewModel() {
         lastSlug = slug
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            try {
-                val res = api.getKomikPages(slug = slug, type = "stream")
-                val body = res.body()
-                val pages = body?.pages.orEmpty()
+            // Coba Nexadev dulu, lalu Sankavollerei.
+            val nexadevResult = runCatching {
+                nexadev.getKomikPages(slug = slug, type = "stream").body()
+            }.getOrNull()
+            if (!nexadevResult?.pages.isNullOrEmpty()) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    streamTitle = body?.chapterTitle
-                        ?: body?.mangaTitle
+                    streamTitle = nexadevResult?.chapterTitle
+                        ?: nexadevResult?.mangaTitle
                         ?: _uiState.value.detail?.title,
-                    pages = pages,
-                    error = if (pages.isEmpty()) {
-                        "Halaman chapter tidak tersedia (HTTP ${res.code()})"
-                    } else null
+                    pages = nexadevResult?.pages.orEmpty(),
+                    error = null
                 )
-            } catch (e: Exception) {
-                Timber.e(e, "loadStream gagal: %s", e.javaClass.simpleName)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.javaClass.simpleName + ": " +
-                        (e.localizedMessage ?: "Gagal memuat chapter")
-                )
+                return@launch
             }
+
+            val sankaku = runCatching {
+                sankavollerei.comicChapter(segment = slug).body()?.data
+            }.getOrNull()
+            val pages = sankaku?.allPages.orEmpty().mapIndexed { i, url ->
+                KomikPage(page = i + 1, url = url)
+            }
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                streamTitle = sankaku?.title
+                    ?: sankaku?.chapter
+                    ?: _uiState.value.detail?.title,
+                pages = pages,
+                error = if (pages.isEmpty()) "Halaman chapter tidak tersedia" else null
+            )
         }
     }
 
@@ -173,11 +269,13 @@ class KomikViewModel : ViewModel() {
         lastSlug?.let { loadStream(it) }
     }
 
-    /** Pencarian komik via Nexadev (`/komik?q=`). */
-    suspend fun search(query: String): List<KomikItem> {
-        if (query.isBlank()) return emptyList()
-        return runCatching {
-            api.searchKomik(query.trim()).body()?.results.orEmpty()
-        }.getOrElse { emptyList() }
-    }
+    private fun com.jayra.app.data.SankavollereiComicItem.toItem(): KomikItem = KomikItem(
+        title = title,
+        link = link ?: href,
+        slug = slug,
+        cover = bestCover,
+        type = type,
+        latestChapter = latestChapter,
+        rating = rating
+    )
 }

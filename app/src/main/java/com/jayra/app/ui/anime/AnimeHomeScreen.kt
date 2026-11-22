@@ -14,11 +14,13 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.TrendingUp
+import com.jayra.app.ui.media.jellyClick
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -58,9 +60,15 @@ fun AnimeHomeScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Brush.verticalGradient(com.jayra.app.ui.media.MediaTheme.BackgroundGradient))
     ) {
         AnimeHomeTopBar(onSearchClick = onSearchClick)
+
+        // Banner sumber: menunjukkan API mana yang aktif.
+        val activeSources = state.sources.filter { it.ok }.map { it.source }
+        if (activeSources.isNotEmpty()) {
+            SourceBanner(sources = activeSources)
+        }
 
         Box(Modifier.fillMaxSize()) {
             val empty = state.ongoing.isEmpty() &&
@@ -379,15 +387,21 @@ fun AnimePosterCard(
     Column(
         modifier = Modifier
             .width(126.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
             .background(Color.White)
-            .clickable(onClick = onClick)
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius),
+                ambientColor = Color.Black.copy(alpha = 0.10f),
+                spotColor = Color.Black.copy(alpha = 0.10f)
+            )
+            .jellyClick(onClick = onClick, pressedScale = 0.96f)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.7f)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius))
                 .background(Color.White)
         ) {
             AnimePoster(
@@ -395,39 +409,43 @@ fun AnimePosterCard(
                 contentDescription = anime.title,
                 modifier = Modifier.matchParentSize(),
                 contentScale = ContentScale.Crop,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(com.jayra.app.ui.media.MediaTheme.CardRadius)
             )
-            // Rating badge
+            // Badge rating sebagai kaca di atas poster.
             enrichment?.rating?.let { r ->
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(6.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color.Black.copy(alpha = 0.62f)
+                        .padding(7.dp),
+                    shape = RoundedCornerShape(50),
+                    color = Color.Black.copy(alpha = 0.35f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        Color.White.copy(alpha = 0.22f)
+                    )
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Star,
                             contentDescription = null,
                             tint = Color(0xFFFACC15),
-                            modifier = Modifier.size(11.dp)
+                            modifier = Modifier.size(12.dp)
                         )
-                        Spacer(Modifier.width(2.dp))
+                        Spacer(Modifier.width(3.dp))
                         Text(
                             text = String.format("%.1f", r),
                             color = Color.White,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(7.dp))
         Text(
             text = anime.title ?: "Tanpa judul",
             style = MaterialTheme.typography.labelMedium,
@@ -435,17 +453,17 @@ fun AnimePosterCard(
             color = Color(0xFF111111),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 2.dp)
+            modifier = Modifier.padding(horizontal = 3.dp)
         )
         val genres = enrichment?.genres.orEmpty()
         if (genres.isNotEmpty()) {
             Text(
                 text = genres.take(2).joinToString(", "),
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF666666),
+                color = Color(0xFF5A5A5A),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 2.dp)
+                modifier = Modifier.padding(horizontal = 3.dp)
             )
         }
         if (showStatus) {
@@ -455,9 +473,38 @@ fun AnimePosterCard(
                 color = Color(0xFF555555),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 2.dp)
+                modifier = Modifier.padding(horizontal = 3.dp)
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(5.dp))
+    }
+}
+/**
+ * Banner kecil yang menunjukkan sumber API yang sedang aktif.
+ * Membuat jelas bahwa kedua sumber (Nexadev + Sankavollerei) dipakai.
+ */
+@Composable
+private fun SourceBanner(sources: List<String>) {
+    val label = sources.joinToString(" + ") { src ->
+        if (src.contains("nexadev", true)) "Nexadev" else "Sankavollerei"
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .size(6.dp)
+                .clip(RoundedCornerShape(50))
+                .background(Color(0xFF22C55E))
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = "Sumber: $label",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

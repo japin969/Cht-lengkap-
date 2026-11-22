@@ -23,7 +23,8 @@ data class AnimeSearchItem(
     @Json(name = "image") val image: String? = null,
     @Json(name = "latestEpisode") val latestEpisode: String? = null,
     @Json(name = "type") val type: String? = null,
-    @Json(name = "rating") val rating: String? = null
+    @Json(name = "rating") val rating: String? = null,
+    @Json(name = "status") val status: String? = null
 )
 
 @JsonClass(generateAdapter = true)
