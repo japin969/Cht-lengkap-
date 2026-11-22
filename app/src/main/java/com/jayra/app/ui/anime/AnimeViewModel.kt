@@ -8,6 +8,13 @@ import com.jayra.app.data.AnimeSearchItem
 import com.jayra.app.data.NexadevApi
 import com.jayra.app.data.SankavollereiAnimeItem
 import com.jayra.app.data.SankavollereiApi
+import com.jayra.app.data.SankavollereiAnimeHomeData
+import com.jayra.app.data.SankavollereiOploverzItem
+import com.jayra.app.data.SankavollereiOploverzDetail
+import com.jayra.app.data.SankavollereiNimegamiItem
+import com.jayra.app.data.SankavollereiNimegamiDetail
+import com.jayra.app.data.SankavollereiSamehadakuDetail
+import com.jayra.app.data.SankavollereiGenreItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -116,17 +123,75 @@ class AnimeViewModel : ViewModel() {
 
     private suspend fun fetchSankavollereiHome(): AnimeSourceResult {
         return try {
-            val home = sankavollerei.animeHome().body()
-            val ongoing = home?.data?.ongoing?.animeList.orEmpty().map { it.toItem() }
-            val completed = home?.data?.completed?.animeList.orEmpty().map { it.toItem() }
+            // Ambil SEMUA sumber anime Sankavollerei secara PARALEL.
+            val sources: List<List<AnimeSearchItem>> = coroutineScope {
+                val a = async {
+                    fetchHomeFromSankavollerei()
+                }
+                val b = async {
+                    fetchHomeFromSamehadaku()
+                }
+                val c = async {
+                    fetchHomeFromOploverz()
+                }
+                val d = async {
+                    fetchHomeFromNimegami()
+                }
+                listOf(a.await(), b.await(), c.await(), d.await())
+            }
+            val merged = sources.flatten().distinctBy { it.link ?: it.title }
             AnimeSourceResult(
                 source = "sankavollerei",
-                items = (ongoing + completed).distinctBy { it.link ?: it.title },
-                error = if (ongoing + completed == emptyList<AnimeSearchItem>())
-                    "kosong" else null
+                items = merged,
+                error = if (merged.isEmpty()) "kosong" else null
             )
         } catch (e: Exception) {
             AnimeSourceResult("sankavollerei", emptyList(), e.localizedMessage ?: "gagal")
+        }
+    }
+
+    private suspend fun fetchHomeFromSankavollerei(): List<AnimeSearchItem> {
+        val out: MutableList<AnimeSearchItem> = mutableListOf()
+        val data: SankavollereiAnimeHomeData? =
+            runCatching { sankavollerei.animeHome().body()?.data }.getOrNull()
+        if (data != null) {
+            data.ongoing?.animeList?.forEach { item: SankavollereiAnimeItem ->
+                out.add(item.toItem())
+            }
+            data.completed?.animeList?.forEach { item: SankavollereiAnimeItem ->
+                out.add(item.toItem())
+            }
+        }
+        return out
+    }
+
+    private suspend fun fetchHomeFromSamehadaku(): List<AnimeSearchItem> {
+        return try {
+            val items: List<SankavollereiAnimeItem>? =
+                sankavollerei.samehadakuHome().body()?.allItems
+            items?.map { item: SankavollereiAnimeItem -> item.toItem("Ongoing") } ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private suspend fun fetchHomeFromOploverz(): List<AnimeSearchItem> {
+        return try {
+            val items: List<SankavollereiOploverzItem>? =
+                sankavollerei.oploverzHome().body()?.allItems
+            items?.map { item: SankavollereiOploverzItem -> item.toItem() } ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private suspend fun fetchHomeFromNimegami(): List<AnimeSearchItem> {
+        return try {
+            val items: List<SankavollereiNimegamiItem>? =
+                sankavollerei.nimegamiHome().body()?.allItems
+            items?.map { item: SankavollereiNimegamiItem -> item.toItem() } ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
@@ -212,18 +277,26 @@ class AnimeViewModel : ViewModel() {
         lastAnimeUrl = url
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, detailError = null)
-            val data = coroutineScope {
+            val data: List<AnimeDetailData> = coroutineScope {
                 val a = async {
-                    runCatching { nexadev.getAnimeDetail(details = url).body()?.data }
-                        .getOrNull()
+                    try {
+                        nexadev.getAnimeDetail(details = url).body()?.data
+                    } catch (e: Exception) {
+                        null
+                    }
                 }
                 val b = async {
-                    runCatching {
+                    try {
                         sankavollerei.animeDetail(animeId = url.removePrefix("/anime/anime/"))
-                            .body()?.data?.toDetailData()
-                    }.getOrNull()
+                            .body()?.data?.asAnimeDetail()
+                    } catch (e: Exception) {
+                        null
+                    }
                 }
-                listOfNotNull(a.await(), b.await())
+                val c = async { fetchSamehadakuDetail(url) }
+                val d = async { fetchOploverzDetail(url) }
+                val e = async { fetchNimegamiDetail(url) }
+                listOfNotNull(a.await(), b.await(), c.await(), d.await(), e.await())
             }
             if (data.isNotEmpty()) {
                 val first = data.first()
@@ -253,6 +326,84 @@ class AnimeViewModel : ViewModel() {
             }
         }
     }
+
+    /** Detail samehadaku: slug diambil dari href. */
+    private suspend fun fetchSamehadakuDetail(url: String): AnimeDetailData? {
+        val slug = url.substringAfter("/anime/").substringAfter("samehadaku/anime/")
+            .ifBlank { url.substringAfterLast("/") }
+        return try {
+            sankavollerei.samehadakuDetail(slug = slug).body()?.data?.asAnimeDetail()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun fetchOploverzDetail(url: String): AnimeDetailData? {
+        val slug = url.substringAfter("oploverz/anime/").ifBlank { url.substringAfterLast("/") }
+        return try {
+            sankavollerei.oploverzDetail(slug = slug).body()?.data?.asAnimeDetail()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private suspend fun fetchNimegamiDetail(url: String): AnimeDetailData? {
+        val slug = url.substringAfter("nimegami/detail/").ifBlank { url.substringAfterLast("/") }
+        return try {
+            val resp = sankavollerei.nimegamiDetail(slug = slug).body()
+            resp?.detail?.asAnimeDetail()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun SankavollereiSamehadakuDetail.asAnimeDetail(): AnimeDetailData = AnimeDetailData(
+        title = title,
+        image = poster,
+        sinopsis = plainSynopsis,
+        rating = null,
+        totalEpisodes = episodeList?.size,
+        genres = genreNames,
+        info = buildMap { status?.let { put("Status", it) } },
+        episodes = episodeList.orEmpty().map { ep ->
+            AnimeEpisode(
+                episode = ep.eps?.toString(),
+                title = ep.title,
+                episodeUrl = ep.href ?: ep.episodeId
+            )
+        }
+    )
+
+    private fun SankavollereiOploverzDetail.asAnimeDetail(): AnimeDetailData = AnimeDetailData(
+        title = title,
+        image = poster,
+        sinopsis = synopsis,
+        rating = rating?.toDoubleOrNull(),
+        totalEpisodes = episodes?.toIntOrNull(),
+        genres = genres,
+        info = buildMap {
+            status?.let { put("Status", it) }
+            type?.let { put("Tipe", it) }
+        },
+        episodes = episode_list.orEmpty().map { ep ->
+            AnimeEpisode(
+                episode = ep.episode,
+                title = ep.title,
+                episodeUrl = ep.slug?.let { "/anime/oploverz/episode/$it" }
+            )
+        }
+    )
+
+    private fun SankavollereiNimegamiDetail.asAnimeDetail(): AnimeDetailData = AnimeDetailData(
+        title = title,
+        image = poster,
+        sinopsis = plainSynopsis,
+        rating = null,
+        totalEpisodes = episodeCount,
+        genres = genreNames,
+        info = info,
+        episodes = emptyList()
+    )
 
     fun retryDetail() {
         lastAnimeUrl?.let { loadDetail(it) }
@@ -309,30 +460,62 @@ class AnimeViewModel : ViewModel() {
         lastStreamEpisodeUrl?.let { loadStream(it) }
     }
 
-    /** Pencarian PARALEL dari kedua sumber, hasil digabung, duplikat dibuang. */
+    /** Pencarian PARALEL dari semua sumber, hasil digabung, duplikat dibuang. */
     suspend fun search(query: String, force: Boolean = false): List<AnimeSearchItem> {
         if (query.isBlank()) return emptyList()
         val key = query.trim().lowercase()
         if (!force) searchCache[key]?.let { return it }
 
+        val q = query.trim()
         val results = coroutineScope {
             val a = async {
                 runCatching {
-                    nexadev.searchAnime(query.trim()).body()?.data?.results.orEmpty()
+                    nexadev.searchAnime(q).body()?.data?.results.orEmpty()
                 }.getOrElse { emptyList() }
             }
             val b = async {
                 runCatching {
-                    sankavollerei.animeSearch(query.trim()).body()
-                        ?.data?.animeList.orEmpty().map { it.toItem() }
+                    sankavollerei.animeSearch(q).body()?.data?.animeList
+                        .orEmpty().map { it.toItem() }
                 }.getOrElse { emptyList() }
             }
-            listOf(a.await(), b.await())
+            val c = async {
+                runCatching {
+                    sankavollerei.samehadakuSearch(q).body()?.allItems
+                        .orEmpty().map { it.toItem("Ongoing") }
+                }.getOrElse { emptyList() }
+            }
+            val d = async {
+                runCatching {
+                    sankavollerei.oploverzSearch(q).body()?.allItems
+                        .orEmpty().map { it.toItem() }
+                }.getOrElse { emptyList() }
+            }
+            val e = async {
+                runCatching {
+                    sankavollerei.nimegamiSearch(q).body()?.allItems
+                        .orEmpty().map { it.toItem() }
+                }.getOrElse { emptyList() }
+            }
+            listOf(a.await(), b.await(), c.await(), d.await(), e.await())
         }
         val merged = results.flatten().distinctBy { it.link ?: it.title }
         searchCache[key] = merged
         return merged
     }
+
+    /** Genre list untuk filter (gabungan semua sumber). */
+    suspend fun loadGenres(): List<String> {
+        val fromSankaku = runCatching {
+            sankavollerei.samehadakuGenres().body()?.all?.mapNotNull { it.label }.orEmpty()
+        }.getOrElse { emptyList() }
+        return (fromSankaku + FALLBACK_GENRES).distinct()
+    }
+
+    private val FALLBACK_GENRES = listOf(
+        "Action", "Adventure", "Comedy", "Drama", "Fantasy",
+        "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural"
+    )
 
     /** Versi tanpa cache (tombol coba lagi). */
     suspend fun searchFresh(query: String): List<AnimeSearchItem> {
@@ -399,8 +582,33 @@ class AnimeViewModel : ViewModel() {
         status = status
     )
 
+    private fun SankavollereiAnimeItem.toItem(statusOverride: String): AnimeSearchItem =
+        toItem().let { if (it.status.isNullOrBlank()) it.copy(status = statusOverride) else it }
+
+    /** Oploverz memakai field `episode` (String) dan `oploverz_url`. */
+    private fun SankavollereiOploverzItem.toItem(): AnimeSearchItem = AnimeSearchItem(
+        title = title,
+        link = slug?.let { "/anime/oploverz/anime/$it" },
+        image = poster,
+        latestEpisode = episode,
+        type = type,
+        rating = rating,
+        status = status
+    )
+
+    /** Nimegami memakai `episode` sebagai label. */
+    private fun SankavollereiNimegamiItem.toItem(): AnimeSearchItem = AnimeSearchItem(
+        title = title,
+        link = slug?.let { "/anime/nimegami/detail/$it" },
+        image = poster,
+        latestEpisode = episode,
+        type = type,
+        rating = null,
+        status = status
+    )
+
     /** Konversi detail Sankavollerei ke model yang dipakai UI. */
-    private fun com.jayra.app.data.SankavollereiAnimeDetailData.toDetailData(): AnimeDetailData =
+    private fun com.jayra.app.data.SankavollereiAnimeDetailData.asAnimeDetail(): AnimeDetailData =
         AnimeDetailData(
             title = title,
             image = poster,

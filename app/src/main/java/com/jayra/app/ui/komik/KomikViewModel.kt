@@ -8,6 +8,10 @@ import com.jayra.app.data.KomikItem
 import com.jayra.app.data.KomikPage
 import com.jayra.app.data.NexadevApi
 import com.jayra.app.data.SankavollereiApi
+import com.jayra.app.data.SankavollereiComicItem
+import com.jayra.app.data.SankavollereiComicListResponse
+import com.jayra.app.data.SankavollereiComicDetailResponse2
+import com.jayra.app.data.SankavollereiComicChapterResponse2
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,16 +89,47 @@ class KomikViewModel : ViewModel() {
     }
 
     private suspend fun fetchSankavollereiList(): KomikSourceResult {
+        // Ambil SEMUA source komik Sankavollerei secara PARALEL.
+        val lists: List<List<KomikItem>> = coroutineScope {
+            val a = async { safeKomikList { sankavollerei.comicLatest(page = 1, limit = 20) } }
+            val b = async { safeKomikList { sankavollerei.comicPopular(page = 1, limit = 20) } }
+            val c = async { safeKomikList { sankavollerei.komikindoLatest(1) } }
+            val d = async { safeKomikList { sankavollerei.komikindoPopular(1) } }
+            val e = async { safeKomikList { sankavollerei.bacakomikLatest() } }
+            val f = async { safeKomikList { sankavollerei.bacakomikPopular() } }
+            val g = async { safeKomikList { sankavollerei.shinigamiLatest() } }
+            val h = async { safeKomikList { sankavollerei.mangasusukuLatest() } }
+            val i = async { safeKomikList { sankavollerei.kiryuuLatest() } }
+            val j = async { safeKomikList { sankavollerei.kiryuuPopular() } }
+            val k = async { safeKomikList { sankavollerei.komikstationHome() } }
+            val l = async { safeKomikList { sankavollerei.komikstationPopular() } }
+            val m = async { safeKomikList { sankavollerei.westmangaLatest() } }
+            val n = async { safeKomikList { sankavollerei.softkomikList() } }
+            val o = async { safeKomikList { sankavollerei.mangakitaList() } }
+            val p = async { safeKomikList { sankavollerei.maidHome() } }
+            listOf(a.await(), b.await(), c.await(), d.await(), e.await(), f.await(),
+                g.await(), h.await(), i.await(), j.await(), k.await(), l.await(),
+                m.await(), n.await(), o.await(), p.await())
+        }
+        val items = lists.flatten().distinctBy { it.slug ?: it.title }
+        return KomikSourceResult(
+            source = "sankavollerei",
+            items = items,
+            error = if (items.isEmpty()) "kosong" else null
+        )
+    }
+
+    private suspend fun safeKomikList(
+        block: suspend () -> retrofit2.Response<*>
+    ): List<KomikItem> {
         return try {
-            val items = sankavollerei.comicLatest(page = 1, limit = 20)
-                .body()?.allItems.orEmpty().map { it.toItem() }
-            KomikSourceResult(
-                source = "sankavollerei",
-                items = items,
-                error = if (items.isEmpty()) "kosong" else null
-            )
+            val body = block().body()
+            when (body) {
+                is SankavollereiComicListResponse -> body.allItems.map { it.toItem() }
+                else -> emptyList()
+            }
         } catch (e: Exception) {
-            KomikSourceResult("sankavollerei", emptyList(), e.localizedMessage ?: "gagal")
+            emptyList()
         }
     }
 
@@ -151,24 +186,56 @@ class KomikViewModel : ViewModel() {
         val key = query.trim().lowercase()
         if (!force) searchCache[key]?.let { return it }
 
-        val results = coroutineScope {
+        val q = query.trim()
+        // Semua sumber pencarian dipanggil PARALEL.
+        val results: List<List<KomikItem>> = coroutineScope {
             val a = async {
-                runCatching {
-                    nexadev.searchKomik(query.trim()).body()?.results.orEmpty()
-                }.getOrElse { emptyList() }
+                safeNexadevSearch { nexadev.searchKomik(q).body()?.results }
             }
             val b = async {
-                runCatching {
-                    sankavollerei.comicSearch(query.trim(), page = 1, limit = 20)
-                        .body()?.allItems.orEmpty().map { it.toItem() }
-                }.getOrElse { emptyList() }
+                safeSankaSearch { sankavollerei.comicSearch(q, page = 1, limit = 20).body()?.allItems }
             }
-            listOf(a.await(), b.await())
+            val c = async {
+                safeSankaSearch { sankavollerei.komikindoSearch(q, 1).body()?.allItems }
+            }
+            val d = async {
+                safeSankaSearch { sankavollerei.bacakomikSearch(q).body()?.allItems }
+            }
+            val e = async {
+                safeSankaSearch { sankavollerei.kiryuuSearch(q).body()?.allItems }
+            }
+            val f = async {
+                safeSankaSearch { sankavollerei.comicAdvancedSearch(q).body()?.allItems }
+            }
+            listOf(a.await(), b.await(), c.await(), d.await(), e.await(), f.await())
         }
         val merged = results.flatten().distinctBy { it.slug ?: it.title }
         searchCache[key] = merged
         return merged
     }
+
+    private suspend fun safeNexadevSearch(
+        block: suspend () -> List<KomikItem>?
+    ): List<KomikItem> {
+        return try {
+            block().orEmpty()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private suspend fun safeSankaSearch(
+        block: suspend () -> List<SankavollereiComicItem>?
+    ): List<KomikItem> {
+        return try {
+            block().orEmpty().map { it.toItem() }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun List<SankavollereiComicItem>.toKomikItems(): List<KomikItem> =
+        map { it.toItem() }
 
     /** Versi tanpa cache (tombol coba lagi). */
     suspend fun searchFresh(query: String): List<KomikItem> {
@@ -187,18 +254,15 @@ class KomikViewModel : ViewModel() {
         lastSlug = slug
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val results = coroutineScope {
-                val a = async {
-                    runCatching { nexadev.getKomikDetail(slug = slug, type = "detail").body() }
-                        .getOrNull()
-                }
-                val b = async {
-                    runCatching {
-                        sankavollerei.comicDetail(slug = slug).body()?.data
-                            ?.let { KomikDetailResponse(success = true, title = it.title, cover = it.bestCover, synopsis = it.plainSynopsis, chapters = it.allChapters.map { c -> KomikChapter(title = c.title, link = c.link ?: c.href, slug = c.slug) }) }
-                    }.getOrNull()
-                }
-                listOfNotNull(a.await(), b.await())
+            // Semua sumber detail dipanggil PARALEL.
+            val results: List<KomikDetailResponse> = coroutineScope {
+                val a = async { safeNexadevDetail { nexadev.getKomikDetail(slug, "detail").body() } }
+                val b = async { safeSankaDetail { sankavollerei.comicDetail(slug).body() } }
+                val c = async { safeSankaDetail { sankavollerei.komikindoDetail(slug).body() } }
+                val d = async { safeSankaDetail { sankavollerei.bacakomikDetail(slug).body() } }
+                val e = async { safeSankaDetail { sankavollerei.kiryuuDetail(slug).body() } }
+                val f = async { safeSankaDetail { sankavollerei.komikstationDetail(slug).body() } }
+                listOfNotNull(a.await(), b.await(), c.await(), d.await(), e.await(), f.await())
             }
             if (results.isNotEmpty()) {
                 val first = results.first()
@@ -217,6 +281,41 @@ class KomikViewModel : ViewModel() {
         }
     }
 
+    private suspend fun safeNexadevDetail(
+        block: suspend () -> KomikDetailResponse?
+    ): KomikDetailResponse? {
+        return try { block() } catch (e: Exception) { null }
+    }
+
+    /**
+     * Konversi response Sankavollerei (bentuk flat ATAU nested `data`)
+     * ke model yang dipakai UI.
+     */
+    private suspend fun safeSankaDetail(
+        block: suspend () -> SankavollereiComicDetailResponse2?
+    ): KomikDetailResponse? {
+        return try {
+            val body = block() ?: return null
+            val d = body.data
+            val chapters = body.allChapters.map { ch ->
+                KomikChapter(
+                    title = ch.label,
+                    link = ch.link ?: ch.href,
+                    slug = ch.slug
+                )
+            }
+            KomikDetailResponse(
+                success = true,
+                title = body.plainTitle,
+                cover = body.bestCover,
+                synopsis = body.plainSynopsis,
+                chapters = chapters
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun retryDetail() {
         lastSlug?.let { loadDetail(it) }
     }
@@ -232,36 +331,47 @@ class KomikViewModel : ViewModel() {
         lastSlug = slug
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            // Coba Nexadev dulu, lalu Sankavollerei.
-            val nexadevResult = runCatching {
-                nexadev.getKomikPages(slug = slug, type = "stream").body()
-            }.getOrNull()
-            if (!nexadevResult?.pages.isNullOrEmpty()) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    streamTitle = nexadevResult?.chapterTitle
-                        ?: nexadevResult?.mangaTitle
-                        ?: _uiState.value.detail?.title,
-                    pages = nexadevResult?.pages.orEmpty(),
-                    error = null
-                )
-                return@launch
-            }
-
-            val sankaku = runCatching {
-                sankavollerei.comicChapter(segment = slug).body()?.data
-            }.getOrNull()
-            val pages = sankaku?.allPages.orEmpty().mapIndexed { i, url ->
-                KomikPage(page = i + 1, url = url)
+            // Semua sumber chapter dipanggil PARALEL; sumber pertama yang
+            // punya halaman gambar yang dipakai.
+            val pages: List<KomikPage> = coroutineScope {
+                val a = async { safeNexadevPages(slug) }
+                val b = async { safeSankaPages { sankavollerei.comicChapter(slug).body() } }
+                val c = async { safeSankaPages { sankavollerei.komikindoChapter(slug).body() } }
+                val d = async { safeSankaPages { sankavollerei.bacakomikChapter(slug).body() } }
+                val e = async { safeSankaPages { sankavollerei.kiryuuChapter(slug).body() } }
+                val f = async { safeSankaPages { sankavollerei.komikstationChapter(slug).body() } }
+                listOf(a.await(), b.await(), c.await(), d.await(), e.await(), f.await())
+                    .firstOrNull { it.isNotEmpty() } ?: emptyList()
             }
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                streamTitle = sankaku?.title
-                    ?: sankaku?.chapter
-                    ?: _uiState.value.detail?.title,
+                streamTitle = _uiState.value.detail?.title,
                 pages = pages,
                 error = if (pages.isEmpty()) "Halaman chapter tidak tersedia" else null
             )
+        }
+    }
+
+    private suspend fun safeNexadevPages(slug: String): List<KomikPage> {
+        return try {
+            val body = nexadev.getKomikPages(slug = slug, type = "stream").body()
+            body?.pages.orEmpty()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /** Konversi response chapter Sankavollerei (flat atau nested) ke halaman. */
+    private suspend fun safeSankaPages(
+        block: suspend () -> SankavollereiComicChapterResponse2?
+    ): List<KomikPage> {
+        return try {
+            val body = block() ?: return emptyList()
+            body.allImages.mapIndexed { i, url ->
+                KomikPage(page = i + 1, url = url)
+            }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
