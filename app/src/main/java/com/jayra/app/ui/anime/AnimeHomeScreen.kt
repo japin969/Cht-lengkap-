@@ -5,8 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Movie
@@ -241,16 +240,29 @@ private fun AnimeRow(
     enrichment: Map<String, AnimeEnrichment>,
     onClick: (String) -> Unit
 ) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    // Grid 3 kolom — SCROLL VERTICAL saja, tanpa swipe horizontal.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        items(items, key = { it.link ?: it.title ?: "" }) { anime ->
-            AnimePosterCard(
-                anime = anime,
-                enrichment = enrichment[anime.link],
-                onClick = { onClick(anime.link ?: "") }
-            )
+        items.chunked(3).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { anime ->
+                    Box(Modifier.weight(1f)) {
+                        AnimePosterCard(
+                            anime = anime,
+                            enrichment = enrichment[anime.link],
+                            onClick = { onClick(anime.link ?: "") }
+                        )
+                    }
+                }
+                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+            }
         }
     }
 }

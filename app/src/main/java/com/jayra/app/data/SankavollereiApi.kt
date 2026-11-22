@@ -500,6 +500,10 @@ interface SankavollereiApi {
 
             val moshi = Moshi.Builder()
                 .addLast(KotlinJsonAdapterFactory())
+                // Beberapa endpoint Sankavollerei mengembalikan field `title`
+                // sebagai Int (nomor episode) dan sebagai String (judul).
+                // Adapter ini menerima keduanya tanpa menggagalkan parsing.
+                .add(JsonFlexibleString::class.java, FlexibleStringAdapter())
                 .build()
 
             return Retrofit.Builder()
@@ -823,8 +827,13 @@ data class SankavollereiOploverzItem(
 @JsonClass(generateAdapter = true)
 data class SankavollereiOploverzDetailResponse(
     val status: String? = null,
+    val source: String? = null,
+    val detail: SankavollereiOploverzDetail? = null,
+    /** Beberapa endpoint memakai `data`. */
     val data: SankavollereiOploverzDetail? = null
-)
+) {
+    val resolved: SankavollereiOploverzDetail? get() = detail ?: data
+}
 
 @JsonClass(generateAdapter = true)
 data class SankavollereiOploverzDetail(
@@ -835,8 +844,23 @@ data class SankavollereiOploverzDetail(
     val episodes: String? = null,
     val rating: String? = null,
     val synopsis: String? = null,
-    val genres: List<String>? = null,
+    /** genres bisa array of object {name,slug,url} atau array of string. */
+    val genres: List<SankavollereiOploverzGenre>? = null,
+    val info: Map<String, String>? = null,
     val episode_list: List<SankavollereiOploverzEpisodeItem>? = null
+) {
+    val plainSynopsis: String? get() = synopsis?.takeIf { it.isNotBlank() }
+    val genreNames: List<String> get() = genres.orEmpty().mapNotNull { it.name }
+    val ratingValue: Double? get() = rating?.toDoubleOrNull() ?: info?.get("score")?.toDoubleOrNull()
+    val episodeCount: Int? get() = episodes?.toIntOrNull() ?: info?.get("episodes")?.toIntOrNull()
+    val statusText: String? get() = status ?: info?.get("status")
+}
+
+@JsonClass(generateAdapter = true)
+data class SankavollereiOploverzGenre(
+    val name: String? = null,
+    val slug: String? = null,
+    val url: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -844,7 +868,9 @@ data class SankavollereiOploverzEpisodeItem(
     val title: String? = null,
     val slug: String? = null,
     val episode: String? = null,
-    val date: String? = null
+    val date: String? = null,
+    val release_date: String? = null,
+    val url: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -928,13 +954,40 @@ data class SankavollereiSamehadakuDetail(
     val title: String? = null,
     val poster: String? = null,
     val status: String? = null,
-    val synopsis: String? = null,
+    val synopsis: SankavollereiSynopsisText? = null,
     val genres: List<SankavollereiGenreRef>? = null,
-    val episodeList: List<SankavollereiEpisodeItem>? = null
+    val episodeList: List<SankavollereiSamehadakuEpisode>? = null
 ) {
     val genreNames: List<String> get() = genres.orEmpty().mapNotNull { it.title }
-    val plainSynopsis: String? get() = synopsis?.takeIf { it.isNotBlank() }
+    val plainSynopsis: String? get() = synopsis?.plain
 }
+
+/** Samehadaku: synopsis berupa objek {paragraphs:[...]}. */
+@JsonClass(generateAdapter = true)
+data class SankavollereiSynopsisText(
+    val paragraphs: List<String>? = null
+) {
+    val plain: String?
+        get() = paragraphs?.filter { it.isNotBlank() }?.joinToString("\n\n")
+}
+
+/** Samehadaku episode: `title` bisa Int (nomor episode). */
+@JsonClass(generateAdapter = true)
+data class SankavollereiSamehadakuEpisode(
+    val title: JsonFlexibleString? = null,
+    val episodeId: String? = null,
+    val href: String? = null,
+    val samehadakuUrl: String? = null
+) {
+    val plainTitle: String? get() = title?.value
+}
+
+/**
+ * Menerima string ATAU angka dari JSON (field `title` di beberapa source
+ * mengembalikan nomor episode sebagai Int).
+ */
+@JsonClass(generateAdapter = true)
+data class JsonFlexibleString(val value: String? = null)
 
 @JsonClass(generateAdapter = true)
 data class SankavollereiGenreRef(
@@ -1076,3 +1129,33 @@ data class SankavollereiScheduleDay(
     val day: String? = null,
     val anime_list: List<SankavollereiAnimeItem>? = null
 )
+
+/**
+ * Adapter Moshi untuk field yang bisa berupa String ATAU Int.
+ * Dipakai oleh [JsonFlexibleString].
+ */
+private class FlexibleStringAdapter : com.squareup.moshi.JsonAdapter<JsonFlexibleString>() {
+    override fun fromJson(reader: com.squareup.moshi.JsonReader): JsonFlexibleString? {
+        return when (reader.peek()) {
+            com.squareup.moshi.JsonReader.Token.STRING ->
+                JsonFlexibleString(reader.nextString())
+            com.squareup.moshi.JsonReader.Token.NUMBER ->
+                JsonFlexibleString(reader.nextString())
+            com.squareup.moshi.JsonReader.Token.NULL -> {
+                reader.nextNull<Any?>()
+                null
+            }
+            else -> {
+                reader.skipValue()
+                null
+            }
+        }
+    }
+
+    override fun toJson(
+        writer: com.squareup.moshi.JsonWriter,
+        value: JsonFlexibleString?
+    ) {
+        if (value == null) writer.nullValue() else writer.value(value.value)
+    }
+}

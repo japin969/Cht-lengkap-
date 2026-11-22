@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
@@ -28,13 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import coil.compose.LocalImageLoader
 import com.jayra.app.data.KomikItem
 import com.jayra.app.data.MediaLibraryStore
 import com.jayra.app.ui.media.MediaEmptyState
 import com.jayra.app.ui.media.MediaErrorState
 import com.jayra.app.ui.media.MediaLoading
-import com.jayra.app.ui.media.createMediaImageLoader
 import kotlinx.coroutines.delay
 
 /**
@@ -49,15 +48,12 @@ private fun KomikSubPageScaffold(
     onBack: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
-    val loader = remember(context) { createMediaImageLoader(context) }
-    CompositionLocalProvider(LocalImageLoader provides loader) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            Surface(color = MaterialTheme.colorScheme.background) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Surface(color = MaterialTheme.colorScheme.background) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -99,7 +95,6 @@ private fun KomikSubPageScaffold(
             }
             Box(Modifier.fillMaxSize()) { content() }
         }
-    }
 }
 
 /** Daftar semua komik (grid) + pencarian. */
@@ -201,6 +196,9 @@ fun KomikSearchScreen(
     var searchError by remember { mutableStateOf<String?>(null) }
     var hasSearched by remember { mutableStateOf(false) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var history by remember { mutableStateOf(MediaLibraryStore.searchHistory(context, "komik")) }
+
     LaunchedEffect(query) {
         if (query.isBlank()) {
             hasSearched = false
@@ -221,6 +219,9 @@ fun KomikSearchScreen(
         searchError = outcome.second
         searching = false
         hasSearched = true
+        // Baru di sini history disimpan (pencarian benar-benar dijalankan).
+        MediaLibraryStore.recordSearch(context, "komik", query.trim())
+        history = MediaLibraryStore.searchHistory(context, "komik")
     }
 
     KomikSubPageScaffold(title = "Cari Komik", onBack = onBack) {
@@ -261,6 +262,61 @@ fun KomikSearchScreen(
                         Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 24.dp)
                     ) {
+                        if (history.isNotEmpty()) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Pencarian Terakhir",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(start = 16.dp)
+                                    )
+                                    TextButton(onClick = {
+                                        MediaLibraryStore.clearSearchHistory(context, "komik")
+                                        history = emptyList()
+                                    }) { Text("Hapus Semua") }
+                                }
+                            }
+                            items(history, key = { it }) { h ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            query = h
+                                            MediaLibraryStore.recordSearch(context, "komik", h)
+                                            history = MediaLibraryStore.searchHistory(context, "komik")
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 9.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.History,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        text = h,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    TextButton(onClick = {
+                                        MediaLibraryStore.removeSearch(context, "komik", h)
+                                        history = MediaLibraryStore.searchHistory(context, "komik")
+                                    }) { Text("Hapus", style = MaterialTheme.typography.labelMedium) }
+                                }
+                            }
+                            item { Spacer(Modifier.height(8.dp)) }
+                        }
                         item {
                             SectionHeader(
                                 title = "Rekomendasi",

@@ -1,123 +1,75 @@
 package com.jayra.app.ui.media
 
-import android.content.Context
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BrokenImage
-import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil.ImageLoader
-import coil.compose.SubcomposeAsyncImage
-import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 
 /**
- * Utilitas gambar untuk screen Komik & Anime.
+ * UI kit media (Komik + Anime) — iOS-inspired, native Compose.
  *
- * Tujuan utama: TIDAK ADA gambar yang tampil sebagai kotak kosong / blank.
- *  - loading  -> shimmer + ikon
- *  - error    -> ikon fallback + tombol coba lagi
- *  - sukses   -> gambar asli dari Nexadev
- *
- * Selain itu, URL dari Nexadev yang memakai proxy WordPress (`i0/i1/i2/i3.wp.com`)
- * dicoba bergantian antar host bila salah satu gagal di jaringan pengguna.
+ * Prinsip:
+ *  - Poster/cover WAJIB gambar asli (Coil). Placeholder hanya saat loading/error.
+ *  - Tidak ada blur berat. Hanya alpha + scale (ringan, 60fps).
+ *  - Tidak ada dependency baru.
  */
 
-private val WP_HOSTS = listOf("i0.wp.com", "i1.wp.com", "i2.wp.com", "i3.wp.com")
+/** Token warna iOS untuk media. */
+object MediaUiTheme {
+    val CardRadius: Dp = 18.dp
+    val ChipRadius: Dp = 50.dp
+    val AccentAnime = Color(0xFF22C55E)
+    val AccentKomik = Color(0xFFF97316)
 
-/**
- * Buat daftar kandidat URL. Bila URL adalah proxy WordPress, hasilkan varian
- * untuk setiap host proxy. Bila bukan, kembalikan URL apa adanya.
- */
-fun wpCandidates(url: String?): List<String> {
-    if (url.isNullOrBlank()) return emptyList()
-    val match = Regex("^https?://i\\d\\.wp\\.com/(.+)$").find(url)
-    return if (match != null) {
-        val path = match.groupValues[1]
-        WP_HOSTS.map { "https://$it/$path" }
-    } else {
-        listOf(url)
-    }
+    /** Gradasi latar — menghindari putih polos. */
+    val PageBackground: List<Color>
+        @Composable get() = listOf(
+            MaterialTheme.colorScheme.background,
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            MaterialTheme.colorScheme.background
+        )
 }
 
 /**
- * ImageLoader khusus media (anime) — TIDAK mengubah konfigurasi global app.
- * Dipasang lewat CompositionLocalProvider(LocalImageLoader provides ...) hanya
- * di screen anime.
+ * Gambar dengan placeholder native.
  *
- * Bukan bypass SSL: OkHttp default + trust store sistem, hanya menambah
- * User-Agent (seperti browser) dan retry koneksi.
- */
-fun createMediaImageLoader(context: Context): ImageLoader {
-    val client = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .retryOnConnectionFailure(true)
-        .addInterceptor { chain ->
-            val request = chain.request().newBuilder()
-                .header("User-Agent", MEDIA_USER_AGENT)
-                .header(
-                    "Accept",
-                    "image/avif,image/webp,image/jpeg,image/png,image/*,*/*;q=0.8"
-                )
-                .build()
-            chain.proceed(request)
-        }
-        .build()
-
-    return ImageLoader.Builder(context)
-        .okHttpClient(client)
-        .crossfade(true)
-        .allowHardware(true)
-        .build()
-}
-
-private const val MEDIA_USER_AGENT =
-    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
-
-/**
- * Gambar dengan placeholder native + retry antar host CDN.
+ * - loading -> ikon + background lembut
+ * - error   -> ikon BrokenImage
+ * - sukses  -> gambar asli
+ *
+ * Memakai AsyncImage biasa (bukan Subcompose) agar request dimulai segera
+ * (bukan kotak putih).
  */
 @Composable
 fun MediaImage(
@@ -125,122 +77,251 @@ fun MediaImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    shape: Shape = RoundedCornerShape(12.dp),
-    fallbackIcon: ImageVector = Icons.Rounded.BrokenImage,
-    iconSize: Dp = 30.dp,
-    showRetry: Boolean = true
+    shape: Shape = RoundedCornerShape(MediaUiTheme.CardRadius),
+    fallbackIcon: ImageVector = Icons.Rounded.Image,
+    iconSize: Dp = 30.dp
 ) {
-    val candidates = remember(url) { wpCandidates(url) }
-    var attempt by remember(url) { mutableIntStateOf(0) }
-    val currentIndex = attempt.coerceAtMost(candidates.lastIndex.coerceAtLeast(0))
-    val current = candidates.getOrNull(currentIndex)
-
     Box(
         modifier = modifier
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        if (current == null) {
-            FallbackContent(fallbackIcon, iconSize)
+        if (url.isNullOrBlank()) {
+            Icon(
+                imageVector = fallbackIcon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                modifier = Modifier.size(iconSize)
+            )
         } else {
-            SubcomposeAsyncImage(
-                model = current,
+            // Placeholder statis (ikon) di belakang. AsyncImage biasa dipakai
+            // supaya request MULAI SEGERA saat item pertama di-compose — tidak
+            // menunggu di-scroll. SubcomposeAsyncImage dihindari karena
+            // menunda request sampai item benar-benar di-layout, sehingga
+            // poster tampil putih sampai user menggeser.
+            Icon(
+                imageVector = fallbackIcon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f),
+                modifier = Modifier.size(iconSize)
+            )
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(url)
+                    .crossfade(false)
+                    .build(),
                 contentDescription = contentDescription,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.matchParentSize(),
                 contentScale = contentScale,
-                loading = {
-                    ShimmerContent(iconSize = iconSize)
-                },
-                error = {
-                    val hasNext = currentIndex < candidates.lastIndex
-                    if (hasNext && showRetry) {
-                        // Coba host proxy berikutnya secara otomatis.
-                        LaunchedEffect(current) { attempt = currentIndex + 1 }
-                    }
-                    FallbackContent(fallbackIcon, iconSize)
-                }
+                imageLoader = LocalMediaImageLoader.current
             )
         }
     }
 }
 
-/** Versi ringkas tanpa shimmer (untuk daftar panjang). */
+/** App bar iOS: back + judul + action. */
 @Composable
-fun SimpleMediaImage(
-    url: String?,
-    contentDescription: String?,
+fun MediaTopBar(
+    title: String,
     modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Crop,
-    shape: Shape = RoundedCornerShape(12.dp),
-    fallbackIcon: ImageVector = Icons.Rounded.Image,
-    iconSize: Dp = 28.dp
-) = MediaImage(
-    url = url,
-    contentDescription = contentDescription,
-    modifier = modifier,
-    contentScale = contentScale,
-    shape = shape,
-    fallbackIcon = fallbackIcon,
-    iconSize = iconSize,
-    showRetry = false
-)
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {}
+) {
+    Surface(color = MaterialTheme.colorScheme.background, modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(56.dp)
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (onBack != null) {
+                JellyIconButton(
+                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = "Kembali",
+                    onClick = onBack
+                )
+            } else {
+                Spacer(Modifier.width(8.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+            actions()
+        }
+    }
+}
 
+/** Tombol ikon dengan animasi jelly. */
 @Composable
-private fun ShimmerContent(iconSize: Dp) {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val progress by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1100, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmer_progress"
-    )
-    val base = MaterialTheme.colorScheme.surfaceVariant
-    val highlight = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
+fun JellyIconButton(
+    icon: ImageVector,
+    contentDescription: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    active: Boolean = false
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale = remember { Animatable(1f) }
+
+    LaunchedEffect(pressed) {
+        scale.animateTo(
+            if (pressed) 0.88f else 1f,
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        )
+    }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(base, highlight, base),
-                    start = androidx.compose.ui.geometry.Offset(
-                        -400f + progress * 800f,
-                        -400f + progress * 800f
-                    ),
-                    end = androidx.compose.ui.geometry.Offset(
-                        progress * 800f,
-                        progress * 800f
-                    )
-                )
-            ),
+        modifier = modifier
+            .size(48.dp)
+            .graphicsLayer { scaleX = scale.value; scaleY = scale.value }
+            .clip(CircleShape)
+            .clickable(interactionSource = interaction, indication = null) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Rounded.Image,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f),
-            modifier = Modifier.size(iconSize)
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (active) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface
         )
     }
 }
 
+/** Chip info. */
 @Composable
-private fun FallbackContent(icon: ImageVector, iconSize: Dp) {
-    Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
-        modifier = Modifier.size(iconSize)
-    )
+fun MediaChip(
+    text: String,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(MediaUiTheme.ChipRadius),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = tint,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            maxLines = 1
+        )
+    }
 }
 
-/**
- * Empty state sederhana untuk daftar media.
- */
+/** Chip filter yang bisa dipilih. */
+@Composable
+fun MediaFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale = remember { Animatable(1f) }
+
+    LaunchedEffect(pressed) {
+        scale.animateTo(
+            if (pressed) 0.92f else 1f,
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+        )
+    }
+
+    Surface(
+        modifier = modifier
+            .graphicsLayer { scaleX = scale.value; scaleY = scale.value }
+            .clip(RoundedCornerShape(MediaUiTheme.ChipRadius))
+            .clickable(interactionSource = interaction, indication = null) { onClick() },
+        shape = RoundedCornerShape(MediaUiTheme.ChipRadius),
+        color = if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
+            maxLines = 1
+        )
+    }
+}
+
+/** Header section. */
+@Composable
+fun MediaSectionHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
+        if (actionLabel != null && onAction != null) {
+            Text(
+                text = actionLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable(onClick = onAction)
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+/** Loading state. */
+@Composable
+fun MediaLoading(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator()
+    }
+}
+
+/** Empty state. */
 @Composable
 fun MediaEmptyState(
     title: String,
@@ -251,31 +332,29 @@ fun MediaEmptyState(
     onAction: (() -> Unit)? = null
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(32.dp),
+        modifier = modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(50))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                .size(76.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(32.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(34.dp)
             )
         }
         Spacer(Modifier.height(16.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
         if (!message.isNullOrBlank()) {
@@ -289,54 +368,77 @@ fun MediaEmptyState(
         }
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(20.dp))
-            androidx.compose.material3.Button(onClick = onAction) { Text(actionLabel) }
+            Button(onClick = onAction) { Text(actionLabel) }
         }
     }
 }
-/** Indikator loading tengah layar. */
-@Composable
-fun MediaLoading(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator()
-    }
-}
 
-/** Error state dengan tombol coba lagi. */
+/** Error state + Retry. */
 @Composable
 fun MediaErrorState(
     message: String?,
     modifier: Modifier = Modifier,
     title: String = "Gagal memuat",
-    onRetry: (() -> Unit)? = null,
-    retryLabel: String = "Coba Lagi"
+    onRetry: (() -> Unit)? = null
 ) {
     MediaEmptyState(
         title = title,
         modifier = modifier,
         message = message?.takeIf { it.isNotBlank() }
             ?: "Koneksi bermasalah. Periksa jaringan lalu coba lagi.",
-        icon = Icons.Rounded.CloudOff,
-        actionLabel = if (onRetry != null) retryLabel else null,
+        icon = Icons.Rounded.ErrorOutline,
+        actionLabel = if (onRetry != null) "Coba Lagi" else null,
         onAction = onRetry
     )
 }
 
+// ═══════════════════════════════════════════════════════════════
+// DEDUPLICATION
+// ═══════════════════════════════════════════════════════════════
 
 /**
- * Cover gambar dengan placeholder native.
- * Dipakai untuk hero / banner yang butuh fallback ikon.
+ * Kunci dedup longgar: judul dinormalisasi + slug/id.
+ * Judul dibersihkan dari prefix "Komik " dan tanda baca.
  */
+fun normalizeKey(title: String?): String {
+    return title
+        ?.removePrefix("Komik ")
+        ?.lowercase()
+        ?.replace(Regex("[^a-z0-9]+"), "")
+        ?: ""
+}
+
+/**
+ * Gabungkan beberapa list, buang duplikat.
+ * Bila judul sama, item dengan data lebih lengkap (image/cover terisi) diprioritaskan.
+ */
+fun <T> mergeDedupe(
+    lists: List<List<T>>,
+    keyOf: (T) -> String,
+    scoreOf: (T) -> Int
+): List<T> {
+    val best = LinkedHashMap<String, T>()
+    lists.flatten().forEach { item ->
+        val key = keyOf(item)
+        if (key.isBlank()) return@forEach
+        val existing = best[key]
+        if (existing == null || scoreOf(item) > scoreOf(existing)) {
+            best[key] = item
+        }
+    }
+    return best.values.toList()
+}
+
+/** Alias untuk kompatibilitas: NetworkImage = MediaImage. */
 @Composable
-fun CoverImage(
+fun NetworkImage(
     url: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    shape: Shape = RoundedCornerShape(12.dp),
-    fallbackIcon: ImageVector = Icons.Rounded.Image
+    fallbackIcon: ImageVector = Icons.Rounded.Image,
+    iconSize: Dp = 30.dp,
+    shape: Shape = RoundedCornerShape(MediaUiTheme.CardRadius)
 ) = MediaImage(
     url = url,
     contentDescription = contentDescription,
@@ -344,6 +446,26 @@ fun CoverImage(
     contentScale = contentScale,
     shape = shape,
     fallbackIcon = fallbackIcon,
-    iconSize = 28.dp,
-    showRetry = false
+    iconSize = iconSize
 )
+
+/**
+ * Tombol ikon bulat dengan animasi jelly (alias [JellyIconButton]).
+ * Disediakan di sini agar dapat dipakai baik oleh Komik maupun Anime.
+ */
+@Composable
+fun MediaIconButton(
+    icon: ImageVector,
+    contentDescription: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    active: Boolean = false
+) {
+    JellyIconButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+        active = active
+    )
+}

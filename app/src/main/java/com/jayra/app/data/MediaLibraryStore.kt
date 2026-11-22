@@ -18,6 +18,7 @@ object MediaLibraryStore {
     private const val PREFS = "jayra_media_library"
     private const val KEY_BOOKMARK = "bookmark_v1"
     private const val KEY_HISTORY = "history_v1"
+    private const val KEY_SEARCH = "search_v1"
 
     /** Entri library (bookmark / history). */
     data class Entry(
@@ -117,4 +118,102 @@ object MediaLibraryStore {
     }
 
     private const val MAX_HISTORY = 200
+
+    // ═══════════════════════════════════════════════════════════════
+    // SEARCH HISTORY
+    //
+    // ATURAN: history HANYA tersimpan ketika user benar-benar
+    // menekan tombol Cari / Enter, atau mengklik salah satu hasil.
+    // Mengetik saja TIDAK PERNAH menyimpan history.
+    // ═══════════════════════════════════════════════════════════════
+
+    /** Riwayat pencarian untuk satu fitur ("anime" / "komik"). */
+    fun searchHistory(context: Context, kind: String): List<String> {
+        return runCatching {
+            val raw = prefs(context).getString(KEY_SEARCH, null) ?: return emptyList()
+            SearchHistoryStore.fromJson(raw)
+                .filter { it.kind == kind }
+                .map { it.query }
+        }.getOrElse { emptyList() }
+    }
+
+    /** Simpan query. HANYA dipanggil dari aksi eksplisit. */
+    fun recordSearch(context: Context, kind: String, query: String) {
+        val q = query.trim()
+        if (q.isEmpty()) return
+        val all = runCatching {
+            SearchHistoryStore.fromJson(prefs(context).getString(KEY_SEARCH, null))
+        }.getOrElse { emptyList() }.toMutableList()
+
+        all.removeAll { it.kind == kind && it.query.equals(q, ignoreCase = true) }
+        all.add(0, SearchHistoryEntry(kind = kind, query = q, at = System.currentTimeMillis()))
+
+        runCatching {
+            prefs(context).edit()
+                .putString(KEY_SEARCH, SearchHistoryStore.toJson(all.take(MAX_SEARCH_HISTORY)))
+                .apply()
+        }
+    }
+
+    fun removeSearch(context: Context, kind: String, query: String) {
+        val all = runCatching {
+            SearchHistoryStore.fromJson(prefs(context).getString(KEY_SEARCH, null))
+        }.getOrElse { emptyList() }.toMutableList()
+        all.removeAll { it.kind == kind && it.query.equals(query, ignoreCase = true) }
+        runCatching {
+            prefs(context).edit().putString(KEY_SEARCH, SearchHistoryStore.toJson(all)).apply()
+        }
+    }
+
+    fun clearSearchHistory(context: Context, kind: String) {
+        val all = runCatching {
+            SearchHistoryStore.fromJson(prefs(context).getString(KEY_SEARCH, null))
+        }.getOrElse { emptyList() }.toMutableList()
+        all.removeAll { it.kind == kind }
+        runCatching {
+            prefs(context).edit().putString(KEY_SEARCH, SearchHistoryStore.toJson(all)).apply()
+        }
+    }
+
+    fun clearAllSearchHistory(context: Context) {
+        runCatching { prefs(context).edit().remove(KEY_SEARCH).apply() }
+    }
+
+    private const val MAX_SEARCH_HISTORY = 30
+
+    data class SearchHistoryEntry(
+        val kind: String = "",
+        val query: String = "",
+        val at: Long = 0L
+    )
+
+    /** Serialisasi JSON via org.json (tersedia di Android). */
+    private object SearchHistoryStore {
+        fun toJson(items: List<SearchHistoryEntry>): String {
+            val arr = org.json.JSONArray()
+            items.forEach { e ->
+                arr.put(org.json.JSONObject().apply {
+                    put("kind", e.kind)
+                    put("query", e.query)
+                    put("at", e.at)
+                })
+            }
+            return arr.toString()
+        }
+
+        fun fromJson(raw: String?): List<SearchHistoryEntry> {
+            if (raw.isNullOrBlank()) return emptyList()
+            return runCatching {
+                val arr = org.json.JSONArray(raw)
+                (0 until arr.length()).map { i ->
+                    val o = arr.getJSONObject(i)
+                    SearchHistoryEntry(
+                        kind = o.optString("kind"),
+                        query = o.optString("query"),
+                        at = o.optLong("at")
+                    )
+                }
+            }.getOrElse { emptyList() }
+        }
+    }
 }

@@ -3,11 +3,9 @@ package com.jayra.app.ui.anime
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -261,14 +259,24 @@ private fun AnimeDetailContent(
         val genres = detail.genres.orEmpty()
         if (genres.isNotEmpty()) {
             item(key = "genres") {
-                Row(
+                // Wrap 3 per baris — tanpa scroll horizontal.
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScrollCompat()
                         .padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    genres.forEach { g -> AnimeInfoChip(g) }
+                    genres.chunked(3).forEach { rowGenres ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowGenres.forEach { g ->
+                                AnimeInfoChip(g)
+                            }
+                            repeat(3 - rowGenres.size) { Spacer(Modifier.width(0.dp)) }
+                        }
+                    }
                 }
             }
         }
@@ -357,18 +365,44 @@ private fun AnimeDetailContent(
                 )
             }
             item(key = "rec_row") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(popular, key = { it.link ?: it.title ?: "" }) { anime ->
+                AnimeGridRows(
+                    items = popular,
+                    enrichment = enrichment,
+                    onClick = onAnimeClick
+                )
+            }
+        }
+    }
+}
+
+/** Grid 3 kolom (scroll vertical, tanpa swipe). */
+@Composable
+private fun AnimeGridRows(
+    items: List<AnimeSearchItem>,
+    enrichment: Map<String, AnimeEnrichment>,
+    onClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        items.chunked(3).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { anime ->
+                    Box(Modifier.weight(1f)) {
                         AnimePosterCard(
                             anime = anime,
                             enrichment = enrichment[anime.link],
-                            onClick = { onAnimeClick(anime.link ?: "") }
+                            onClick = { onClick(anime.link ?: "") }
                         )
                     }
                 }
+                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -481,10 +515,6 @@ fun AnimeEpisodeRow(
 }
 
 /** Baris genre yang bisa di-scroll horizontal. */
-@Composable
-private fun Modifier.horizontalScrollCompat(): Modifier =
-    this.then(horizontalScroll(rememberScrollState()))
-
 // ═══════════════════════════════════════════════════════════════════
 // PLAYER — YouTube-style, native ExoPlayer
 // ═══════════════════════════════════════════════════════════════════
@@ -948,18 +978,11 @@ fun AnimePlayerScreen(
                 )
             }
             item(key = "rec_row") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(recommendations, key = { it.link ?: it.title ?: "" }) { anime ->
-                        AnimePosterCard(
-                            anime = anime,
-                            enrichment = enrichment[anime.link],
-                            onClick = { onAnimeClick(anime.link ?: "") }
-                        )
-                    }
-                }
+                AnimeGridRows(
+                    items = recommendations,
+                    enrichment = enrichment,
+                    onClick = onAnimeClick
+                )
             }
         }
     }

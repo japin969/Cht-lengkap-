@@ -15,6 +15,8 @@ import com.jayra.app.data.SankavollereiNimegamiItem
 import com.jayra.app.data.SankavollereiNimegamiDetail
 import com.jayra.app.data.SankavollereiSamehadakuDetail
 import com.jayra.app.data.SankavollereiGenreItem
+import com.jayra.app.ui.media.mergeDedupe
+import com.jayra.app.ui.media.normalizeKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -196,24 +198,36 @@ class AnimeViewModel : ViewModel() {
     }
 
     private fun mergeHome(results: List<AnimeSourceResult>) {
-        val all = results.flatMap { it.items }
-            .distinctBy { it.link ?: it.title }
+        // Dedup longgar: judul dinormalisasi (tanpa spasi/karakter aneh).
+        // Item dengan image terisi diprioritaskan.
+        val all = mergeDedupe(
+            lists = results.map { it.items },
+            keyOf = { normalizeKey(it.title) },
+            scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
+        )
 
-        // Ongoing / completed dipisah berdasarkan sumber asalnya, tapi
-        // digabung antar sumber tanpa duplikat.
-        val ongoing = buildList {
-            addAll(results.firstOrNull { it.source == "nexadev" }
-                ?.items?.filter { it.status.equals("Ongoing", true) }.orEmpty())
-            addAll(results.firstOrNull { it.source == "sankavollerei" }
-                ?.items?.filter { it.status.equals("Ongoing", true) }.orEmpty())
-        }.distinctBy { it.link ?: it.title }
+        // Ongoing / completed dipisah berdasarkan status, tanpa duplikat.
+        val ongoing = mergeDedupe(
+            lists = listOf(
+                results.firstOrNull { it.source == "nexadev" }
+                    ?.items?.filter { it.status.equals("Ongoing", true) }.orEmpty(),
+                results.firstOrNull { it.source == "sankavollerei" }
+                    ?.items?.filter { it.status.equals("Ongoing", true) }.orEmpty()
+            ),
+            keyOf = { normalizeKey(it.title) },
+            scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
+        )
 
-        val completed = buildList {
-            addAll(results.firstOrNull { it.source == "nexadev" }
-                ?.items?.filter { !it.status.equals("Ongoing", true) }.orEmpty())
-            addAll(results.firstOrNull { it.source == "sankavollerei" }
-                ?.items?.filter { !it.status.equals("Ongoing", true) }.orEmpty())
-        }.distinctBy { it.link ?: it.title }
+        val completed = mergeDedupe(
+            lists = listOf(
+                results.firstOrNull { it.source == "nexadev" }
+                    ?.items?.filter { !it.status.equals("Ongoing", true) }.orEmpty(),
+                results.firstOrNull { it.source == "sankavollerei" }
+                    ?.items?.filter { !it.status.equals("Ongoing", true) }.orEmpty()
+            ),
+            keyOf = { normalizeKey(it.title) },
+            scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
+        )
 
         val popular = all
         val recent = all
@@ -367,8 +381,8 @@ class AnimeViewModel : ViewModel() {
         info = buildMap { status?.let { put("Status", it) } },
         episodes = episodeList.orEmpty().map { ep ->
             AnimeEpisode(
-                episode = ep.eps?.toString(),
-                title = ep.title,
+                episode = ep.episodeId?.substringAfterLast("-") ?: ep.plainTitle,
+                title = ep.plainTitle,
                 episodeUrl = ep.href ?: ep.episodeId
             )
         }
@@ -377,19 +391,19 @@ class AnimeViewModel : ViewModel() {
     private fun SankavollereiOploverzDetail.asAnimeDetail(): AnimeDetailData = AnimeDetailData(
         title = title,
         image = poster,
-        sinopsis = synopsis,
-        rating = rating?.toDoubleOrNull(),
-        totalEpisodes = episodes?.toIntOrNull(),
-        genres = genres,
+        sinopsis = plainSynopsis,
+        rating = ratingValue,
+        totalEpisodes = episodeCount,
+        genres = genreNames,
         info = buildMap {
-            status?.let { put("Status", it) }
+            statusText?.let { put("Status", it) }
             type?.let { put("Tipe", it) }
         },
         episodes = episode_list.orEmpty().map { ep ->
             AnimeEpisode(
                 episode = ep.episode,
                 title = ep.title,
-                episodeUrl = ep.slug?.let { "/anime/oploverz/episode/$it" }
+                episodeUrl = ep.url ?: ep.slug?.let { "/anime/oploverz/episode/$it" }
             )
         }
     )
@@ -499,7 +513,11 @@ class AnimeViewModel : ViewModel() {
             }
             listOf(a.await(), b.await(), c.await(), d.await(), e.await())
         }
-        val merged = results.flatten().distinctBy { it.link ?: it.title }
+        val merged = mergeDedupe(
+            lists = results,
+            keyOf = { normalizeKey(it.title) },
+            scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
+        )
         searchCache[key] = merged
         return merged
     }

@@ -10,6 +10,8 @@ import com.jayra.app.data.NexadevApi
 import com.jayra.app.data.SankavollereiApi
 import com.jayra.app.data.SankavollereiComicItem
 import com.jayra.app.data.SankavollereiComicListResponse
+import com.jayra.app.ui.media.mergeDedupe
+import com.jayra.app.ui.media.normalizeKey
 import com.jayra.app.data.SankavollereiComicDetailResponse2
 import com.jayra.app.data.SankavollereiComicChapterResponse2
 import kotlinx.coroutines.async
@@ -111,7 +113,11 @@ class KomikViewModel : ViewModel() {
                 g.await(), h.await(), i.await(), j.await(), k.await(), l.await(),
                 m.await(), n.await(), o.await(), p.await())
         }
-        val items = lists.flatten().distinctBy { it.slug ?: it.title }
+        val items = mergeDedupe(
+            lists = lists,
+            keyOf = { normalizeKey(it.title) },
+            scoreOf = { if (it.cover.isNullOrBlank()) 0 else 1 }
+        )
         return KomikSourceResult(
             source = "sankavollerei",
             items = items,
@@ -209,7 +215,11 @@ class KomikViewModel : ViewModel() {
             }
             listOf(a.await(), b.await(), c.await(), d.await(), e.await(), f.await())
         }
-        val merged = results.flatten().distinctBy { it.slug ?: it.title }
+        val merged = mergeDedupe(
+            lists = results,
+            keyOf = { normalizeKey(it.title) },
+            scoreOf = { if (it.cover.isNullOrBlank()) 0 else 1 }
+        )
         searchCache[key] = merged
         return merged
     }

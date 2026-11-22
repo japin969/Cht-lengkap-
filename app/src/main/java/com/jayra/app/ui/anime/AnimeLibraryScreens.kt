@@ -1,7 +1,7 @@
 package com.jayra.app.ui.anime
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,11 +13,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jayra.app.data.AnimeSearchItem
+import com.jayra.app.data.MediaLibraryStore
 
 /**
  * Halaman pendukung Anime: List, Search, Bookmark.
@@ -101,47 +104,56 @@ fun AnimeFilterRow(
     onSortChange: (AnimeSort) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    // Wrap ke baris berikutnya kalau tidak muat — TIDAK ada scroll horizontal.
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        AnimeFilterChip(
-            label = "Semua",
-            selected = status == null,
-            onClick = { onStatusChange(null) }
-        )
-        AnimeFilterChip(
-            label = "Ongoing",
-            selected = status == AnimeStatus.ONGOING,
-            onClick = { onStatusChange(AnimeStatus.ONGOING) }
-        )
-        AnimeFilterChip(
-            label = "Completed",
-            selected = status == AnimeStatus.COMPLETED,
-            onClick = { onStatusChange(AnimeStatus.COMPLETED) }
-        )
-        AnimeFilterChip(
-            label = "Populer",
-            selected = status == AnimeStatus.POPULAR,
-            onClick = { onStatusChange(AnimeStatus.POPULAR) }
-        )
-        AnimeFilterChip(
-            label = sort.label,
-            selected = true,
-            onClick = {
-                onSortChange(
-                    when (sort) {
-                        AnimeSort.TERBARU -> AnimeSort.TERPOPULER
-                        AnimeSort.TERPOPULER -> AnimeSort.AZ
-                        AnimeSort.AZ -> AnimeSort.TERBARU
-                    }
-                )
-            }
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AnimeFilterChip(
+                label = "Semua",
+                selected = status == null,
+                onClick = { onStatusChange(null) }
+            )
+            AnimeFilterChip(
+                label = "Ongoing",
+                selected = status == AnimeStatus.ONGOING,
+                onClick = { onStatusChange(AnimeStatus.ONGOING) }
+            )
+            AnimeFilterChip(
+                label = "Completed",
+                selected = status == AnimeStatus.COMPLETED,
+                onClick = { onStatusChange(AnimeStatus.COMPLETED) }
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AnimeFilterChip(
+                label = "Populer",
+                selected = status == AnimeStatus.POPULAR,
+                onClick = { onStatusChange(AnimeStatus.POPULAR) }
+            )
+            AnimeFilterChip(
+                label = sort.label,
+                selected = true,
+                onClick = {
+                    onSortChange(
+                        when (sort) {
+                            AnimeSort.TERBARU -> AnimeSort.TERPOPULER
+                            AnimeSort.TERPOPULER -> AnimeSort.AZ
+                            AnimeSort.AZ -> AnimeSort.TERBARU
+                        }
+                    )
+                }
+            )
+        }
     }
 }
 
@@ -300,6 +312,10 @@ fun AnimeSearchScreen(
     var status by remember { mutableStateOf<AnimeStatus?>(null) }
     var sort by remember { mutableStateOf(AnimeSort.TERBARU) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var history by remember { mutableStateOf(MediaLibraryStore.searchHistory(context, "anime")) }
+
+    // Debounce pencarian. Mengetik SAJA tidak menyimpan history.
     LaunchedEffect(query) {
         if (query.isBlank()) {
             hasSearched = false
@@ -320,6 +336,9 @@ fun AnimeSearchScreen(
         searchError = outcome.second
         searching = false
         hasSearched = true
+        // History HANYA disimpan setelah pencarian benar-benar dijalankan.
+        MediaLibraryStore.recordSearch(context, "anime", query.trim())
+        history = MediaLibraryStore.searchHistory(context, "anime")
     }
 
     // Filter status hanya berlaku bila datanya tersedia di sumber lokal.
@@ -392,11 +411,77 @@ fun AnimeSearchScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
+                        item(key = "hdr") {
+                            Text(
+                                text = "Rekomendasi",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
+                        if (history.isNotEmpty()) {
+                            item(key = "hist_hdr") {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Pencarian Terakhir",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    TextButton(onClick = {
+                                        MediaLibraryStore.clearSearchHistory(context, "anime")
+                                        history = emptyList()
+                                    }) { Text("Hapus Semua") }
+                                }
+                            }
+                            items(history, key = { it }) { h ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            query = h
+                                            // Klik history = aksi eksplisit, simpan lagi.
+                                            MediaLibraryStore.recordSearch(context, "anime", h)
+                                            history = MediaLibraryStore.searchHistory(context, "anime")
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.History,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = h,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    TextButton(onClick = {
+                                        MediaLibraryStore.removeSearch(context, "anime", h)
+                                        history = MediaLibraryStore.searchHistory(context, "anime")
+                                    }) { Text("Hapus", style = MaterialTheme.typography.labelMedium) }
+                                }
+                            }
+                            item(key = "hist_gap") { Spacer(Modifier.height(8.dp)) }
+                        }
                         items(filtered, key = { it.link ?: it.title ?: "" }) { anime ->
                             AnimePosterCard(
                                 anime = anime,
                                 enrichment = enrichment[anime.link],
-                                onClick = { onAnimeClick(anime.link ?: "") }
+                                onClick = {
+                                    // Klik hasil = aksi eksplisit, simpan history.
+                                    MediaLibraryStore.recordSearch(context, "anime", query)
+                                    onAnimeClick(anime.link ?: "")
+                                }
                             )
                         }
                     }

@@ -2,7 +2,6 @@ package com.jayra.app.ui.komik
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
@@ -46,7 +45,7 @@ import coil.compose.AsyncImage
 import com.jayra.app.data.KomikItem
 import com.jayra.app.ui.media.MediaEmptyState
 import com.jayra.app.ui.media.MediaErrorState
-import com.jayra.app.ui.media.CoverImage
+import com.jayra.app.ui.media.NetworkImage
 import com.jayra.app.ui.media.MediaLoading
 import com.jayra.app.ui.media.jellyClick
 import kotlinx.coroutines.delay
@@ -323,34 +322,43 @@ fun KomikSearchField(
     }
 }
 
-/** Baris filter yang bisa di-scroll horizontal. */
+/** Baris filter (wrap, tanpa scroll horizontal). */
 @Composable
 private fun FilterRow(
     selected: KomikFilter,
-    onSelect: (KomikFilter) -> Unit
+    onSelect: (KomikFilter) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
+    // Dua baris wrap — tanpa scroll horizontal.
+    Column(
+        modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        KomikFilter.entries.forEach { filter ->
-            FilterChip(
-                selected = selected == filter,
-                onClick = { onSelect(filter) },
-                label = { Text(filter.label) },
-                leadingIcon = if (selected == filter) {
-                    {
-                        Icon(
-                            imageVector = Icons.Rounded.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                } else null
-            )
+        val all = KomikFilter.entries.toList()
+        all.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowItems.forEach { filter ->
+                    FilterChip(
+                        selected = selected == filter,
+                        onClick = { onSelect(filter) },
+                        label = { Text(filter.label) },
+                        leadingIcon = if (selected == filter) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else null
+                    )
+                }
+            }
         }
     }
 }
@@ -441,7 +449,7 @@ private fun KomikHero(komik: KomikItem, onClick: (String) -> Unit) {
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable { onClick(komik.slug ?: "") }
     ) {
-        CoverImage(
+        NetworkImage(
             url = komik.cover,
             contentDescription = komik.title,
             modifier = Modifier.matchParentSize(),

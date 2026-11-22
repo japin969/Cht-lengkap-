@@ -536,6 +536,15 @@ private fun MainNavigationGraph(
         }
     }
 
+    val mediaLoader = remember(navController.context.applicationContext) {
+        com.jayra.app.ui.media.MediaImageLoaderProvider.get(
+            navController.context.applicationContext
+        )
+    }
+
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.jayra.app.ui.media.LocalMediaImageLoader provides mediaLoader
+    ) {
     NavHost(
         navController = navController,
         startDestination = MainViewModel.ROUTE_SPLASH,
@@ -792,7 +801,7 @@ private fun MainNavigationGraph(
                 onAnimeClick = { other ->
                     val encoded = java.net.URLEncoder.encode(other, "UTF-8")
                     navController.navigate("anime_detail?url=$encoded") {
-                        popUpTo("anime_detail") { inclusive = true }
+                        popUpTo("anime_detail?url={url}") { inclusive = true }
                         launchSingleTop = true
                     }
                 }
@@ -805,11 +814,19 @@ private fun MainNavigationGraph(
         ) { backStackEntry ->
             val url = backStackEntry.arguments?.getString("url") ?: ""
             val decoded = java.net.URLDecoder.decode(url, "UTF-8")
+            // Ambil ViewModel dari parent (detail) bila ada. Bila tidak ada
+            // (mis. deep link), jangan crash — pakai VM baru.
             val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry("anime_detail?url={url}")
+                runCatching {
+                    navController.getBackStackEntry("anime_detail?url={url}")
+                }.getOrNull()
             }
             val vm: com.jayra.app.ui.anime.AnimeViewModel =
-                androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner = parentEntry)
+                if (parentEntry != null) {
+                    androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner = parentEntry)
+                } else {
+                    androidx.lifecycle.viewmodel.compose.viewModel()
+                }
             val state by vm.uiState.collectAsState()
             val enrichment by vm.enrichment.collectAsState()
             LaunchedEffect(decoded) { vm.loadStream(decoded) }
@@ -856,7 +873,7 @@ private fun MainNavigationGraph(
                             episodes.getOrNull(currentIndex - 1)?.episodeUrl?.let { epUrl ->
                                 val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                                 navController.navigate("anime_player?url=$epEncoded") {
-                                    popUpTo("anime_player") { inclusive = true }
+                                    popUpTo("anime_player?url={url}") { inclusive = true }
                                     launchSingleTop = true
                                 }
                             }
@@ -865,7 +882,7 @@ private fun MainNavigationGraph(
                             episodes.getOrNull(currentIndex + 1)?.episodeUrl?.let { epUrl ->
                                 val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                                 navController.navigate("anime_player?url=$epEncoded") {
-                                    popUpTo("anime_player") { inclusive = true }
+                                    popUpTo("anime_player?url={url}") { inclusive = true }
                                     launchSingleTop = true
                                 }
                             }
@@ -877,14 +894,14 @@ private fun MainNavigationGraph(
                         onEpisodeClick = { epUrl ->
                             val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
                             navController.navigate("anime_player?url=$epEncoded") {
-                                popUpTo("anime_player") { inclusive = true }
+                                popUpTo("anime_player?url={url}") { inclusive = true }
                                 launchSingleTop = true
                             }
                         },
                         onAnimeClick = { other ->
                             val encoded = java.net.URLEncoder.encode(other, "UTF-8")
                             navController.navigate("anime_detail?url=$encoded") {
-                                popUpTo("anime_detail") { inclusive = true }
+                                popUpTo("anime_detail?url={url}") { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
@@ -939,7 +956,8 @@ private fun MainNavigationGraph(
                 slug = slug,
                 onChapterClick = { chapterSlug ->
                     navController.navigate("komik_reader?slug=$chapterSlug")
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -948,7 +966,10 @@ private fun MainNavigationGraph(
             arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
         ) { backStackEntry ->
             val slug = backStackEntry.arguments?.getString("slug") ?: ""
-            com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
+            com.jayra.app.ui.komik.KomikReaderScreen(
+                slug = slug,
+                onBack = { navController.popBackStack() }
+            )
         }
 
         composable("komik_list") {
@@ -1438,6 +1459,7 @@ private fun MainNavigationGraph(
                 }
             )
         }
+    }
     }
 }
 
