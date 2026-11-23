@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.NexadevApi
 import com.jayra.app.data.DeezerApi
 import com.jayra.app.data.DeezerTrack
+import com.jayra.app.data.RavyMusicApi
+import com.jayra.app.data.RavySong
 import com.jayra.app.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -34,7 +36,8 @@ sealed interface MusicUiState {
 class MusicViewModel @JvmOverloads constructor(
     application: Application,
     private val nexadevApi: NexadevApi = NexadevApi.create(),
-    private val deezerApi: DeezerApi = DeezerApi.create()
+    private val deezerApi: DeezerApi = DeezerApi.create(),
+    private val ravyApi: RavyMusicApi = RavyMusicApi.create()
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Empty)
@@ -130,36 +133,44 @@ class MusicViewModel @JvmOverloads constructor(
         lastQuery = query
         _uiState.value = MusicUiState.Loading
         try {
-            // Sumber data baru: Deezer (API lama api.nexadev.my.id sudah mati / 403).
+            // Sumber utama: Rayy Music (search + full mp3). 20 hasil/query.
+            val ravyResp = withContext(Dispatchers.IO) { ravyApi.search(query) }
+            val ravySongs = ravyResp.body()?.result?.songs.orEmpty().map { it.toSong() }
+            if (ravySongs.isNotEmpty()) {
+                _uiState.value = MusicUiState.Success(ravySongs)
+                addHistory(query)
+                return
+            }
+            // Fallback: Deezer.
             val response = withContext(Dispatchers.IO) { deezerApi.search(query) }
-            val tracks = response.body()?.data.orEmpty()
-            val songs = tracks.map { it.toSong() }
+            val songs = response.body()?.data.orEmpty().map { it: com.jayra.app.data.DeezerTrack -> it.toSong() }
             if (songs.isNotEmpty()) {
                 _uiState.value = MusicUiState.Success(songs)
                 addHistory(query)
-            } else {
-                val fallback = curatedSongs.filter {
-                    it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true)
-                }
-                _uiState.value = if (fallback.isNotEmpty()) {
-                    MusicUiState.Success(fallback)
-                } else {
-                    MusicUiState.Empty
-                }
+                return
             }
-        } catch (e: Exception) {
             val fallback = curatedSongs.filter {
                 it.title.contains(query, ignoreCase = true) ||
                     it.artist.contains(query, ignoreCase = true)
             }
-            _uiState.value = if (fallback.isNotEmpty()) {
-                MusicUiState.Success(fallback)
-            } else {
-                MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
-            }
+            _uiState.value = if (fallback.isNotEmpty()) MusicUiState.Success(fallback)
+            else MusicUiState.Empty
+        } catch (e: Exception) {
+            _uiState.value = MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
         }
     }
+
+    /** Konversi lagu Rayy -> Song (audio di-resolve saat play). */
+    private fun RavySong.toSong(): Song = Song(
+        id = "ravy_" + (videoId ?: System.currentTimeMillis().toString()),
+        title = title ?: "Tanpa Judul",
+        artist = artist ?: "Unknown",
+        album = album ?: "",
+        duration = duration ?: "0:00",
+        coverUrl = thumbnail ?: "",
+        audioUrl = "",
+        source = "ravy"
+    )
 
     private fun DeezerTrack.toSong(): Song = Song(
         id = "dz_${id ?: System.currentTimeMillis()}",
@@ -224,10 +235,34 @@ class MusicViewModel @JvmOverloads constructor(
         releasePlayer()
 
         if (song.audioUrl.isBlank()) {
-            _isPlaying.value = false
+            // Lagu Rayy: resolve mp3 dulu via ytplay (paralel, async).
+            viewModelScope.launch {
+                val url = resolveRavyAudio(song)
+                if (url != null) {
+                    playResolved(song, url)
+                } else {
+                    _isPlaying.value = false
+                }
+            }
             return
         }
+        playResolved(song, song.audioUrl)
+    }
 
+    /** Resolve URL mp3 dari Rayy ytplay. */
+    private suspend fun resolveRavyAudio(song: Song): String? = try {
+        // cari videoId dari id "ravy_<videoId>"
+        val vid = song.id.removePrefix("ravy_")
+        val ytUrl = "https://music.youtube.com/watch?v=" + vid
+        val resp = withContext(Dispatchers.IO) {
+            ravyApi.ytPlay(com.jayra.app.data.RavyYtPlayRequest(ytUrl))
+        }
+        resp.body()?.result?.download?.audio
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun playResolved(song: Song, audioUrl: String) {
         try {
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
@@ -236,7 +271,7 @@ class MusicViewModel @JvmOverloads constructor(
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build()
                 )
-                setDataSource(song.audioUrl)
+                setDataSource(audioUrl)
                 setOnPreparedListener { mp ->
                     mp.start()
                     _isPlaying.value = true
