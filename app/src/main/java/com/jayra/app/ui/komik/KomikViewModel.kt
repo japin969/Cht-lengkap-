@@ -63,7 +63,12 @@ class KomikViewModel : ViewModel() {
     private var lastSlug: String? = null
     private var homeLoaded = false
 
-    init { loadHome() }
+    init {
+        HomeCache.state?.let { c ->
+            _uiState.value = c.copy(isLoading = true)
+        }
+        loadHome()
+    }
 
     fun loadHome(force: Boolean = false) {
         if (homeLoaded && !force) return
@@ -122,19 +127,17 @@ class KomikViewModel : ViewModel() {
                 async { safeKomikList { sankavollerei.bacakomikLatest() } },
                 async { safeKomikList { sankavollerei.shinigamiLatest() } },
                 async { safeKomikList { sankavollerei.mangasusukuLatest() } },
-                async { safeKomikList { sankavollerei.kiryuuLatest() } },
                 async { safeKomikList { sankavollerei.komikstationHome() } },
-                async { safeKomikList { sankavollerei.westmangaLatest() } },
-                async { safeKomikList { sankavollerei.softkomikList() } },
                 async { safeKomikList { sankavollerei.mangakitaList() } },
-                async { safeKomikList { sankavollerei.maidHome() } }
+                // maid/home kosong -> pakai maid/latest (15 item).
+                async { safeKomikList { sankavollerei.maidLatest() } }
             )
             val popular = listOf(
                 async { safeKomikList { sankavollerei.comicPopular(page = 1, limit = 20) } },
                 async { safeKomikList { sankavollerei.komikindoPopular(1) } },
                 async { safeKomikList { sankavollerei.bacakomikPopular() } },
-                async { safeKomikList { sankavollerei.kiryuuPopular() } },
-                async { safeKomikList { sankavollerei.komikstationPopular() } }
+                async { safeKomikList { sankavollerei.komikstationPopular() } },
+                async { safeKomikList { sankavollerei.mangasusukuPopular() } }
             )
             latestLists = latest.map { it.await() }
             popularLists = popular.map { it.await() }
@@ -200,6 +203,11 @@ class KomikViewModel : ViewModel() {
             homeError = if (anyOk || all.isNotEmpty()) null
             else msgs.firstOrNull() ?: "Gagal memuat daftar komik"
         )
+        HomeCache.state = _uiState.value.copy(isLoading = false)
+    }
+
+    object HomeCache {
+        @Volatile var state: KomikUiState? = null
     }
 
     /** Muat satu halaman daftar komik dari Nexadev. */

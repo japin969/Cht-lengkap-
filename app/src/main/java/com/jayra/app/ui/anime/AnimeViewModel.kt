@@ -111,7 +111,23 @@ class AnimeViewModel : ViewModel() {
     private var lastStreamEpisodeUrl: String? = null
     private var homeLoaded = false
 
-    init { loadHome() }
+    init {
+        // Tampilkan cache home KEMARIN dulu (instan) kalau ada, lalu refresh.
+        HomeCache.sections?.let { cached ->
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                ongoing = cached.ongoing,
+                popular = cached.popular,
+                completed = cached.completed,
+                recent = cached.recent,
+                topRated = cached.topRated,
+                recommendations = cached.recommendations,
+                genres = cached.genres,
+                homeError = null
+            )
+        }
+        loadHome()
+    }
 
     fun loadHome(force: Boolean = false) {
         if (homeLoaded && !force) return
@@ -304,6 +320,13 @@ class AnimeViewModel : ViewModel() {
             recommendations = recommendations,
             sources = results
         )
+        HomeCache.save(_uiState.value)
+    }
+
+    /** Cache home level-proses (instan saat balik ke Home). */
+    object HomeCache {
+        @Volatile var sections: AnimeUiState? = null
+        fun save(s: AnimeUiState) { sections = s.copy(isLoading = false) }
     }
 
     fun retry() {
@@ -381,11 +404,27 @@ class AnimeViewModel : ViewModel() {
             }
             // Pilih kandidat yang judulnya PALING cocok dengan judul item.
             // Kalau tidak ada yang cocok, pakai yang punya episode terbanyak.
-            val best = selectBestDetail(candidates, knownTitle)
+            var best = selectBestDetail(candidates, knownTitle)
+            var mergedGenres = candidates.flatMap { it.genres.orEmpty() }.distinct()
+            var mergedEpisodes = candidates.flatMap { it.episodes.orEmpty() }
+                .distinctBy { it.episodeUrl ?: it.episode }
+            // FALLBACK EPISODE: kalau daftar episode kosong, cari via judul di
+            // Nexadev (search -> detail) yang punya daftar episode lengkap.
+            // Ini menjamin judul yang ada di Home tapi detail-nya dari sumber
+            // tanpa episode tetap bisa Play.
+            if (mergedEpisodes.isEmpty()) {
+                val title = best?.title ?: knownTitle
+                if (!title.isNullOrBlank()) {
+                    val byTitle = fetchNexadevEpisodesByTitle(title)
+                    if (byTitle != null) {
+                        if (best == null) best = byTitle.first
+                        mergedEpisodes = (mergedEpisodes + byTitle.second)
+                            .distinctBy { it.episodeUrl ?: it.episode }
+                        if (mergedGenres.isEmpty()) mergedGenres = byTitle.first.genres.orEmpty()
+                    }
+                }
+            }
             if (best != null) {
-                val mergedGenres = candidates.flatMap { it.genres.orEmpty() }.distinct()
-                val mergedEpisodes = candidates.flatMap { it.episodes.orEmpty() }
-                    .distinctBy { it.episodeUrl ?: it.episode }
                 val resolved = best.copy(
                     genres = mergedGenres.ifEmpty { best.genres },
                     episodes = mergedEpisodes.ifEmpty { best.episodes }
@@ -463,6 +502,30 @@ class AnimeViewModel : ViewModel() {
             ?.takeIf { it.title != null || it.episodes != null || it.sinopsis != null }
     } catch (e: Exception) {
         null
+    }
+
+    /**
+     * Cari episode via judul di Nexadev: search -> ambil link -> detail.
+     * Dipakai sebagai fallback saat detail dari sumber lain tidak punya episode.
+     * Return (detail, episodes) atau null.
+     */
+    private suspend fun fetchNexadevEpisodesByTitle(title: String): Pair<AnimeDetailData, List<AnimeEpisode>>? {
+        return try {
+            val results = nexadev.searchAnime(title).body()?.data?.results.orEmpty()
+            // Cocokkan judul paling mirip.
+            val key = normalizeKey(title)
+            val match = results.firstOrNull { normalizeKey(it.title) == key }
+                ?: results.firstOrNull { normalizeKey(it.title).contains(key) || key.contains(normalizeKey(it.title)) }
+                ?: results.firstOrNull()
+                ?: return null
+            val link = match.link ?: return null
+            val detail = nexadev.getAnimeDetail(details = link).body()?.data ?: return null
+            val eps = detail.episodes.orEmpty()
+            if (eps.isEmpty()) return null
+            detail to eps
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /** Detail Sankavollerei (otakudesu): animeId diekstrak dari href. */

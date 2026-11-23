@@ -144,6 +144,7 @@ fun AnimeDetailScreen(
                     onToggleSynopsis = { synopsisExpanded = !synopsisExpanded },
                     onPlayEpisode = onPlayEpisode,
                     onAnimeClick = onAnimeClick,
+                    onRetryEpisodes = { viewModel.retryDetail() },
                     onToggleBookmark = {
                         bookmarked = MediaLibraryStore.toggleBookmark(
                             context,
@@ -174,7 +175,8 @@ private fun AnimeDetailContent(
     onToggleSynopsis: () -> Unit,
     onPlayEpisode: (String) -> Unit,
     onAnimeClick: (String) -> Unit,
-    onToggleBookmark: () -> Unit
+    onToggleBookmark: () -> Unit,
+    onRetryEpisodes: () -> Unit = {}
 ) {
     val synopsis = detail.synopsis?.takeIf { it.isNotBlank() }
     val firstEpisode = episodes.firstOrNull()?.episodeUrl
@@ -349,7 +351,9 @@ private fun AnimeDetailContent(
             item(key = "ep_empty") {
                 AnimeEmptyState(
                     title = "Episode belum tersedia",
-                    message = "Daftar episode untuk anime ini belum bisa dimuat.",
+                    message = "Daftar episode belum bisa dimuat dari semua sumber. Coba lagi.",
+                    actionLabel = "Coba Lagi",
+                    onAction = onRetryEpisodes,
                     modifier = Modifier.height(220.dp)
                 )
             }
