@@ -175,13 +175,15 @@ private fun AnimeHomeContent(
     onAnimeClick: (String) -> Unit,
     onViewAllClick: () -> Unit
 ) {
-    // Judul hero tidak diulang di section lain agar tidak terlihat dobel.
+    // Judul hero tidak diulang di section lain. Kita lacak SEMUA judul yang
+    // sudah tampil (hero + section sebelumnya) supaya tidak ada judul kembar
+    // di Home (duplikat antar-section).
     val hero = ongoing.firstOrNull() ?: popular.firstOrNull()
-    val heroKey = hero?.let { normalizeKey(it.title) }
+    val seen = linkedSetOf<String>()
+    hero?.let { seen.add(normalizeKey(it.title)) }
 
-    fun withoutHero(list: List<AnimeSearchItem>): List<AnimeSearchItem> =
-        if (heroKey == null) list
-        else list.filterNot { normalizeKey(it.title) == heroKey }
+    fun unique(list: List<AnimeSearchItem>): List<AnimeSearchItem> =
+        list.filter { seen.add(normalizeKey(it.title)) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -199,7 +201,7 @@ private fun AnimeHomeContent(
         }
 
         // ── Sedang Tayang ─────────────────────────────────────
-        val ongoingList = withoutHero(ongoing)
+        val ongoingList = unique(ongoing)
         if (ongoingList.isNotEmpty()) {
             item(key = "ongoing_head") {
                 AnimeSectionHeader(
@@ -215,7 +217,7 @@ private fun AnimeHomeContent(
         }
 
         // ── Populer ───────────────────────────────────────────
-        val popularList = withoutHero(popular)
+        val popularList = unique(popular)
         if (popularList.isNotEmpty()) {
             item(key = "popular_head") {
                 AnimeSectionHeader(
@@ -231,7 +233,7 @@ private fun AnimeHomeContent(
         }
 
         // ── Terbaru / Update ──────────────────────────────────
-        val recentList = withoutHero(recent)
+        val recentList = unique(recent)
         if (recentList.isNotEmpty()) {
             item(key = "recent_head") {
                 AnimeSectionHeader(
@@ -247,7 +249,7 @@ private fun AnimeHomeContent(
         }
 
         // ── Top Rated ─────────────────────────────────────────
-        val topRatedList = withoutHero(topRated)
+        val topRatedList = unique(topRated)
         if (topRatedList.isNotEmpty()) {
             item(key = "toprated_head") {
                 AnimeSectionHeader(
@@ -263,7 +265,7 @@ private fun AnimeHomeContent(
         }
 
         // ── Rekomendasi ───────────────────────────────────────
-        val recList = recommendations.filter { normalizeKey(it.title) != heroKey }
+        val recList = unique(recommendations)
         if (recList.isNotEmpty()) {
             item(key = "rec_head") {
                 AnimeSectionHeader(
@@ -279,7 +281,7 @@ private fun AnimeHomeContent(
         }
 
         // ── Selesai ───────────────────────────────────────────
-        val completedList = withoutHero(completed)
+        val completedList = unique(completed)
         if (completedList.isNotEmpty()) {
             item(key = "completed_head") {
                 AnimeSectionHeader(

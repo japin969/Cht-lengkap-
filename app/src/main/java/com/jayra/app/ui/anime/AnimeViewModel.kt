@@ -270,9 +270,11 @@ class AnimeViewModel : ViewModel() {
 
         // Gabungkan tiap kategori dari kedua sumber lalu dedup longgar.
         // Item dengan image terisi diprioritaskan.
+        // Item TIDAK valid (judul kosong / placeholder #nonton / slug kosong)
+        // dibuang supaya tidak muncul kartu rusak yang gagal detail.
         fun merge(vararg lists: List<AnimeSearchItem>): List<AnimeSearchItem> =
             mergeDedupe(
-                lists = lists.toList(),
+                lists = lists.toList().map { list -> list.filter { it.isValidAnime() } },
                 keyOf = { normalizeKey(it.title) },
                 scoreOf = { if (it.image.isNullOrBlank()) 0 else 1 }
             )
@@ -675,10 +677,15 @@ class AnimeViewModel : ViewModel() {
 
     /** Genre list untuk filter (gabungan semua sumber). */
     suspend fun loadGenres(): List<String> {
+        // Beberapa endpoint genre pakai bentuk berbeda (array / {genreList}).
+        // Kita gabung beberapa sumber + fallback supaya list kaya.
         val fromSankaku = runCatching {
             sankavollerei.samehadakuGenres().body()?.all?.mapNotNull { it.label }.orEmpty()
         }.getOrElse { emptyList() }
-        return (fromSankaku + FALLBACK_GENRES).distinct()
+        val fromComic = runCatching {
+            sankavollerei.comicGenres().body()?.all?.mapNotNull { it.label }.orEmpty()
+        }.getOrElse { emptyList() }
+        return (fromSankaku + fromComic + FALLBACK_GENRES).distinct()
     }
 
     private val FALLBACK_GENRES = listOf(
@@ -799,6 +806,15 @@ class AnimeViewModel : ViewModel() {
                 )
             }
         )
+
+    /** Item anime valid: punya judul & link, bukan placeholder (#...). */
+    private fun AnimeSearchItem.isValidAnime(): Boolean {
+        val t = title?.trim().orEmpty()
+        if (t.isBlank() || t.startsWith("#")) return false
+        val l = link?.trim().orEmpty()
+        if (l.isBlank() || l == "#" || l.endsWith("/#")) return false
+        return true
+    }
 
     companion object {
         /** googlevideo hanya menerima User-Agent okhttp. */

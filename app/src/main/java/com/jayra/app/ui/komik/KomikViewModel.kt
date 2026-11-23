@@ -396,10 +396,23 @@ class KomikViewModel : ViewModel() {
             return
         }
         lastSlug = slug
+        // Cache chapter -> buka lagi langsung tampil.
+        chapterPagesCache[slug]?.let { cached ->
+            if (cached.isNotEmpty()) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    streamTitle = _uiState.value.detail?.title,
+                    pages = cached,
+                    error = null
+                )
+                return
+            }
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             // Semua sumber chapter dipanggil PARALEL; sumber pertama yang
-            // punya halaman gambar yang dipakai.
+            // punya halaman gambar yang dipakai. Mangakita/maid/softkomik/
+            // westmanga/shinigami/mangasusuku juga dicoba.
             val pages: List<KomikPage> = coroutineScope {
                 val a = async { safeNexadevPages(slug) }
                 val b = async { safeSankaPages { sankavollerei.comicChapter(slug).body() } }
@@ -407,9 +420,24 @@ class KomikViewModel : ViewModel() {
                 val d = async { safeSankaPages { sankavollerei.bacakomikChapter(slug).body() } }
                 val e = async { safeSankaPages { sankavollerei.kiryuuChapter(slug).body() } }
                 val f = async { safeSankaPages { sankavollerei.komikstationChapter(slug).body() } }
-                listOf(a.await(), b.await(), c.await(), d.await(), e.await(), f.await())
+                val g = async { safeSankaPages { sankavollerei.mangasusukuChapter(slug).body() } }
+                val h = async { safeSankaPages { sankavollerei.maidChapter(slug).body() } }
+                val i = async { safeSankaPages { sankavollerei.softkomikChapter(slug, "1").body() } }
+                val j = async { safeSankaPages { sankavollerei.westmangaChapter(slug).body() } }
+                val k = async { safeSankaPages { sankavollerei.shinigamiChapter(slug).body() } }
+                val l = async { safeSankaPages { sankavollerei.mangakitaChapter(slug).body() } }
+                // Fallback: beberapa source (mangakita/kiryuu) butuh NOMOR
+                // chapter, bukan slug. Coba dengan angka yang diekstrak.
+                val num = extractChapterNumber(slug)
+                val m = async {
+                    if (num != null && num > 0) safeSankaPages { sankavollerei.mangakitaChapter(num.toString()).body() }
+                    else emptyList()
+                }
+                listOf(a.await(), b.await(), c.await(), d.await(), e.await(), f.await(),
+                    g.await(), h.await(), i.await(), j.await(), k.await(), l.await(), m.await())
                     .firstOrNull { it.isNotEmpty() } ?: emptyList()
             }
+            if (pages.isNotEmpty()) chapterPagesCache[slug] = pages
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 streamTitle = _uiState.value.detail?.title,
@@ -417,6 +445,18 @@ class KomikViewModel : ViewModel() {
                 error = if (pages.isEmpty()) "Halaman chapter tidak tersedia" else null
             )
         }
+    }
+
+    /** Cache halaman chapter (biar buka lagi instan). */
+    private val chapterPagesCache = LinkedHashMap<String, List<KomikPage>>()
+
+    /** Ekstrak nomor chapter dari slug (mis. chapter-1.438774 -> 1). */
+    private fun extractChapterNumber(slug: String): Int? {
+        // Ambil segmen setelah 'chapter' terakhir, lalu angka pertama.
+        val after = slug.substringAfterLast("chapter").trim('-', '.', ' ')
+            .ifBlank { slug.substringAfterLast('-') }
+        val digits = after.filter { it.isDigit() }
+        return digits.toIntOrNull()
     }
 
     private suspend fun safeNexadevPages(slug: String): List<KomikPage> {

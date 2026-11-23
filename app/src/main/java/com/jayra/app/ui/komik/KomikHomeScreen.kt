@@ -409,14 +409,17 @@ private fun KomikContent(
             return
         }
 
-        // Hero tidak diulang di section lain.
-        val heroKey = latest.firstOrNull()?.let { normalizeKey(it.title) }
-        fun withoutHero(list: List<KomikItem>): List<KomikItem> =
-            if (heroKey == null) list
-            else list.filterNot { normalizeKey(it.title) == heroKey }
+        // Hero tidak diulang di section lain. Lacak SEMUA judul yang sudah
+        // tampil (hero + section) -> tidak ada judul kembar antar-section.
+        val hero = latest.firstOrNull()
+        val seen = linkedSetOf<String>()
+        hero?.let { seen.add(normalizeKey(it.title)) }
+        fun unique(list: List<KomikItem>): List<KomikItem> =
+            list.filter { seen.add(normalizeKey(it.title)) }
 
-        val latestList = withoutHero(filtered)
-        val popularList = withoutHero(popular)
+        // Populer dulu (binary search: hero sudah di seen).
+        val popularList = unique(popular)
+        val latestList = unique(filtered)
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -424,8 +427,8 @@ private fun KomikContent(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Hero
-            latest.firstOrNull()?.let { hero ->
-                item(key = "hero") { KomikHero(hero) { onKomikClick(it) } }
+            hero?.let { h ->
+                item(key = "hero") { KomikHero(h) { onKomikClick(it) } }
             }
 
             // Populer

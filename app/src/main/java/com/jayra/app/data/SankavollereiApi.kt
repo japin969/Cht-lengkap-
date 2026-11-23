@@ -371,6 +371,11 @@ interface SankavollereiApi {
         @Path("genre") genre: String
     ): Response<SankavollereiComicListResponse>
 
+    @GET("comic/mangakita/chapter/{slug}")
+    suspend fun mangakitaChapter(
+        @Path("slug") slug: String
+    ): Response<SankavollereiComicChapterResponse2>
+
     @GET("comic/mangakita/detail/{slug}")
     suspend fun mangakitaDetail(
         @Path("slug") slug: String
