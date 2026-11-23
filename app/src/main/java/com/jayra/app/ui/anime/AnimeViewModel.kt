@@ -136,20 +136,12 @@ class AnimeViewModel : ViewModel() {
 
     private suspend fun fetchNexadevHome(): AnimeSourceResult {
         return try {
-            // Ambil tiap kategori terpisah; kegagalan satu kategori tidak
-            // menggagalkan yang lain.
-            val ongoing = runCatching {
-                nexadev.getAnimeOngoing().body()?.data?.animeList.orEmpty()
-            }.getOrDefault(emptyList())
-            val popular = runCatching {
-                nexadev.getAnimePopular().body()?.data?.animeList.orEmpty()
-            }.getOrDefault(emptyList())
-            val completed = runCatching {
-                nexadev.getAnimeCompleted().body()?.data?.animeList.orEmpty()
-            }.getOrDefault(emptyList())
-            val recent = runCatching {
-                nexadev.getAnimeRecent().body()?.data?.animeList.orEmpty()
-            }.getOrDefault(emptyList())
+            // Ambil tiap kategori terpisah; tiap kategori beberapa page (paralel)
+            // supaya Home benar-benar terisi (pagination), bukan cuma page 1.
+            val ongoing = fetchNexadevPages { p -> nexadev.getAnimeOngoing(page = p).body()?.data?.animeList }
+            val popular = fetchNexadevPages { p -> nexadev.getAnimePopular(page = p).body()?.data?.animeList }
+            val completed = fetchNexadevPages { p -> nexadev.getAnimeCompleted(page = p).body()?.data?.animeList }
+            val recent = fetchNexadevPages { p -> nexadev.getAnimeRecent(page = p).body()?.data?.animeList }
             val fetch = AnimeFetch(
                 ongoing = ongoing,
                 popular = popular,
@@ -164,6 +156,19 @@ class AnimeViewModel : ViewModel() {
         } catch (e: Exception) {
             AnimeSourceResult("nexadev", emptyList(), e.localizedMessage ?: "gagal")
         }
+    }
+
+    /** Ambil beberapa page (default 3) secara PARALEL, gabung + dedup. */
+    private suspend fun fetchNexadevPages(
+        pages: Int = 3,
+        fetch: suspend (Int) -> List<AnimeSearchItem>?
+    ): List<AnimeSearchItem> = coroutineScope {
+        (1..pages).map { p ->
+            async {
+                runCatching { fetch(p) }.getOrDefault(emptyList()).orEmpty()
+            }
+        }.flatMap { it.await() }
+            .distinctBy { it.link ?: it.title }
     }
 
     /** Cache kategori Nexadev terakhir (dipakai mergeHome). */
@@ -190,13 +195,27 @@ class AnimeViewModel : ViewModel() {
                     )
                 }
                 val samehadaku = async {
-                    // samehadaku home punya recent/popular/ongoing/completed.
-                    val d = runCatching { sankavollerei.samehadakuHome().body()?.data }.getOrNull()
+                    // samehadaku home punya recent/batch/movie/top10 (BUKAN
+                    // ongoing/popular/completed). Kita gabung recent + top10 +
+                    // movie jadi recent/popular. Plus multi-page recent.
+                    val home = runCatching { sankavollerei.samehadakuHome().body()?.data }.getOrNull()
+                    val recentPages = coroutineScope {
+                        (1..3).map { p ->
+                            async {
+                                runCatching {
+                                    sankavollerei.samehadakuRecentPage(p).body()?.allItems
+                                        ?.map { it.toItem("Ongoing") }.orEmpty()
+                                }.getOrDefault(emptyList())
+                            }
+                        }.flatMap { it.await() }
+                    }
+                    val recent = (home?.recent?.animeList?.map { it.toItem("Ongoing") }.orEmpty()
+                        + recentPages)
                     Grouped(
-                        ongoing = d?.ongoing?.animeList?.map { it.toItem("Ongoing") }.orEmpty(),
-                        popular = d?.popular?.animeList?.map { it.toItem("Ongoing") }.orEmpty(),
-                        recent = d?.recent?.animeList?.map { it.toItem("Ongoing") }.orEmpty(),
-                        completed = d?.completed?.animeList?.map { it.toItem("Completed") }.orEmpty()
+                        ongoing = emptyList(),
+                        popular = home?.top10?.animeList?.map { it.toItem("Ongoing") }.orEmpty(),
+                        recent = recent,
+                        completed = home?.movie?.animeList?.map { it.toItem("Completed") }.orEmpty()
                     )
                 }
                 val oploverz = async {
@@ -342,13 +361,14 @@ class AnimeViewModel : ViewModel() {
             )
             return
         }
+        // Judul item (untuk pencocokan) dari list yang sudah dimuat.
+        val knownTitle = rememberTitleFor(url)
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, detailError = null)
-            // Semua sumber dicoba PARALEL. Tidak ada sumber yang diprioritaskan
-            // secara eksklusif — begitu satu sumber mengembalikan detail valid,
-            // itu dipakai; sumber lain tetap dilengkapi (genre/episode).
-            // Kegagalan satu sumber TIDAK menggagalkan keseluruhan.
-            val data: List<AnimeDetailData> = coroutineScope {
+            // Semua sumber dicoba PARALEL. Sumber yang format URL-nya cocok
+            // diprioritaskan, tapi semua tetap dicoba; kegagalan satu sumber
+            // TIDAK menggagalkan keseluruhan.
+            val candidates: List<AnimeDetailData> = coroutineScope {
                 val a = async { fetchNexadevDetail(url) }
                 val b = async { fetchSankaAnimeDetail(url) }
                 val c = async { fetchSamehadakuDetail(url) }
@@ -357,35 +377,82 @@ class AnimeViewModel : ViewModel() {
                 listOfNotNull(a.await(), b.await(), c.await(), d.await(), e.await())
                     .filter { it.title != null || it.episodes != null || it.sinopsis != null }
             }
-            if (data.isNotEmpty()) {
-                val first = data.first()
-                val mergedGenres = data.flatMap { it.genres.orEmpty() }.distinct()
-                val mergedEpisodes = data.flatMap { it.episodes.orEmpty() }
+            // Pilih kandidat yang judulnya PALING cocok dengan judul item.
+            // Kalau tidak ada yang cocok, pakai yang punya episode terbanyak.
+            val best = selectBestDetail(candidates, knownTitle)
+            if (best != null) {
+                val mergedGenres = candidates.flatMap { it.genres.orEmpty() }.distinct()
+                val mergedEpisodes = candidates.flatMap { it.episodes.orEmpty() }
                     .distinctBy { it.episodeUrl ?: it.episode }
+                val resolved = best.copy(
+                    genres = mergedGenres.ifEmpty { best.genres },
+                    episodes = mergedEpisodes.ifEmpty { best.episodes }
+                )
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    detail = first.copy(
-                        genres = mergedGenres.ifEmpty { first.genres },
-                        episodes = mergedEpisodes
-                    ),
-                    episodes = mergedEpisodes,
+                    detail = resolved,
+                    episodes = resolved.episodes.orEmpty(),
                     detailError = null
                 )
                 _enrichment.value = _enrichment.value + mapOf(
                     url to AnimeEnrichment(
                         genres = mergedGenres,
-                        rating = first.rating
+                        rating = best.rating
                     )
                 )
-                detailCache[url] = _uiState.value.detail ?: first
-                episodeCache[url] = mergedEpisodes
+                detailCache[url] = resolved
+                episodeCache[url] = resolved.episodes.orEmpty()
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    detailError = "Gagal memuat detail anime"
+                    detailError = detailFailureReason(url)
                 )
             }
         }
+    }
+
+    /** Cari judul item dari list yang sudah dimuat (best-effort). */
+    private fun rememberTitleFor(url: String): String? {
+        val st = _uiState.value
+        val all = st.ongoing + st.popular + st.completed + st.recent +
+            st.topRated + st.recommendations
+        return all.firstOrNull { it.link == url }?.title
+    }
+
+    /**
+     * Pilih detail terbaik: yang judulnya paling cocok dengan [knownTitle]
+     * (match fleksibel: abaikan spasi/karakter/kasus). Kalau tidak ada,
+     * pilih yang episode-nya paling banyak.
+     */
+    private fun selectBestDetail(
+        candidates: List<AnimeDetailData>,
+        knownTitle: String?
+    ): AnimeDetailData? {
+        if (candidates.isEmpty()) return null
+        if (knownTitle.isNullOrBlank()) {
+            return candidates.maxByOrNull { it.episodes?.size ?: 0 }
+        }
+        val key = normalizeKey(knownTitle)
+        val scored = candidates.map { d ->
+            val dk = normalizeKey(d.title)
+            val score = when {
+                dk == key -> 100
+                dk.contains(key) || key.contains(dk) -> 50
+                else -> 0
+            }
+            d to score
+        }
+        val bestMatch = scored.filter { it.second > 0 }.maxByOrNull { it.second }
+        return bestMatch?.first ?: candidates.maxByOrNull { it.episodes?.size ?: 0 }
+    }
+
+    /** Alasan gagal yang jelas (bukan blank). */
+    private fun detailFailureReason(url: String): String {
+        val looksLikeUrl = url.startsWith("http")
+        return if (looksLikeUrl)
+            "Detail tidak ditemukan di semua sumber (link tidak dikenali)."
+        else
+            "Detail tidak ditemukan. Coba lagi atau buka dari daftar."
     }
 
     /** Detail Nexadev (animasu): menerima URL penuh animasu.love. */
@@ -717,7 +784,7 @@ class AnimeViewModel : ViewModel() {
             sinopsis = plainSynopsis,
             rating = score?.toDoubleOrNull(),
             totalEpisodes = episodes,
-            genres = genres,
+            genres = allGenreNames,
             info = buildMap {
                 status?.let { put("Status", it) }
                 studio?.let { put("Studio", it) }

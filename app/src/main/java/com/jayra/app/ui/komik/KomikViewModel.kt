@@ -87,7 +87,15 @@ class KomikViewModel : ViewModel() {
 
     private suspend fun fetchNexadevList(): KomikSourceResult {
         return try {
-            val items = nexadev.getKomikList(page = 1).body()?.results.orEmpty()
+            // Beberapa halaman pertama (paralel) supaya daftar terisi.
+            val items: List<KomikItem> = coroutineScope {
+                (1..3).map { p ->
+                    async {
+                        runCatching { nexadev.getKomikList(page = p).body()?.results }
+                            .getOrDefault(emptyList()).orEmpty()
+                    }
+                }.flatMap { it.await() }.distinctBy { it.slug ?: it.title }
+            }
             _nexadevLatest = items
             KomikSourceResult(
                 source = "nexadev",
@@ -106,8 +114,11 @@ class KomikViewModel : ViewModel() {
         val popularLists: List<List<KomikItem>>
         coroutineScope {
             val latest = listOf(
+                // komikindo punya 228 halaman -> ambil 3 halaman pertama (paralel).
                 async { safeKomikList { sankavollerei.comicLatest(page = 1, limit = 20) } },
                 async { safeKomikList { sankavollerei.komikindoLatest(1) } },
+                async { safeKomikList { sankavollerei.komikindoLatest(2) } },
+                async { safeKomikList { sankavollerei.komikindoLatest(3) } },
                 async { safeKomikList { sankavollerei.bacakomikLatest() } },
                 async { safeKomikList { sankavollerei.shinigamiLatest() } },
                 async { safeKomikList { sankavollerei.mangasusukuLatest() } },
@@ -318,7 +329,8 @@ class KomikViewModel : ViewModel() {
                 listOfNotNull(a.await(), b.await(), c.await(), d.await(), e.await(), f.await())
             }
             if (results.isNotEmpty()) {
-                val first = results.first()
+                // Pilih kandidat dengan chapter terbanyak (detail paling lengkap).
+                val first = results.maxByOrNull { it.chapters?.size ?: 0 } ?: results.first()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     detail = first,
@@ -330,7 +342,7 @@ class KomikViewModel : ViewModel() {
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Gagal memuat detail komik"
+                    error = "Detail komik tidak ditemukan di semua sumber. Coba lagi."
                 )
             }
         }
@@ -440,7 +452,7 @@ class KomikViewModel : ViewModel() {
         slug = slug,
         cover = bestCover,
         type = type,
-        latestChapter = latestChapter,
+        latestChapter = latestChapterText,
         rating = rating
     )
 }

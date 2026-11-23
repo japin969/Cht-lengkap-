@@ -336,14 +336,14 @@ private fun AnimeRow(
     enrichment: Map<String, AnimeEnrichment>,
     onClick: (String) -> Unit
 ) {
-    // Grid 3 kolom — SCROLL VERTICAL saja, tanpa swipe horizontal.
+    // Grid 2 kolom BESAR (lega) — SCROLL VERTICAL saja, tanpa swipe.
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        items.chunked(3).forEach { rowItems ->
+        items.chunked(2).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -357,7 +357,7 @@ private fun AnimeRow(
                         )
                     }
                 }
-                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                repeat(2 - rowItems.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }

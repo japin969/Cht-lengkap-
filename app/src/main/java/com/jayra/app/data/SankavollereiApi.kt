@@ -67,6 +67,9 @@ interface SankavollereiApi {
     @GET("anime/samehadaku/recent")
     suspend fun samehadakuRecent(): Response<SankavollereiSourceHomeResponse>
 
+    @GET("anime/samehadaku/recent")
+    suspend fun samehadakuRecentPage(@Query("page") page: Int): Response<SankavollereiSourceHomeResponse>
+
     @GET("anime/samehadaku/popular")
     suspend fun samehadakuPopular(): Response<SankavollereiSourceHomeResponse>
 
@@ -588,6 +591,8 @@ data class SankavollereiAnimeDetailData(
     val duration: String? = null,
     val episodes: Int? = null,
     val genres: List<String>? = null,
+    // Sankavollerei (otakudesu) memakai genreList: [{title,genreId,...}].
+    val genreList: List<SankavollereiGenreRef>? = null,
     val synopsis: SankavollereiSynopsis? = null,
     val episodeList: List<SankavollereiEpisodeItem>? = null
 ) {
@@ -595,6 +600,9 @@ data class SankavollereiAnimeDetailData(
         get() = synopsis?.paragraphs
             ?.filter { it.isNotBlank() }
             ?.joinToString("\n\n")
+    /** Gabung genres (List<String>) + genreList (obj) -> nama genre. */
+    val allGenreNames: List<String>
+        get() = (genres.orEmpty() + genreList.orEmpty().mapNotNull { it.title }).distinct()
 }
 
 @JsonClass(generateAdapter = true)
@@ -662,11 +670,32 @@ data class SankavollereiComicListResponse(
     val total: Int? = null,
     val page: Int? = null,
     val comics: List<SankavollereiComicItem>? = null,
-    val data: List<SankavollereiComicItem>? = null
+    val data: List<SankavollereiComicItem>? = null,
+    // BENTUK LAIN yang dipakai berbagai source (hasil beda-beda):
+    val komikList: List<SankavollereiComicItem>? = null,
+    val mangaList: List<SankavollereiComicItem>? = null,
+    val results: List<SankavollereiComicItem>? = null,
+    val popularToday: List<SankavollereiComicItem>? = null,
+    val projectUpdates: List<SankavollereiComicItem>? = null,
+    val latestReleases: List<SankavollereiComicItem>? = null,
+    val trending: List<SankavollereiComicItem>? = null,
+    val latestUpdates: List<SankavollereiComicItem>? = null,
+    val komikPopuler: List<SankavollereiComicItem>? = null,
+    val popular: List<SankavollereiComicItem>? = null,
+    val latest: List<SankavollereiComicItem>? = null,
+    val completed: List<SankavollereiComicItem>? = null,
+    val added: List<SankavollereiComicItem>? = null,
+    val colored: List<SankavollereiComicItem>? = null,
+    val az: List<SankavollereiComicItem>? = null
 ) {
-    /** Gabungkan dua bentuk payload yang dipakai API ini. */
+    /** Gabungkan SEMUA bentuk payload (banyak field) + dedup by slug/title. */
     val allItems: List<SankavollereiComicItem>
-        get() = data ?: comics ?: emptyList()
+        get() = listOfNotNull(
+            comics, data, komikList, mangaList, results,
+            popularToday, projectUpdates, latestReleases,
+            trending, latestUpdates, komikPopuler,
+            popular, latest, completed, added, colored, az
+        ).flatten().distinctBy { it.slug ?: it.title ?: it.link }
 }
 
 @JsonClass(generateAdapter = true)
@@ -679,18 +708,24 @@ data class SankavollereiComicItem(
     val thumbnail: String? = null,
     val image: String? = null,
     val img: String? = null,
+    val imageSrc: String? = null,
+    val cover: String? = null,
     val chapter: String? = null,
+    val latestChapter: String? = null,
+    val chapters: String? = null,
     val type: String? = null,
     val rating: String? = null,
+    val status: String? = null,
+    val date: String? = null,
     val time_ago: String? = null,
     val url: String? = null,
     val data: SankavollereiComicItemData? = null
 ) {
     val bestCover: String?
-        get() = thumbnail ?: image ?: img
+        get() = thumbnail ?: image ?: img ?: imageSrc ?: cover
 
-    val latestChapter: String?
-        get() = chapter ?: data?.chapter
+    val latestChapterText: String?
+        get() = chapter ?: latestChapter ?: data?.chapter
 }
 
 @JsonClass(generateAdapter = true)
@@ -796,7 +831,11 @@ data class SankavollereiSourceHomeData(
     val recent: SankavollereiAnimeGroup? = null,
     val popular: SankavollereiAnimeGroup? = null,
     val completed: SankavollereiAnimeGroup? = null,
-    val ongoing: SankavollereiAnimeGroup? = null
+    val ongoing: SankavollereiAnimeGroup? = null,
+    // Grup tambahan yang dipakai samehadaku home:
+    val top10: SankavollereiAnimeGroup? = null,
+    val movie: SankavollereiAnimeGroup? = null,
+    val batch: SankavollereiAnimeGroup? = null
 )
 
 /** Oploverz memakai anime_list di top-level. */
@@ -1038,16 +1077,46 @@ data class SankavollereiComicDetailResponse2(
     val status_text: String? = null,
     val rating: String? = null,
     val chapters: List<SankavollereiComicChapterItem2>? = null,
-    val data: SankavollereiComicDetailData2? = null
+    val data: SankavollereiComicDetailData2? = null,
+    // Beberapa source (bacakomik) memakai key `detail`, mangakita `details`.
+    val detail: SankavollereiComicDetailData2? = null,
+    val details: SankavollereiComicDetailData2? = null
 ) {
-    val bestCover: String? get() = cover ?: image ?: thumbnail ?: data?.cover ?: data?.thumbnail ?: data?.image
-    val plainTitle: String? get() = title ?: data?.title
-    val plainSynopsis: String? get() = synopsis ?: synopsis_full ?: data?.synopsis
+    val bestCover: String?
+        get() {
+            val d = data ?: detail ?: details
+            return cover ?: image ?: thumbnail ?: d?.cover ?: d?.thumbnail ?: d?.image
+        }
+    val plainTitle: String?
+        get() {
+            val d = data ?: detail ?: details
+            return title ?: d?.title
+        }
+    val plainSynopsis: String?
+        get() {
+            val d = data ?: detail ?: details
+            return synopsis ?: synopsis_full ?: d?.synopsis
+        }
     val allChapters: List<SankavollereiComicChapterItem2>
-        get() = chapters ?: data?.chapters ?: emptyList()
-    val allGenres: List<String> get() = genres ?: data?.genres ?: emptyList()
-    val ratingValue: String? get() = rating ?: data?.rating
-    val statusText: String? get() = status_text ?: data?.status ?: data?.status_text
+        get() {
+            val d = data ?: detail ?: details
+            return chapters ?: d?.chapters ?: d?.chapter ?: emptyList()
+        }
+    val allGenres: List<String>
+        get() {
+            val d = data ?: detail ?: details
+            return genres ?: d?.genres ?: emptyList()
+        }
+    val ratingValue: String?
+        get() {
+            val d = data ?: detail ?: details
+            return rating ?: d?.rating
+        }
+    val statusText: String?
+        get() {
+            val d = data ?: detail ?: details
+            return status_text ?: d?.status ?: d?.status_text
+        }
 }
 
 @JsonClass(generateAdapter = true)

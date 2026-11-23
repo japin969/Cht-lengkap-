@@ -211,13 +211,13 @@ private fun KomikTopBar(
     onBookmarkClick: () -> Unit,
     onHistoryClick: () -> Unit
 ) {
-    Surface(color = MaterialTheme.colorScheme.background) {
+    Surface(color = Color.Transparent) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .height(60.dp)
-                .padding(horizontal = 16.dp),
+                .height(52.dp)
+                .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
@@ -225,12 +225,7 @@ private fun KomikTopBar(
                     text = "Komik",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-                Text(
-                    text = "Baca chapter terbaru setiap hari",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MediaGlassColors.OnSurface,
                     maxLines = 1
                 )
             }
@@ -274,14 +269,14 @@ fun KomikSearchField(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 20.dp, vertical = 2.dp),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -327,46 +322,67 @@ fun KomikSearchField(
     }
 }
 
-/** Baris filter (wrap, tanpa scroll horizontal). */
+/** Baris filter RAMPING — chip kecil, wrap, nempel di bawah header. */
 @Composable
 private fun FilterRow(
     selected: KomikFilter,
     onSelect: (KomikFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Dua baris wrap — tanpa scroll horizontal.
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         val all = KomikFilter.entries.toList()
-        all.chunked(2).forEach { rowItems ->
+        all.chunked(3).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 rowItems.forEach { filter ->
-                    FilterChip(
-                        selected = selected == filter,
-                        onClick = { onSelect(filter) },
-                        label = { Text(filter.label) },
-                        leadingIcon = if (selected == filter) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Rounded.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        } else null
-                    )
+                    Box(Modifier.weight(1f)) {
+                        SlimFilterChip(
+                            label = filter.label,
+                            selected = selected == filter,
+                            onClick = { onSelect(filter) }
+                        )
+                    }
                 }
+                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
+
+/** Chip filter ramping (kecil, tinggi ~30dp). */
+@Composable
+private fun SlimFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .jellyClick(onClick = onClick, pressedScale = 0.94f),
+        shape = RoundedCornerShape(50),
+        color = if (selected) KomikFilterSelected else MediaGlassColors.SurfaceVariant
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) Color.White else MediaGlassColors.OnSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+        )
+    }
+}
+
+private val KomikFilterSelected = Color(0xFF0A84FF)
 
 @Composable
 private fun KomikContent(
