@@ -69,6 +69,16 @@ interface DramaApi {
     @GET("anime/donghub/episode/{slug}")
     suspend fun donghubEpisode(@Path("slug") slug: String): Response<DramaEpisodeResponse>
 
+    // ── NEKOPOI (dipisah, card sendiri) ─────────────────────────
+    @GET("anime/nekopoi/home")
+    suspend fun nekopoiHome(): Response<DramaListResponse>
+
+    @GET("anime/nekopoi/detail/{slug}")
+    suspend fun nekopoiDetail(@Path("slug") slug: String): Response<DramaDetailResponse>
+
+    @GET("anime/nekopoi/episode/{slug}")
+    suspend fun nekopoiEpisode(@Path("slug") slug: String): Response<DramaEpisodeResponse>
+
     companion object {
         private const val BASE_URL = "https://www.sankavollerei.web.id/"
         private const val UA =
@@ -119,7 +129,7 @@ data class DramaListResponse(
     val ongoing_donghua: List<DramaItem>? = null,
     val completed_donghua: List<DramaItem>? = null,
     val latest_donghua: List<DramaItem>? = null,
-    // donghub
+    // donghub / nekopoi (keduanya nested di data)
     val data: DramaDonghubData? = null,
     val pagination: DramaPagination? = null
 ) {
@@ -134,6 +144,10 @@ data class DramaListResponse(
                 addAll(d.slider.orEmpty())
                 addAll(d.popular.orEmpty())
                 addAll(d.latest.orEmpty())
+                addAll(d.recommended.orEmpty())
+                addAll(d.latest_hentai.orEmpty())
+                addAll(d.latest_episodes.orEmpty())
+                addAll(d.latest_jav.orEmpty())
             }
         }.distinctBy { it.slug ?: it.href ?: it.title }
 }
@@ -142,8 +156,14 @@ data class DramaListResponse(
 data class DramaDonghubData(
     val slider: List<DramaItem>? = null,
     val popular: List<DramaItem>? = null,
-    val latest: List<DramaItem>? = null
+    val latest: List<DramaItem>? = null,
+    // nekopoi
+    val recommended: List<DramaItem>? = null,
+    val latest_hentai: List<DramaItem>? = null,
+    val latest_episodes: List<DramaItem>? = null,
+    val latest_jav: List<DramaItem>? = null
 )
+
 
 @JsonClass(generateAdapter = true)
 data class DramaPagination(
@@ -158,6 +178,8 @@ data class DramaItem(
     val slug: String? = null,
     val poster: String? = null,
     val cover: String? = null,
+    val thumbnail: String? = null,
+    val url: String? = null,
     val status: String? = null,
     val type: String? = null,
     val sub: String? = null,
@@ -165,17 +187,17 @@ data class DramaItem(
     val rating: String? = null,
     val synopsis: String? = null,
     val href: String? = null,
-    val url: String? = null,
     // detail
     val alter_title: String? = null,
     val studio: String? = null,
     val released: String? = null,
     val duration: String? = null,
-    val genres: List<String>? = null,
+    val genres: List<DramaGenreRef>? = null,
     val episodes: List<DramaEpisode>? = null
 ) {
+    val genreNames: List<String> get() = genres?.mapNotNull { it.name }.orEmpty()
     val stableId: String? get() = slug ?: href?.substringAfterLast("/")?.trim('/')
-    val bestCover: String? get() = poster ?: cover
+    val bestCover: String? get() = poster ?: cover ?: thumbnail
     val bestSynopsis: String? get() = synopsis
     val epsCount: Int? get() = episodes?.size
     val completed: Boolean get() = status?.contains("completed", true) == true || status?.contains("tamat", true) == true
@@ -194,14 +216,12 @@ data class DramaDetailResponse(
     val released: String? = null,
     val duration: String? = null,
     val synopsis: String? = null,
-    val genres: List<String>? = null,
+    val genres: List<DramaGenreRef>? = null,
     val episodes: List<DramaEpisode>? = null,
     val episodes_list: List<DramaEpisode>? = null,
     val data: DramaItem? = null,
     // donghub detail membungkus di data
-    val episodeList: List<DramaEpisode>? = null,
-    // genres bisa array of object {name} atau string
-    val genreList: List<DramaGenreRef>? = null
+    val episodeList: List<DramaEpisode>? = null
 ) {
     val resolvedTitle: String? get() = title ?: data?.title
     val resolvedCover: String? get() = poster ?: cover ?: data?.poster ?: data?.cover
@@ -209,7 +229,9 @@ data class DramaDetailResponse(
     val resolvedEpisodes: List<DramaEpisode>
         get() = episodes_list ?: episodes ?: episodeList ?: data?.episodes ?: emptyList()
     val resolvedGenres: List<String>
-        get() = genres ?: genreList?.mapNotNull { it.name } ?: data?.genres ?: emptyList()
+        get() = genres?.mapNotNull { it.name }?.ifEmpty { null }
+            ?: data?.genres?.mapNotNull { it.name }
+            ?: emptyList()
     val resolvedRating: String? get() = rating ?: data?.rating
 }
 
@@ -224,12 +246,13 @@ data class DramaEpisode(
     val title: String? = null,
     val slug: String? = null,
     val href: String? = null,
+    val url: String? = null,
     val episode: String? = null,
     val number: String? = null,
     val episode_number: String? = null
 ) {
     val label: String? get() = title ?: episode ?: number
-    val epSlug: String? get() = slug ?: href?.substringAfterLast("/")?.trim('/')
+    val epSlug: String? get() = slug ?: href?.substringAfterLast("/")?.trim('/') ?: url?.substringAfterLast("/")?.trim('/')
     /** Nomor episode (Int) untuk UI lama. */
     val num: Int? get() = (number ?: episode_number ?: episode)?.filter { it.isDigit() }?.toIntOrNull()
     val locked: Boolean get() = false

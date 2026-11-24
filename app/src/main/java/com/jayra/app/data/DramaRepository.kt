@@ -36,6 +36,7 @@ class DramaRepository private constructor(context: Context) {
         val latestD = async { safeList("donghua_latest") { api.donghuaLatest(1) } }
         val donghubD = async { safeList("donghub_home") { api.donghubHome() } }
         val donghubPopD = async { safeList("donghub_popular") { api.donghubPopular() } }
+        val nekopoiD = async { safeList("nekopoi_home") { api.nekopoiHome() } }
 
         val sections = linkedMapOf<String, List<DramaItem>>()
         var offline = false
@@ -48,10 +49,12 @@ class DramaRepository private constructor(context: Context) {
         val ongoing = (ongoingD.await() + latestD.await()).distinctBy { it.stableId ?: it.title }
         val completed = completedD.await()
         val donghub = (donghubD.await() + donghubPopD.await()).distinctBy { it.stableId ?: it.title }
+        val nekopoi = nekopoiD.await()
         put("Ongoing", ongoing)
         put("Populer", donghub)
         put("Completed", completed)
         put("Latest", latestD.await())
+        put("Nekopoi", nekopoi)
 
         HomeResult(sections, offline, empty)
     }
@@ -87,6 +90,10 @@ class DramaRepository private constructor(context: Context) {
             resp = runCatching { api.donghubDetail(slug) }.getOrNull()
             detail = resp?.body()
         }
+        if (detail == null || detail.resolvedTitle == null) {
+            resp = runCatching { api.nekopoiDetail(slug) }.getOrNull()
+            detail = resp?.body()
+        }
         if (detail != null && (detail.resolvedTitle != null || detail.resolvedEpisodes.isNotEmpty())) {
             writeDetail(cacheKey, detail)
             return DetailResult(detail, detail.resolvedEpisodes, false, false)
@@ -104,6 +111,10 @@ class DramaRepository private constructor(context: Context) {
         var url = resp?.body()?.bestStreamUrl
         if (url.isNullOrBlank()) {
             resp = runCatching { api.donghubEpisode(slug) }.getOrNull()
+            url = resp?.body()?.bestStreamUrl
+        }
+        if (url.isNullOrBlank()) {
+            resp = runCatching { api.nekopoiEpisode(slug) }.getOrNull()
             url = resp?.body()?.bestStreamUrl
         }
         if (!url.isNullOrBlank()) {
@@ -154,7 +165,6 @@ class DramaRepository private constructor(context: Context) {
             put("poster", item.resolvedCover ?: JSONObject.NULL)
             put("synopsis", item.resolvedSynopsis ?: JSONObject.NULL)
             put("rating", item.resolvedRating ?: JSONObject.NULL)
-            put("genres", JSONArray(item.resolvedGenres))
             val eps = JSONArray()
             item.resolvedEpisodes.forEach { ep ->
                 eps.put(JSONObject().apply {
@@ -185,9 +195,6 @@ class DramaRepository private constructor(context: Context) {
                 poster = o.optString("poster").ifBlank { null },
                 synopsis = o.optString("synopsis").ifBlank { null },
                 rating = o.optString("rating").ifBlank { null },
-                genres = runCatching {
-                    val a = o.optJSONArray("genres"); if (a == null) emptyList() else (0 until a.length()).map { a.getString(it) }
-                }.getOrDefault(emptyList()),
                 episodes = epList
             )
         }.getOrNull()

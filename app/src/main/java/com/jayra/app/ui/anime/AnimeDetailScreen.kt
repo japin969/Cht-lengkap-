@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -595,6 +596,25 @@ fun AnimePlayerScreen(
     var liked by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
 
+    // Fullscreen -> sembunyikan system bars (landscape immersive). Aman di preview.
+    val view = LocalView.current
+    DisposableEffect(isFullscreen) {
+        val window = (context as? android.app.Activity)?.window
+        val controller = if (window != null) androidx.core.view.WindowCompat.getInsetsController(window, view) else null
+        if (controller != null) {
+            if (isFullscreen) {
+                controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior =
+                    androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        onDispose {
+            runCatching { controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars()) }
+        }
+    }
+
     // Pantau state player.
     LaunchedEffect(exoPlayer) {
         val listener = object : Player.Listener {
@@ -658,7 +678,7 @@ fun AnimePlayerScreen(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
+                    .then(if (isFullscreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16f / 9f))
                     .background(Color.Black)
             ) {
                 if (videoUrl.isBlank()) {

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -102,19 +103,23 @@ fun KomikReaderScreen(
                         items = state.pages,
                         key = { it.page ?: it.url ?: "" }
                     ) { page ->
+                        // Tiap halaman tampil penuh 1 per baris, lebar penuh,
+                        // tinggi mengikuti rasio gambar (tidak kecil/berantakan).
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(Color.Black),
                             contentAlignment = Alignment.Center
                         ) {
-                            NetworkImage(
-                                url = page.url,
+                            coil.compose.AsyncImage(
+                                model = coil.request.ImageRequest.Builder(LocalContext.current)
+                                    .data(page.url)
+                                    .crossfade(false)
+                                    .build(),
                                 contentDescription = "Halaman ${page.page}",
                                 modifier = Modifier.fillMaxWidth(),
                                 contentScale = ContentScale.FillWidth,
-                                shape = RoundedCornerShape(0.dp),
-                                fallbackIcon = Icons.Rounded.Image
+                                imageLoader = com.jayra.app.ui.media.LocalMediaImageLoader.current
                             )
                         }
                     }

@@ -87,7 +87,7 @@ class DramaViewModel(app: Application) : AndroidViewModel(app) {
                     detail = DramaItem(
                         title = d.resolvedTitle, cover = d.resolvedCover,
                         synopsis = d.resolvedSynopsis, rating = d.resolvedRating,
-                        genres = d.resolvedGenres, episodes = d.resolvedEpisodes,
+                        episodes = d.resolvedEpisodes,
                         status = d.status, slug = slug
                     ),
                     episodes = d.resolvedEpisodes,
