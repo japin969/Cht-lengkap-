@@ -62,7 +62,7 @@ fun DramaDetailScreen(
     var synopsisExpanded by remember(dramaUrl) { mutableStateOf(false) }
 
     // Drama terpilih untuk diputar (in-place overlay).
-    var playingEp by remember(dramaUrl) { mutableStateOf<Int?>(null) }
+    var playingEp by remember(dramaUrl) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(dramaUrl) {
         viewModel.loadDetail(dramaUrl)
@@ -191,10 +191,11 @@ private fun DramaDetailContent(
     offline: Boolean,
     synopsisExpanded: Boolean,
     onToggleSynopsis: () -> Unit,
-    onPlayEpisode: (Int) -> Unit
+    onPlayEpisode: (String) -> Unit
 ) {
     val synopsis = detail.bestSynopsis
-    val firstEp = episodes.firstOrNull()?.num
+    val synopsisText = synopsis?.takeIf { it.isNotBlank() }
+    val firstEp = episodes.firstOrNull()?.epSlug
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -277,7 +278,7 @@ private fun DramaDetailContent(
         }
 
         // ── Sinopsis ────────────────────────────────────────────
-        if (!synopsis.isNullOrBlank()) {
+        if (synopsisText != null) {
             item(key = "synopsis") {
                 Column(
                     Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
@@ -290,13 +291,13 @@ private fun DramaDetailContent(
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = synopsis,
+                        text = synopsisText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MediaGlassColors.OnSurfaceVariant,
                         maxLines = if (synopsisExpanded) Int.MAX_VALUE else 5,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (synopsis.length > 160) {
+                    if (synopsisText.length > 160) {
                         TextButton(onClick = onToggleSynopsis) {
                             Text(
                                 if (synopsisExpanded) "Tutup" else "Selengkapnya",
@@ -348,7 +349,7 @@ private fun DramaDetailContent(
             items(episodes, key = { it.num ?: it.title ?: "" }) { ep ->
                 DramaEpisodeRow(
                     ep = ep,
-                    onClick = { ep.num?.let { onPlayEpisode(it) } }
+                    onClick = { ep.epSlug?.let { onPlayEpisode(it) } }
                 )
             }
         }
@@ -381,7 +382,7 @@ private fun DramaEpisodeRow(
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 10.dp)
             .clip(RoundedCornerShape(16.dp))
-            .clickable(enabled = ep.num != null, onClick = onClick)
+            .clickable(enabled = ep.epSlug != null, onClick = onClick)
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -421,14 +422,14 @@ private fun DramaEpisodeRow(
 private fun DramaPlayerOverlay(
     viewModel: DramaViewModel,
     dramaId: String,
-    ep: Int,
+    ep: String,
     title: String?,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(dramaId, ep) { viewModel.loadStream(dramaId, ep) }
+    LaunchedEffect(dramaId, ep) { viewModel.loadStream(ep) }
 
     val exoPlayer = remember(state.streamUrl) {
         val url = state.streamUrl
@@ -462,7 +463,7 @@ private fun DramaPlayerOverlay(
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Kembali", tint = Color.White)
                 }
                 Text(
-                    text = title?.let { "$it — Episode $ep" } ?: "Episode $ep",
+                    text = title ?: "Memutar",
                     color = Color.White,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
@@ -514,7 +515,7 @@ private fun DramaPlayerOverlay(
             // Info episode
             Column(Modifier.fillMaxWidth().padding(20.dp)) {
                 Text(
-                    "Episode $ep",
+                    "Memutar Episode",
                     color = Color.White,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold

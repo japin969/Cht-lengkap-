@@ -32,7 +32,7 @@ fun VidHubScreen(
     onKomikViewAllClick: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Drama", "Anime", "Komik")
+    val tabs = listOf("Strem", "Anime", "Komik")
     val context = LocalContext.current
     val mediaLoader = remember(context) { MediaImageLoaderProvider.get(context) }
 

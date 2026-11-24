@@ -86,7 +86,7 @@ private fun DramaTopBar() {
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                text = "Drama",
+                text = "Strem",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MediaGlassColors.OnSurface,

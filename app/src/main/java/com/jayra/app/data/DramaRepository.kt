@@ -2,271 +2,222 @@ package com.jayra.app.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import retrofit2.Response
+import com.jayra.app.JayraApp
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Repository Drama dengan cache 30 menit per endpoint (SharedPreferences).
+ * Repository Drama (Strem) — Sankavollerei donghua + donghub.
+ * Cache-first 30 menit (SharedPreferences). Paralel. Rate-limit aman.
  *
- * Alur (WAJIB):
- *  1. Cek cache. Kalau fresh (<30 menit) -> pakai cache, 0 request ke API.
- *  2. Kalau expired -> tembak API 1x (lewat rate limiter), simpan lagi.
- *  3. Kalau API error / 429 / 403 -> fallback ke cache lama (stale) +
- *     tandai offline, JANGAN blank.
- *  4. Cache kosong + API gagal -> kembalikan kosong (UI tampilkan empty state).
- *
- * Cache disimpan sebagai JSON (serialisasi manual, tanpa dependency baru).
+ * Alur: cek cache -> fresh? pakai. expired? tembak API 1x + simpan.
+ * error/429 -> fallback cache lama + flag offline.
  */
 class DramaRepository private constructor(context: Context) {
 
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences("drama_cache", Context.MODE_PRIVATE)
-
     private val api = DramaApi.create()
 
     companion object {
-        private const val FRESH_MS = 30 * 60 * 1000L // 30 menit
-
-        @Volatile
-        private var instance: DramaRepository? = null
-
+        private const val FRESH_MS = 30 * 60 * 1000L
+        @Volatile private var instance: DramaRepository? = null
         fun get(context: Context): DramaRepository = instance ?: synchronized(this) {
             instance ?: DramaRepository(context).also { instance = it }
         }
     }
 
-    // ── Home: gabungan semua section, di-cache per section ──────────────
+    suspend fun home(): HomeResult = coroutineScope {
+        // donghua (ongoing/completed/latest) + donghub (popular/latest) PARALEL.
+        val ongoingD = async { safeList("donghua_ongoing") { api.donghuaOngoing(1) } }
+        val completedD = async { safeList("donghua_completed") { api.donghuaCompleted(1) } }
+        val latestD = async { safeList("donghua_latest") { api.donghuaLatest(1) } }
+        val donghubD = async { safeList("donghub_home") { api.donghubHome() } }
+        val donghubPopD = async { safeList("donghub_popular") { api.donghubPopular() } }
 
-    suspend fun home(): HomeResult {
-        val sections = LinkedHashMap<String, List<DramaItem>>()
+        val sections = linkedMapOf<String, List<DramaItem>>()
         var offline = false
-        var anyFresh = false
+        var empty = true
 
-        // Tiap section: cache dulu, kalau expired tembak API.
-        val trending = section("trending") { api.trending() }
-        sections["Trending"] = trending.items
-        offline = offline || trending.offline
-        anyFresh = anyFresh || trending.fresh
+        fun put(name: String, items: List<DramaItem>) {
+            if (items.isNotEmpty()) { sections[name] = items; empty = false }
+        }
+        // gabung ongoing
+        val ongoing = (ongoingD.await() + latestD.await()).distinctBy { it.stableId ?: it.title }
+        val completed = completedD.await()
+        val donghub = (donghubD.await() + donghubPopD.await()).distinctBy { it.stableId ?: it.title }
+        put("Ongoing", ongoing)
+        put("Populer", donghub)
+        put("Completed", completed)
+        put("Latest", latestD.await())
 
-        val forYou = section("foryou") { api.forYou(1) }
-        sections["For You"] = forYou.items
-        offline = offline || forYou.offline
-        anyFresh = anyFresh || forYou.fresh
-
-        val hot = section("hotrank") { api.hotRank() }
-        sections["Hot Rank"] = hot.items
-        offline = offline || hot.offline
-        anyFresh = anyFresh || hot.fresh
-
-        val rec = section("recommended") { api.recommended() }
-        sections["Recommended"] = rec.items
-        offline = offline || rec.offline
-        anyFresh = anyFresh || rec.fresh
-
-        return HomeResult(
-            sections = sections,
-            offline = offline && !anyFresh,
-            empty = sections.values.all { it.isEmpty() }
-        )
+        HomeResult(sections, offline, empty)
     }
 
-    // ── Search ──────────────────────────────────────────────────────────
-
     suspend fun search(query: String): SearchResult {
+        // donghua search (path keyword) + donghub search tidak ada -> pakai donghua.
         val q = query.trim()
         if (q.isEmpty()) return SearchResult(emptyList(), false, false)
         val cacheKey = "search:$q"
         val cached = readList(cacheKey)
-        val fresh = isFresh(cacheKey)
-        if (cached != null && fresh) {
-            return SearchResult(cached, false, false)
-        }
-        // Tembak API (lewat rate limiter). Search kadang lambat -> timeout
-        // ditangani repository; kalau gagal pakai cache lama.
-        val resp = runCatching {
-            ApiRateLimiter.throttle { api.search(q) }
-        }.getOrNull()
+        if (cached != null && isFresh(cacheKey)) return SearchResult(cached, false, false)
+        val resp = runCatching { api.donghuaSearch(q, 1) }.getOrNull()
         val items = resp?.body()?.allItems
         if (resp != null && resp.isSuccessful && !items.isNullOrEmpty()) {
             writeList(cacheKey, items)
             return SearchResult(items, false, false)
         }
-        // Gagal / 429 / timeout -> fallback cache lama.
         if (cached != null) return SearchResult(cached, true, false)
         return SearchResult(emptyList(), true, cached == null)
     }
 
-    // ── Detail ──────────────────────────────────────────────────────────
-
-    suspend fun detail(id: String): DetailResult {
-        if (id.isBlank()) return DetailResult(null, emptyList(), true, false)
-        val cacheKey = "detail:$id"
+    suspend fun detail(slug: String): DetailResult {
+        if (slug.isBlank()) return DetailResult(null, emptyList(), true, false)
+        val cacheKey = "detail:$slug"
         val cached = readDetail(cacheKey)
         if (cached != null && isFresh(cacheKey)) {
-            return DetailResult(cached, cached.episodeList.orEmpty(), false, false)
+            return DetailResult(cached, cached.resolvedEpisodes, false, false)
         }
-        val resp = runCatching {
-            ApiRateLimiter.throttle { api.detail(id) }
-        }.getOrNull()
-        val data = resp?.body()?.data
-        if (resp != null && resp.isSuccessful && data != null && data.title != null) {
-            // Lengkapi episodes dari detail (kalau ada) -> simpan.
-            writeDetail(cacheKey, data)
-            return DetailResult(data, data.episodeList.orEmpty(), false, false)
+        // coba donghua dulu, lalu donghub.
+        var resp = runCatching { api.donghuaDetail(slug) }.getOrNull()
+        var detail = resp?.body()
+        if (detail == null || detail.resolvedTitle == null) {
+            resp = runCatching { api.donghubDetail(slug) }.getOrNull()
+            detail = resp?.body()
         }
-        if (cached != null) {
-            return DetailResult(cached, cached.episodeList.orEmpty(), true, false)
+        if (detail != null && (detail.resolvedTitle != null || detail.resolvedEpisodes.isNotEmpty())) {
+            writeDetail(cacheKey, detail)
+            return DetailResult(detail, detail.resolvedEpisodes, false, false)
         }
+        if (cached != null) return DetailResult(cached, cached.resolvedEpisodes, true, false)
         return DetailResult(null, emptyList(), true, cached == null)
     }
 
-    // ── Episode (resolve mp4) ────────────────────────────────────────────
-
-    suspend fun episode(id: String, ep: Int): String? {
-        val cacheKey = "ep:$id:$ep"
+    suspend fun stream(slug: String): String? {
+        val cacheKey = "stream:$slug"
         val cached = prefs.getString(cacheKey, null)
         if (cached != null && isFresh(cacheKey)) return cached
-        val resp = runCatching {
-            ApiRateLimiter.throttle { api.episode(id, ep) }
-        }.getOrNull()
-        val url = resp?.body()?.bestUrl
-        if (resp != null && resp.isSuccessful && !url.isNullOrBlank()) {
-            prefs.edit().putString(cacheKey, url).putLong("$cacheKey.ts", now()).apply()
-            return url
+        // donghua dulu, lalu donghub.
+        var resp = runCatching { api.donghuaEpisode(slug) }.getOrNull()
+        var url = resp?.body()?.bestStreamUrl
+        if (url.isNullOrBlank()) {
+            resp = runCatching { api.donghubEpisode(slug) }.getOrNull()
+            url = resp?.body()?.bestStreamUrl
         }
-        // fallback cache lama (meski expired)
-        return cached
+        if (!url.isNullOrBlank()) {
+            prefs.edit().putString(cacheKey, url).putLong("$cacheKey.ts", now()).apply()
+        }
+        return url
     }
 
-    fun clearCache() = prefs.edit().clear().apply()
+    // ── internal ────────────────────────────────────────────────────────
 
-    // ── Internal helpers ─────────────────────────────────────────────────
-
-    private data class Section(val items: List<DramaItem>, val offline: Boolean, val fresh: Boolean)
-
-    private suspend fun section(
+    private suspend fun safeList(
         key: String,
-        fetch: suspend () -> Response<DramaListResponse>
-    ): Section {
+        fetch: suspend () -> retrofit2.Response<DramaListResponse>
+    ): List<DramaItem> {
         val cached = readList(key)
-        if (cached != null && isFresh(key)) return Section(cached, false, true)
-        val resp = runCatching { ApiRateLimiter.throttle { fetch() } }.getOrNull()
+        if (cached != null && isFresh(key)) return cached
+        val resp = runCatching { fetch() }.getOrNull()
         val items = resp?.body()?.allItems
         if (resp != null && resp.isSuccessful && !items.isNullOrEmpty()) {
             writeList(key, items)
-            return Section(items, false, true)
+            return items
         }
-        return Section(cached ?: emptyList(), cached == null, false)
+        return cached ?: emptyList()
     }
 
     private fun now() = System.currentTimeMillis()
-
     private fun isFresh(key: String): Boolean {
         val ts = prefs.getLong("$key.ts", 0L)
         return ts > 0 && now() - ts < FRESH_MS
     }
 
-    // Serialisasi manual (tanpa Moshi/Gson -> hemat & aman).
-
     private fun writeList(key: String, items: List<DramaItem>) {
-        val arr = JSONArray()
-        items.forEach { arr.put(itemToJson(it)) }
-        prefs.edit().putString(key, arr.toString()).putLong("$key.ts", now()).apply()
+        val a = JSONArray()
+        items.forEach { a.put(itemToJson(it)) }
+        prefs.edit().putString(key, a.toString()).putLong("$key.ts", now()).apply()
     }
-
     private fun readList(key: String): List<DramaItem>? {
         val raw = prefs.getString(key, null) ?: return null
         return runCatching {
-            val arr = JSONArray(raw)
-            (0 until arr.length()).map { jsonToItem(arr.getJSONObject(it)) }
+            val a = JSONArray(raw)
+            (0 until a.length()).map { jsonToItem(a.getJSONObject(it)) }
+        }.getOrNull()
+    }
+    private fun writeDetail(key: String, item: DramaDetailResponse) {
+        // simpan sebagai DramaItem (episodes di-flatten ke json)
+        val o = JSONObject().apply {
+            put("title", item.resolvedTitle ?: JSONObject.NULL)
+            put("poster", item.resolvedCover ?: JSONObject.NULL)
+            put("synopsis", item.resolvedSynopsis ?: JSONObject.NULL)
+            put("rating", item.resolvedRating ?: JSONObject.NULL)
+            put("genres", JSONArray(item.resolvedGenres))
+            val eps = JSONArray()
+            item.resolvedEpisodes.forEach { ep ->
+                eps.put(JSONObject().apply {
+                    put("title", ep.title ?: JSONObject.NULL)
+                    put("slug", ep.slug ?: JSONObject.NULL)
+                    put("href", ep.href ?: JSONObject.NULL)
+                })
+            }
+            put("episodes", eps)
+        }
+        prefs.edit().putString(key, o.toString()).putLong("$key.ts", now()).apply()
+    }
+    private fun readDetail(key: String): DramaDetailResponse? {
+        val raw = prefs.getString(key, null) ?: return null
+        return runCatching {
+            val o = JSONObject(raw)
+            val eps = o.optJSONArray("episodes")
+            val epList = if (eps == null) emptyList() else (0 until eps.length()).map { i ->
+                val e = eps.getJSONObject(i)
+                DramaEpisode(
+                    title = e.optString("title").ifBlank { null },
+                    slug = e.optString("slug").ifBlank { null },
+                    href = e.optString("href").ifBlank { null }
+                )
+            }
+            DramaDetailResponse(
+                title = o.optString("title").ifBlank { null },
+                poster = o.optString("poster").ifBlank { null },
+                synopsis = o.optString("synopsis").ifBlank { null },
+                rating = o.optString("rating").ifBlank { null },
+                genres = runCatching {
+                    val a = o.optJSONArray("genres"); if (a == null) emptyList() else (0 until a.length()).map { a.getString(it) }
+                }.getOrDefault(emptyList()),
+                episodes = epList
+            )
         }.getOrNull()
     }
 
-    private fun writeDetail(key: String, item: DramaItem) {
-        prefs.edit().putString(key, itemToJson(item).toString()).putLong("$key.ts", now()).apply()
-    }
-
-    private fun readDetail(key: String): DramaItem? {
-        val raw = prefs.getString(key, null) ?: return null
-        return runCatching { jsonToItem(JSONObject(raw)) }.getOrNull()
-    }
-
     private fun itemToJson(it: DramaItem): JSONObject = JSONObject().apply {
-        put("id", it.id ?: JSONObject.NULL)
-        put("dramaId", it.dramaId ?: JSONObject.NULL)
         put("title", it.title ?: JSONObject.NULL)
-        put("cover", it.cover ?: JSONObject.NULL)
-        put("posterImg", it.posterImg ?: JSONObject.NULL)
-        put("description", it.description ?: JSONObject.NULL)
-        put("synopsis", it.synopsis ?: JSONObject.NULL)
-        put("totalEpisodes", it.totalEpisodes ?: JSONObject.NULL)
-        put("isCompleted", it.isCompleted ?: JSONObject.NULL)
-        put("categoryNames", JSONArray(it.categoryNames.orEmpty()))
-        put("publishedAt", it.publishedAt ?: JSONObject.NULL)
-        // episodes (ringkas: simpan videoUrl per episode)
-        val eps = JSONArray()
-        it.episodeList.orEmpty().forEach { ep ->
-            eps.put(JSONObject().apply {
-                put("episodeNumber", ep.episodeNumber ?: JSONObject.NULL)
-                put("number", ep.number ?: JSONObject.NULL)
-                put("episodeTitle", ep.episodeTitle ?: JSONObject.NULL)
-                put("title", ep.title ?: JSONObject.NULL)
-                put("locked", ep.locked ?: JSONObject.NULL)
-                put("videoUrl", ep.videoUrl ?: JSONObject.NULL)
-            })
-        }
-        put("episodeList", eps)
+        put("slug", it.slug ?: JSONObject.NULL)
+        put("poster", it.poster ?: JSONObject.NULL)
+        put("status", it.status ?: JSONObject.NULL)
+        put("type", it.type ?: JSONObject.NULL)
+        put("href", it.href ?: JSONObject.NULL)
     }
-
-    private fun jsonToItem(o: JSONObject): DramaItem {
-        val epsArr = o.optJSONArray("episodeList")
-        val eps = if (epsArr == null) emptyList() else (0 until epsArr.length()).map { i ->
-            val e = epsArr.getJSONObject(i)
-            DramaEpisode(
-                episodeNumber = if (e.isNull("episodeNumber")) null else e.getInt("episodeNumber"),
-                number = if (e.isNull("number")) null else e.getInt("number"),
-                episodeTitle = e.optString("episodeTitle").ifBlank { null },
-                title = e.optString("title").ifBlank { null },
-                locked = if (e.isNull("locked")) null else e.getBoolean("locked"),
-                videoUrl = e.optString("videoUrl").ifBlank { null }
-            )
-        }
-        return DramaItem(
-            id = o.optString("id").ifBlank { null },
-            dramaId = o.optString("dramaId").ifBlank { null },
-            title = o.optString("title").ifBlank { null },
-            cover = o.optString("cover").ifBlank { null },
-            posterImg = o.optString("posterImg").ifBlank { null },
-            description = o.optString("description").ifBlank { null },
-            synopsis = o.optString("synopsis").ifBlank { null },
-            totalEpisodes = if (o.isNull("totalEpisodes")) null else o.getInt("totalEpisodes"),
-            isCompleted = o.optString("isCompleted").ifBlank { null },
-            categoryNames = runCatching {
-                val a = o.optJSONArray("categoryNames")
-                if (a == null) emptyList() else (0 until a.length()).map { a.getString(it) }
-            }.getOrDefault(emptyList()),
-            publishedAt = o.optString("publishedAt").ifBlank { null },
-            episodes = if (eps.isEmpty()) null else DramaEpisodesField(list = eps)
-        )
-    }
-
-    // ── Hasil ────────────────────────────────────────────────────────────
+    private fun jsonToItem(o: JSONObject): DramaItem = DramaItem(
+        title = o.optString("title").ifBlank { null },
+        slug = o.optString("slug").ifBlank { null },
+        poster = o.optString("poster").ifBlank { null },
+        status = o.optString("status").ifBlank { null },
+        type = o.optString("type").ifBlank { null },
+        href = o.optString("href").ifBlank { null }
+    )
 
     data class HomeResult(
         val sections: Map<String, List<DramaItem>>,
         val offline: Boolean,
         val empty: Boolean
     )
-
-    data class SearchResult(
-        val items: List<DramaItem>,
-        val offline: Boolean,
-        val empty: Boolean
-    )
-
+    data class SearchResult(val items: List<DramaItem>, val offline: Boolean, val empty: Boolean)
     data class DetailResult(
-        val detail: DramaItem?,
+        val detail: DramaDetailResponse?,
         val episodes: List<DramaEpisode>,
         val offline: Boolean,
         val empty: Boolean
