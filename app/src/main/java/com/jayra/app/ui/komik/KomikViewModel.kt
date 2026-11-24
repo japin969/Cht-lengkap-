@@ -6,6 +6,7 @@ import com.jayra.app.data.KomikChapter
 import com.jayra.app.data.KomikDetailResponse
 import com.jayra.app.data.KomikItem
 import com.jayra.app.data.KomikPage
+import com.jayra.app.data.KomikHomeStore
 import com.jayra.app.data.NexadevApi
 import com.jayra.app.ui.media.mergeDedupe
 import com.jayra.app.ui.media.normalizeKey
@@ -59,8 +60,21 @@ class KomikViewModel : ViewModel() {
     private var homeLoaded = false
 
     init {
-        HomeCache.state?.let { c -> _uiState.value = c.copy(isLoading = true) }
+        val mem = HomeCache.state
+        val disk = if (mem == null) komikDiskToState(KomikHomeStore.load()) else null
+        (mem ?: disk)?.let { c -> _uiState.value = c.copy(isLoading = true) }
         loadHome()
+    }
+
+    private fun komikDiskToState(items: List<KomikHomeStore.Item>?): KomikUiState? {
+        if (items == null) return null
+        val mapped = items.map {
+            KomikItem(
+                title = it.title, link = it.link, slug = it.slug, cover = it.cover,
+                type = it.type, latestChapter = it.latestChapter, rating = it.rating
+            )
+        }
+        return KomikUiState(latest = mapped, popular = mapped)
     }
 
     fun loadHome(force: Boolean = false) {
@@ -76,7 +90,7 @@ class KomikViewModel : ViewModel() {
     private suspend fun fetchNexadevList(): KomikSourceResult {
         return try {
             val items: List<KomikItem> = coroutineScope {
-                (1..3).map { p ->
+                (1..2).map { p ->
                     async { runCatching { nexadev.getKomikList(page = p).body()?.results }.getOrDefault(emptyList()).orEmpty() }
                 }.flatMap { it.await() }.distinctBy { it.slug ?: it.title }
             }
@@ -105,6 +119,12 @@ class KomikViewModel : ViewModel() {
                 else result.error?.takeIf { it != "kosong" } ?: "Gagal memuat daftar komik"
         )
         HomeCache.state = _uiState.value.copy(isLoading = false)
+        KomikHomeStore.save(_uiState.value.latest.map {
+            KomikHomeStore.Item(
+                title = it.title, link = it.link, slug = it.slug, cover = it.cover,
+                type = it.type, latestChapter = it.latestChapter, rating = it.rating
+            )
+        })
     }
 
     object HomeCache {

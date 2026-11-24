@@ -46,9 +46,10 @@ object MediaImageLoaderProvider {
             }
             .build()
 
-        // ~25% dari available memory untuk bitmap cache.
-        val maxMemory = (Runtime.getRuntime().maxMemory() / 4).toInt()
-            .coerceAtLeast(16 * 1024 * 1024)
+        // ~35% dari available memory untuk bitmap cache (lebih banyak poster
+        // cached -> scroll & balik halaman instan, tidak putih).
+        val maxMemory = (Runtime.getRuntime().maxMemory() * 35 / 100).toInt()
+            .coerceAtLeast(24 * 1024 * 1024)
 
         val memoryCache = MemoryCache.Builder(context)
             .maxSizeBytes(maxMemory)
@@ -56,7 +57,7 @@ object MediaImageLoaderProvider {
 
         val diskCache = DiskCache.Builder()
             .directory(context.cacheDir.resolve("media_images"))
-            .maxSizeBytes(80L * 1024 * 1024)
+            .maxSizeBytes(150L * 1024 * 1024)
             .build()
 
         return ImageLoader.Builder(context)

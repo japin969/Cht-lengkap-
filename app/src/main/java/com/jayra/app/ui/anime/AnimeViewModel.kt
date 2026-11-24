@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeSearchItem
+import com.jayra.app.data.AnimeHomeStore
 import com.jayra.app.data.NexadevApi
 import com.jayra.app.ui.media.mergeDedupe
 import com.jayra.app.ui.media.normalizeKey
@@ -87,7 +88,11 @@ class AnimeViewModel : ViewModel() {
     private var homeLoaded = false
 
     init {
-        HomeCache.sections?.let { cached ->
+        // 1. Cache memori (proses) -> instan.
+        // 2. Cache disk persisten -> instan walau app baru dibuka.
+        val mem = HomeCache.sections
+        val disk = if (mem == null) diskSnapshotToState(AnimeHomeStore.load()) else null
+        (mem ?: disk)?.let { cached ->
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 ongoing = cached.ongoing,
@@ -101,6 +106,23 @@ class AnimeViewModel : ViewModel() {
             )
         }
         loadHome()
+    }
+
+    private fun diskSnapshotToState(snap: AnimeHomeStore.Snapshot?): AnimeUiState? {
+        if (snap == null) return null
+        fun toItems(l: List<AnimeHomeStore.Item>) = l.map {
+            AnimeSearchItem(
+                title = it.title, link = it.link, image = it.image,
+                latestEpisode = it.latestEpisode, type = it.type,
+                rating = it.rating, status = it.status
+            )
+        }
+        return AnimeUiState(
+            ongoing = toItems(snap.ongoing),
+            popular = toItems(snap.popular),
+            recent = toItems(snap.recent),
+            completed = toItems(snap.completed)
+        )
     }
 
     fun loadHome(force: Boolean = false) {
@@ -119,26 +141,31 @@ class AnimeViewModel : ViewModel() {
 
     private suspend fun fetchNexadevHome(): AnimeSourceResult {
         return try {
-            val ongoing = fetchNexadevPages { p -> nexadev.getAnimeOngoing(page = p).body()?.data?.animeList }
-            val popular = fetchNexadevPages { p -> nexadev.getAnimePopular(page = p).body()?.data?.animeList }
-            val completed = fetchNexadevPages { p -> nexadev.getAnimeCompleted(page = p).body()?.data?.animeList }
-            // "Terbaru" diisi dari endpoint SCHEDULE (animasu?schedule=1),
-            // bukan recent. Flatten semua hari.
-            val scheduleMap = runCatching {
-                nexadev.getAnimeSchedule().body()?.data?.schedule
-            }.getOrNull()
-            val recent = scheduleMap?.values?.flatten()?.distinctBy { it.link ?: it.title }.orEmpty()
-            val fetch = AnimeFetch(
-                ongoing = ongoing,
-                popular = popular,
-                recent = recent,
-                completed = completed
-            )
-            AnimeSourceResult(
-                source = "nexadev",
-                items = fetch.all,
-                error = if (fetch.all.isEmpty()) "kosong" else null
-            ).also { _nexadevCache = fetch }
+            // SEMUA kategori di-load PARALEL PENUH via async (bukan berurutan).
+            // Tiap kategori ambil 2 halaman (paralel di dalam fetchNexadevPages).
+            // Ini memangkas waktu dari ~8s (4 kategori berurutan) jadi ~2s.
+            coroutineScope {
+                val ongoingD = async { fetchNexadevPages(pages = 2) { p -> nexadev.getAnimeOngoing(page = p).body()?.data?.animeList } }
+                val popularD = async { fetchNexadevPages(pages = 2) { p -> nexadev.getAnimePopular(page = p).body()?.data?.animeList } }
+                val completedD = async { fetchNexadevPages(pages = 2) { p -> nexadev.getAnimeCompleted(page = p).body()?.data?.animeList } }
+                val scheduleD = async { runCatching { nexadev.getAnimeSchedule().body()?.data?.schedule }.getOrNull() }
+                val ongoing = ongoingD.await()
+                val popular = popularD.await()
+                val completed = completedD.await()
+                val scheduleMap = scheduleD.await()
+                val recent = scheduleMap?.values?.flatten()?.distinctBy { it.link ?: it.title }.orEmpty()
+                val fetch = AnimeFetch(
+                    ongoing = ongoing,
+                    popular = popular,
+                    recent = recent,
+                    completed = completed
+                )
+                AnimeSourceResult(
+                    source = "nexadev",
+                    items = fetch.all,
+                    error = if (fetch.all.isEmpty()) "kosong" else null
+                ).also { _nexadevCache = fetch }
+            }
         } catch (e: Exception) {
             AnimeSourceResult("nexadev", emptyList(), e.localizedMessage ?: "gagal")
         }
@@ -192,6 +219,16 @@ class AnimeViewModel : ViewModel() {
             sources = listOf(result)
         )
         HomeCache.save(_uiState.value)
+        // Simpan ke disk persisten (buka app berikutnya instan).
+        val st = _uiState.value
+        AnimeHomeStore.save(
+            AnimeHomeStore.Snapshot(
+                ongoing = st.ongoing.map { it.toStore() },
+                popular = st.popular.map { it.toStore() },
+                recent = st.recent.map { it.toStore() },
+                completed = st.completed.map { it.toStore() }
+            )
+        )
     }
 
     /** Cache home level-proses (instan saat balik ke Home). */
@@ -403,6 +440,11 @@ class AnimeViewModel : ViewModel() {
                 }
             }.getOrNull()
         }
+
+    private fun AnimeSearchItem.toStore() = AnimeHomeStore.Item(
+        title = title, link = link, image = image, latestEpisode = latestEpisode,
+        type = type, rating = rating, status = status
+    )
 
     private fun AnimeSearchItem.isValidAnime(): Boolean {
         val t = title?.trim().orEmpty()
