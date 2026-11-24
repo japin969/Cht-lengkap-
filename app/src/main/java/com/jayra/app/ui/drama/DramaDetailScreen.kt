@@ -434,11 +434,13 @@ private fun DramaPlayerOverlay(
     val exoPlayer = remember(state.streamUrl) {
         val url = state.streamUrl
         if (url.isNullOrBlank()) null
-        else ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(url))
-            prepare()
-            playWhenReady = true
-        }
+        else runCatching {
+            ExoPlayer.Builder(context).build().apply {
+                setMediaItem(MediaItem.fromUri(url))
+                prepare()
+                playWhenReady = true
+            }
+        }.getOrNull()
     }
     DisposableEffect(exoPlayer) { onDispose { exoPlayer?.release() } }
 

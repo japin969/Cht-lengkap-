@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,6 +47,21 @@ fun DramaScreen(
     onDramaClick: (String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var query by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<DramaItem>>(emptyList()) }
+    var searching by remember { mutableStateOf(false) }
+    var hasSearched by remember { mutableStateOf(false) }
+
+    // Debounce search.
+    LaunchedEffect(query) {
+        if (query.isBlank()) { hasSearched = false; searching = false; results = emptyList(); return@LaunchedEffect }
+        kotlinx.coroutines.delay(350)
+        searching = true
+        results = runCatching { viewModel.search(query.trim()) }.getOrElse { emptyList() }
+        searching = false
+        hasSearched = true
+    }
 
     MediaGlassTheme {
         Column(
@@ -54,20 +71,33 @@ fun DramaScreen(
         ) {
             DramaTopBar()
 
+            DramaSearchField(
+                query = query,
+                onQueryChange = { query = it },
+                onClear = { query = "" }
+            )
+
             Box(Modifier.fillMaxSize()) {
-                val hasAny = state.sections.values.any { it.isNotEmpty() }
                 when {
-                    state.isLoading && !hasAny -> MediaLoading()
-                    state.homeError != null && !hasAny -> MediaError(
-                        message = state.homeError,
-                        onRetry = { viewModel.retry() }
-                    )
-                    !hasAny -> MediaEmpty(onRetry = { viewModel.retry() })
-                    else -> DramaHomeContent(
-                        sections = state.sections,
-                        offline = state.offline,
-                        onDramaClick = onDramaClick
-                    )
+                    searching -> MediaLoading()
+                    hasSearched && results.isEmpty() -> MediaEmpty(onRetry = { query = "" })
+                    hasSearched -> DramaGrid(items = results, onClick = onDramaClick)
+                    else -> {
+                        val hasAny = state.sections.values.any { it.isNotEmpty() }
+                        when {
+                            state.isLoading && !hasAny -> MediaLoading()
+                            state.homeError != null && !hasAny -> MediaError(
+                                message = state.homeError,
+                                onRetry = { viewModel.retry() }
+                            )
+                            !hasAny -> MediaEmpty(onRetry = { viewModel.retry() })
+                            else -> DramaHomeContent(
+                                sections = state.sections,
+                                offline = state.offline,
+                                onDramaClick = onDramaClick
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -416,5 +446,42 @@ private fun MediaEmpty(onRetry: () -> Unit) {
         Text("Daftar drama sedang kosong. Coba muat ulang.", style = MaterialTheme.typography.bodyMedium, color = MediaGlassColors.OnSurfaceVariant, textAlign = TextAlign.Center)
         Spacer(Modifier.height(16.dp))
         Button(onClick = onRetry) { Text("Coba Lagi") }
+    }
+}
+@Composable
+private fun DramaSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = MediaGlassColors.SurfaceVariant
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Rounded.Search, null, tint = MediaGlassColors.OnSurfaceVariant, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            androidx.compose.foundation.text.BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MediaGlassColors.OnSurface),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(MediaGlassColors.Accent),
+                modifier = Modifier.weight(1f)
+            )
+            if (query.isEmpty()) {
+                Text("Cari drama...", style = MaterialTheme.typography.bodyMedium, color = MediaGlassColors.OnSurfaceVariant)
+            } else {
+                Box(Modifier.size(28.dp).clip(RoundedCornerShape(50)).clickable(onClick = onClear), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Close, "Hapus", tint = MediaGlassColors.OnSurfaceVariant, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
     }
 }

@@ -237,7 +237,7 @@ class KomikViewModel : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             val pages = runCatching {
                 nexadev.getKomikPages(slug = slug, type = "stream").body()?.pages
-            }.getOrNull().orEmpty()
+            }.getOrNull().orEmpty().filter { !isAdImage(it.url) }
             if (pages.isNotEmpty()) chapterPagesCache[slug] = pages
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
@@ -249,4 +249,12 @@ class KomikViewModel : ViewModel() {
     }
 
     fun retryStream() { lastSlug?.let { loadStream(it) } }
+
+    /** Filter gambar iklan (slot/gacor/maxwin) dari chapter. */
+    private fun isAdImage(url: String?): Boolean {
+        val u = url?.lowercase().orEmpty()
+        if (u.isBlank()) return false
+        val adWords = listOf("slot", "gacor", "maxwin", "jp168", "sule", "idslot", "mpo", "qq", "ceme", "bandar", "togel", "pragmatic", "judi")
+        return adWords.any { u.contains(it) }
+    }
 }

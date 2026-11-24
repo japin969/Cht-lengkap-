@@ -562,24 +562,23 @@ fun AnimePlayerScreen(
     // ── ExoPlayer dengan User-Agent okhttp (wajib untuk googlevideo) ──
     val exoPlayer = remember(videoUrl) {
         if (videoUrl.isBlank()) null
-        else ExoPlayer.Builder(context).build().apply {
-            // Data source dengan UA okhttp + ikuti redirect.
-            val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(
-                context,
-                androidx.media3.datasource.DefaultHttpDataSource.Factory()
-                    .setUserAgent(AnimeViewModel.USER_AGENT)
-                    .setAllowCrossProtocolRedirects(true)
-            )
-            val mediaSourceFactory =
-                androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
-            setMediaSource(
-                mediaSourceFactory.createMediaSource(
-                    MediaItem.fromUri(videoUrl)
+        else runCatching {
+            ExoPlayer.Builder(context).build().apply {
+                val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(
+                    context,
+                    androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                        .setUserAgent(AnimeViewModel.USER_AGENT)
+                        .setAllowCrossProtocolRedirects(true)
                 )
-            )
-            prepare()
-            playWhenReady = true
-        }
+                val mediaSourceFactory =
+                    androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
+                setMediaSource(
+                    mediaSourceFactory.createMediaSource(MediaItem.fromUri(videoUrl))
+                )
+                prepare()
+                playWhenReady = true
+            }
+        }.getOrNull()
     }
 
     DisposableEffect(exoPlayer) {
@@ -612,6 +611,19 @@ fun AnimePlayerScreen(
         }
         onDispose {
             runCatching { controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars()) }
+        }
+    }
+
+    // Fullscreen -> landscape (seperti YouTube). Kembalikan portrait saat keluar.
+    val activity = LocalContext.current as? android.app.Activity
+    DisposableEffect(isFullscreen) {
+        if (isFullscreen) {
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+        onDispose {
+            if (isFullscreen) {
+                runCatching { activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+            }
         }
     }
 
