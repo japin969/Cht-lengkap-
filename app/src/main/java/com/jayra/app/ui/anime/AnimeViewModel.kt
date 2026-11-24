@@ -122,7 +122,12 @@ class AnimeViewModel : ViewModel() {
             val ongoing = fetchNexadevPages { p -> nexadev.getAnimeOngoing(page = p).body()?.data?.animeList }
             val popular = fetchNexadevPages { p -> nexadev.getAnimePopular(page = p).body()?.data?.animeList }
             val completed = fetchNexadevPages { p -> nexadev.getAnimeCompleted(page = p).body()?.data?.animeList }
-            val recent = fetchNexadevPages { p -> nexadev.getAnimeRecent(page = p).body()?.data?.animeList }
+            // "Terbaru" diisi dari endpoint SCHEDULE (animasu?schedule=1),
+            // bukan recent. Flatten semua hari.
+            val scheduleMap = runCatching {
+                nexadev.getAnimeSchedule().body()?.data?.schedule
+            }.getOrNull()
+            val recent = scheduleMap?.values?.flatten()?.distinctBy { it.link ?: it.title }.orEmpty()
             val fetch = AnimeFetch(
                 ongoing = ongoing,
                 popular = popular,

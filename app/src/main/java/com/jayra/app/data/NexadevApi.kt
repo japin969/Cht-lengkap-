@@ -75,11 +75,10 @@ interface NexadevApi {
         @Query("page") page: Int = 1
     ): Response<AnimeListResponse>
 
-    /** Anime terbaru (recent). */
+    /** Jadwal tayang anime (schedule). */
     @GET("animasu/")
-    suspend fun getAnimeRecent(
-        @Query("recent") recent: Int = 1,
-        @Query("page") page: Int = 1
+    suspend fun getAnimeSchedule(
+        @Query("schedule") schedule: Int = 1
     ): Response<AnimeListResponse>
 
     /** Cari anime berdasarkan judul. */
