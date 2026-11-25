@@ -53,15 +53,6 @@ fun AnimeHomeScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val enrichment by viewModel.enrichment.collectAsStateWithLifecycle()
 
-    // Isi genre/rating untuk kartu yang terlihat (lazy, per item).
-    val items = remember(state.popular, state.ongoing, state.completed, state.recent) {
-        (state.ongoing + state.popular + state.completed + state.recent)
-            .distinctBy { it.link ?: it.title }
-    }
-    LaunchedEffect(items) {
-        items.take(12).forEach { viewModel.ensureEnriched(it.link) }
-    }
-
     MediaGlassTheme {
         Column(
             Modifier

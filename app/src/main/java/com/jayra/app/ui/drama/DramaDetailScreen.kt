@@ -32,7 +32,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.jayra.app.data.DramaItem
@@ -436,7 +439,16 @@ private fun DramaPlayerOverlay(
         if (url.isNullOrBlank()) null
         else runCatching {
             ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(url))
+                val dataSourceFactory = DefaultDataSource.Factory(
+                    context,
+                    DefaultHttpDataSource.Factory()
+                        .setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
+                        .setAllowCrossProtocolRedirects(true)
+                )
+                val mediaSourceFactory = ProgressiveMediaSource.Factory(dataSourceFactory)
+                setMediaSource(
+                    mediaSourceFactory.createMediaSource(MediaItem.fromUri(url))
+                )
                 prepare()
                 playWhenReady = true
             }

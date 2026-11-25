@@ -195,13 +195,26 @@ private fun DramaHero(drama: DramaItem, onClick: () -> Unit) {
             .background(MediaGlassColors.SurfaceVariant)
             .jellyClick(onClick = onClick)
     ) {
-        AsyncImage(
-            model = drama.bestCover,
-            contentDescription = drama.title,
-            modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
-            imageLoader = com.jayra.app.ui.media.LocalMediaImageLoader.current
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .matchParentSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Movie,
+                contentDescription = null,
+                tint = MediaGlassColors.OnSurfaceVariant.copy(alpha = 0.35f),
+                modifier = Modifier.size(40.dp)
+            )
+            AsyncImage(
+                model = drama.bestCover,
+                contentDescription = drama.title,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+                imageLoader = com.jayra.app.ui.media.LocalMediaImageLoader.current
+            )
+        }
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -313,13 +326,26 @@ fun DramaCard(drama: DramaItem, onClick: (String) -> Unit) {
                 .clip(RoundedCornerShape(MediaTheme.CardRadius))
                 .background(MediaGlassColors.SurfaceVariant)
         ) {
-            AsyncImage(
-                model = drama.bestCover,
-                contentDescription = drama.title,
-                modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop,
-                imageLoader = com.jayra.app.ui.media.LocalMediaImageLoader.current
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .matchParentSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Movie,
+                    contentDescription = null,
+                    tint = MediaGlassColors.OnSurfaceVariant.copy(alpha = 0.30f),
+                    modifier = Modifier.size(30.dp)
+                )
+                AsyncImage(
+                    model = drama.bestCover,
+                    contentDescription = drama.title,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop,
+                    imageLoader = com.jayra.app.ui.media.LocalMediaImageLoader.current
+                )
+            }
             // Badge episode di atas poster (kaca).
             drama.epsCount?.let { n ->
                 Surface(
