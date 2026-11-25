@@ -1,7 +1,7 @@
 name: Build Jayra APK
 on:
   push:
-    branches: [main]
+    branches: [main, kilo/warm-tensor-2vb]
   workflow_dispatch:
 jobs:
   build:
