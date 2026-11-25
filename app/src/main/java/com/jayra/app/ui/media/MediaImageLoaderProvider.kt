@@ -1,14 +1,10 @@
 package com.jayra.app.ui.media
 
 import android.content.Context
-import android.util.Log
 import coil.ImageLoader
 import coil.disk.DiskCache
-import coil.event.EventListener
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
-import coil.request.ErrorResult
-import coil.request.ImageRequest
 import okhttp3.OkHttpClient
 
 /**
@@ -82,14 +78,6 @@ object MediaImageLoaderProvider {
             // Jangan pakai ulang hasil cache secara agresif — tapi tetap cache
             // di memori/disk agar scroll balik instan.
             .respectCacheHeaders(false)
-            .eventListener(object : EventListener {
-                override fun onError(request: ImageRequest, result: ErrorResult) {
-                    Log.e(
-                        "JayraPoster",
-                        "Gagal load poster: ${result.request.data} | ${result.throwable.javaClass.simpleName}: ${result.throwable.message}"
-                    )
-                }
-            })
             .build()
     }
 

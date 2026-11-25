@@ -593,18 +593,16 @@ fun AnimePlayerScreen(
                 .setUri(videoUrl)
                 .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.VIDEO_MP4)
                 .build()
-            ExoPlayer.Builder(
-                context,
-                renderersFactory,
-                DefaultMediaSourceFactory(dataSourceFactory),
-                trackSelector,
-                loadControl
-            ).build().apply {
-                Log.d("JayraStream", "Anime ExoPlayer prepare: $videoUrl (hls=$isHls)")
-                setMediaItem(mediaItem)
-                prepare()
-                playWhenReady = true
-            }
+            ExoPlayer.Builder(context, renderersFactory)
+                .setTrackSelector(trackSelector)
+                .setLoadControl(loadControl)
+                .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+                .build().apply {
+                    Log.d("JayraStream", "Anime ExoPlayer prepare: $videoUrl (hls=$isHls)")
+                    setMediaItem(mediaItem)
+                    prepare()
+                    playWhenReady = true
+                }
         }.getOrNull()
     }
 
