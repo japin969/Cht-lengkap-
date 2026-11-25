@@ -614,17 +614,14 @@ fun AnimePlayerScreen(
         }
     }
 
-    // Fullscreen -> landscape (seperti YouTube). Kembalikan portrait saat keluar.
+    // Fullscreen -> landscape (seperti YouTube). Pakai LaunchedEffect (tanpa
+    // cleanup race yang bikin balik ke portrait).
     val activity = LocalContext.current as? android.app.Activity
-    DisposableEffect(isFullscreen) {
-        if (isFullscreen) {
-            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        }
-        onDispose {
-            if (isFullscreen) {
-                runCatching { activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
-            }
-        }
+    LaunchedEffect(isFullscreen) {
+        activity?.requestedOrientation = if (isFullscreen)
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        else
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 
     // Pantau state player.

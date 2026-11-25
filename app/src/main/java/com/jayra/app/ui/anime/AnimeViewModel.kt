@@ -145,9 +145,9 @@ class AnimeViewModel : ViewModel() {
             // Tiap kategori ambil 2 halaman (paralel di dalam fetchNexadevPages).
             // Ini memangkas waktu dari ~8s (4 kategori berurutan) jadi ~2s.
             coroutineScope {
-                val ongoingD = async { fetchNexadevPages(pages = 2) { p -> nexadev.getAnimeOngoing(page = p).body()?.data?.animeList } }
-                val popularD = async { fetchNexadevPages(pages = 2) { p -> nexadev.getAnimePopular(page = p).body()?.data?.animeList } }
-                val completedD = async { fetchNexadevPages(pages = 2) { p -> nexadev.getAnimeCompleted(page = p).body()?.data?.animeList } }
+                val ongoingD = async { fetchNexadevPages(pages = 1) { p -> nexadev.getAnimeOngoing(page = p).body()?.data?.animeList } }
+                val popularD = async { fetchNexadevPages(pages = 1) { p -> nexadev.getAnimePopular(page = p).body()?.data?.animeList } }
+                val completedD = async { fetchNexadevPages(pages = 1) { p -> nexadev.getAnimeCompleted(page = p).body()?.data?.animeList } }
                 val scheduleD = async { runCatching { nexadev.getAnimeSchedule().body()?.data?.schedule }.getOrNull() }
                 val ongoing = ongoingD.await()
                 val popular = popularD.await()

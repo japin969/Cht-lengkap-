@@ -51,12 +51,6 @@ fun AnimePoster(
 ) {
     val context = LocalContext.current
     var loadState by remember(url) { mutableStateOf(LoadState.EMPTY) }
-    // Fade-in halus saat gambar pertama kali siap (ringan, sekali jalan).
-    val alpha by animateFloatAsState(
-        targetValue = if (loadState == LoadState.READY) 1f else 0f,
-        animationSpec = tween(durationMillis = 220),
-        label = "poster_fade"
-    )
 
     Box(
         modifier = modifier
@@ -84,8 +78,7 @@ fun AnimePoster(
                     .build(),
                 contentDescription = contentDescription,
                 modifier = Modifier
-                    .matchParentSize()
-                    .alpha(alpha),
+                    .matchParentSize(),
                 contentScale = contentScale,
                 imageLoader = com.jayra.app.ui.media.LocalMediaImageLoader.current,
                 onState = { state ->

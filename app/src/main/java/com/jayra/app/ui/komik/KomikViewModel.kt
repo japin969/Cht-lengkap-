@@ -90,7 +90,7 @@ class KomikViewModel : ViewModel() {
     private suspend fun fetchNexadevList(): KomikSourceResult {
         return try {
             val items: List<KomikItem> = coroutineScope {
-                (1..2).map { p ->
+                (1..1).map { p ->
                     async { runCatching { nexadev.getKomikList(page = p).body()?.results }.getOrDefault(emptyList()).orEmpty() }
                 }.flatMap { it.await() }.distinctBy { it.slug ?: it.title }
             }
@@ -254,7 +254,13 @@ class KomikViewModel : ViewModel() {
     private fun isAdImage(url: String?): Boolean {
         val u = url?.lowercase().orEmpty()
         if (u.isBlank()) return false
-        val adWords = listOf("slot", "gacor", "maxwin", "jp168", "sule", "idslot", "mpo", "qq", "ceme", "bandar", "togel", "pragmatic", "judi")
+        val adWords = listOf(
+            "slot", "gacor", "maxwin", "jp168", "sule", "idslot", "mpo", "qq", "ceme",
+            "bandar", "togel", "pragmatic", "judi", "arab777", "depo", "jackpot",
+            "maxwin", "scatter", "zeus", "gatesof", "starlight", "mahjong", "wayang",
+            "sakti", "gacorx", "jpslot", "bosslot", "ligacash", "rolet", "sabung",
+            "bet", "casino", "poker", "domino", "99bet", "1x", "maxbet", "sbobet"
+        )
         return adWords.any { u.contains(it) }
     }
 }

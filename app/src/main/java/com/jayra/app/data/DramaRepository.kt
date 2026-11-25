@@ -23,6 +23,8 @@ class DramaRepository private constructor(context: Context) {
 
     companion object {
         private const val FRESH_MS = 30 * 60 * 1000L
+        private val MP4_REGEX = Regex("https?://[^\"'\\s]+\\.mp4[^\"'\\s]*")
+        private val M3U8_REGEX = Regex("https?://[^\"'\\s]+\\.m3u8[^\"'\\s]*")
         @Volatile private var instance: DramaRepository? = null
         fun get(context: Context): DramaRepository = instance ?: synchronized(this) {
             instance ?: DramaRepository(context).also { instance = it }
@@ -117,11 +119,33 @@ class DramaRepository private constructor(context: Context) {
             resp = runCatching { api.nekopoiEpisode(slug) }.getOrNull()
             url = resp?.body()?.bestStreamUrl
         }
-        if (!url.isNullOrBlank()) {
-            prefs.edit().putString(cacheKey, url).putLong("$cacheKey.ts", now()).apply()
+        // Resolve embed (ok.ru/rumble/dailymotion/dll) -> mp4/m3u8 langsung.
+        val resolved = if (!url.isNullOrBlank()) resolveEmbedToMp4(url) else null
+        val finalUrl = resolved ?: url
+        if (!finalUrl.isNullOrBlank()) {
+            prefs.edit().putString(cacheKey, finalUrl).putLong("$cacheKey.ts", now()).apply()
         }
-        return url
+        return finalUrl
     }
+
+    /** Fetch halaman embed, cari mp4/m3u8 di HTML/JSON. */
+    private suspend fun resolveEmbedToMp4(embedUrl: String): String? = runCatching {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val client = okhttp3.OkHttpClient.Builder()
+                .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+            val req = okhttp3.Request.Builder().url(embedUrl)
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8)")
+                .build()
+            client.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return@use null
+                val html = resp.body?.string() ?: return@use null
+                val decoded = html.replace("\\u0026", "&").replace("\\/", "/")
+                MP4_REGEX.find(decoded)?.value ?: M3U8_REGEX.find(decoded)?.value
+            }
+        }
+    }.getOrNull()
 
     // ── internal ────────────────────────────────────────────────────────
 
