@@ -44,9 +44,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.util.Log
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeSearchItem
@@ -563,18 +569,39 @@ fun AnimePlayerScreen(
     val exoPlayer = remember(videoUrl) {
         if (videoUrl.isBlank()) null
         else runCatching {
-            ExoPlayer.Builder(context).build().apply {
-                val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(
-                    context,
-                    androidx.media3.datasource.DefaultHttpDataSource.Factory()
-                        .setUserAgent(AnimeViewModel.USER_AGENT)
-                        .setAllowCrossProtocolRedirects(true)
+            val isHls = videoUrl.lowercase().contains(".m3u8")
+            val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(
+                context,
+                androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                    .setUserAgent(AnimeViewModel.USER_AGENT)
+                    .setAllowCrossProtocolRedirects(true)
+            )
+            val renderersFactory = DefaultRenderersFactory(context)
+                .setEnableDecoderFallback(true)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            val trackSelector = DefaultTrackSelector(context).apply {
+                setParameters(
+                    buildUponParameters()
+                        .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                        .setAllowVideoNonSeamlessAdaptiveness(true)
                 )
-                val mediaSourceFactory =
-                    androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
-                setMediaSource(
-                    mediaSourceFactory.createMediaSource(MediaItem.fromUri(videoUrl))
-                )
+            }
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(50_000, 50_000, 2_500, 5_000)
+                .build()
+            val mediaItem = MediaItem.Builder()
+                .setUri(videoUrl)
+                .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.VIDEO_MP4)
+                .build()
+            ExoPlayer.Builder(
+                context,
+                renderersFactory,
+                DefaultMediaSourceFactory(dataSourceFactory),
+                trackSelector,
+                loadControl
+            ).build().apply {
+                Log.d("JayraStream", "Anime ExoPlayer prepare: $videoUrl (hls=$isHls)")
+                setMediaItem(mediaItem)
                 prepare()
                 playWhenReady = true
             }
@@ -629,6 +656,14 @@ fun AnimePlayerScreen(
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isBuffering = playbackState == Player.STATE_BUFFERING
+                val name = when (playbackState) {
+                    Player.STATE_IDLE -> "IDLE"
+                    Player.STATE_BUFFERING -> "BUFFERING"
+                    Player.STATE_READY -> "READY"
+                    Player.STATE_ENDED -> "ENDED"
+                    else -> "?"
+                }
+                Log.d("JayraStream", "Anime player state: $name")
                 when (playbackState) {
                     Player.STATE_READY -> playError = null
                     Player.STATE_ENDED -> {
@@ -646,8 +681,17 @@ fun AnimePlayerScreen(
                 isPlaying = playing
             }
 
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                Log.d("JayraStream", "Anime video size: ${videoSize.width}x${videoSize.height}")
+            }
+
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 playError = error.message ?: "Gagal memutar video"
+                Log.e(
+                    "JayraStream",
+                    "Anime ExoPlayer error ${error.errorCodeName}(${error.errorCode}): ${error.message}",
+                    error.cause
+                )
             }
         }
         exoPlayer?.addListener(listener)

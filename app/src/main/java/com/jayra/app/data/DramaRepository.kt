@@ -2,6 +2,7 @@ package com.jayra.app.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.jayra.app.JayraApp
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -108,24 +109,39 @@ class DramaRepository private constructor(context: Context) {
         val cacheKey = "stream:$slug"
         val cached = prefs.getString(cacheKey, null)
         if (cached != null && isFresh(cacheKey)) return cached
-        // donghua dulu, lalu donghub.
-        var resp = runCatching { api.donghuaEpisode(slug) }.getOrNull()
-        var url = resp?.body()?.bestStreamUrl
-        if (url.isNullOrBlank()) {
-            resp = runCatching { api.donghubEpisode(slug) }.getOrNull()
-            url = resp?.body()?.bestStreamUrl
+
+        // Kumpulkan kandidat dari donghua -> donghub -> nekopoi (semua server).
+        val candidates = buildList {
+            runCatching { api.donghuaEpisode(slug) }.getOrNull()?.body()?.serverCandidates
+                ?.let { addAll(it) }
+            runCatching { api.donghubEpisode(slug) }.getOrNull()?.body()?.serverCandidates
+                ?.let { addAll(it) }
+            runCatching { api.nekopoiEpisode(slug) }.getOrNull()?.body()?.serverCandidates
+                ?.let { addAll(it) }
+        }.distinct()
+
+        // Coba tiap kandidat. Kalau sudah media langsung pakai; kalau embed,
+        // resolve ke mp4/m3u8. JANGAN pakai URL embed sebagai fallback — ExoPlayer
+        // tidak bisa memutar halaman HTML (itu penyebab layar hitam).
+        for (candidate in candidates) {
+            val direct = if (isDirectMedia(candidate)) candidate else resolveEmbedToMp4(candidate)
+            if (!direct.isNullOrBlank()) {
+                Log.d("JayraStream", "Stream resolved: $direct")
+                prefs.edit().putString(cacheKey, direct).putLong("$cacheKey.ts", now()).apply()
+                return direct
+            }
         }
-        if (url.isNullOrBlank()) {
-            resp = runCatching { api.nekopoiEpisode(slug) }.getOrNull()
-            url = resp?.body()?.bestStreamUrl
-        }
-        // Resolve embed (ok.ru/rumble/dailymotion/dll) -> mp4/m3u8 langsung.
-        val resolved = if (!url.isNullOrBlank()) resolveEmbedToMp4(url) else null
-        val finalUrl = resolved ?: url
-        if (!finalUrl.isNullOrBlank()) {
-            prefs.edit().putString(cacheKey, finalUrl).putLong("$cacheKey.ts", now()).apply()
-        }
-        return finalUrl
+        Log.w("JayraStream", "Tidak ada sumber video yang bisa di-resolve (slug=$slug)")
+        return null
+    }
+
+    /** URL yang sudah berupa media asli (bukan halaman embed HTML). */
+    private fun isDirectMedia(url: String): Boolean {
+        val lower = url.lowercase()
+        return lower.contains(".m3u8") ||
+            lower.contains(".mp4") ||
+            lower.contains("videoplayback") ||
+            lower.contains(".mkv")
     }
 
     /** Fetch halaman embed, cari mp4/m3u8 di HTML/JSON. */
@@ -136,16 +152,36 @@ class DramaRepository private constructor(context: Context) {
                 .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                 .build()
             val req = okhttp3.Request.Builder().url(embedUrl)
-                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8)")
+                .header(
+                    "User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                )
+                .header("Referer", embedUrl)
+                .header("Accept", "*/*")
                 .build()
             client.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) return@use null
-                val html = resp.body?.string() ?: return@use null
-                val decoded = html.replace("\\u0026", "&").replace("\\/", "/")
-                MP4_REGEX.find(decoded)?.value ?: M3U8_REGEX.find(decoded)?.value
+                if (!resp.isSuccessful) {
+                    Log.w("JayraStream", "Embed ${resp.code} untuk $embedUrl")
+                    return@use null
+                }
+                val raw = resp.body?.string() ?: return@use null
+                // Decode entity HTML (&quot; &amp; \u0026 \/ ) supaya regex URL valid.
+                val html = decodeEntities(raw)
+                // ok.ru / rumble / player lain: HLS manifest (.m3u8) didahulukan.
+                M3U8_REGEX.find(html)?.value
+                    ?: MP4_REGEX.find(html)?.value
             }
         }
     }.getOrNull()
+
+    private fun decodeEntities(s: String): String = s
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
+        .replace("\\u0026", "&")
+        .replace("\\/", "/")
+        .replace("\\u002F", "/")
 
     // ── internal ────────────────────────────────────────────────────────
 

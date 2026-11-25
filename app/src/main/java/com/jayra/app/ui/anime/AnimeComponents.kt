@@ -22,10 +22,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import android.util.Log
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
+import coil.request.CachePolicy
+import coil.request.ErrorResult
 
 /**
  * Poster anime dengan placeholder native.
@@ -68,13 +71,25 @@ fun AnimePoster(
             )
         }
         if (!url.isNullOrBlank()) {
+            Log.d("JayraPoster", "Anime poster URL: $url")
             AsyncImage(
                 // Pakai ImageRequest -> shared ImageLoader (cache memori + disk
                 // yang sama dengan Komik). Poster yang pernah muncul langsung
                 // tampil lagi tanpa kedip putih.
                 model = coil.request.ImageRequest.Builder(context)
                     .data(url)
-                    .crossfade(false)
+                    .crossfade(true)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .listener(
+                        onError = { _, result: ErrorResult ->
+                            Log.e(
+                                "JayraPoster",
+                                "Error poster anime: $url -> ${result.throwable.javaClass.simpleName}: ${result.throwable.message}"
+                            )
+                        }
+                    )
                     .build(),
                 contentDescription = contentDescription,
                 modifier = Modifier

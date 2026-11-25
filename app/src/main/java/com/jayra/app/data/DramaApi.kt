@@ -272,6 +272,16 @@ data class DramaEpisodeResponse(
         get() = streaming?.main_url?.url
             ?: streaming?.servers?.firstOrNull { !it.url.isNullOrBlank() }?.url
             ?: data?.streams?.firstOrNull { !it.url.isNullOrBlank() }?.url
+    /**
+     * Semua kandidat URL (embed atau langsung) dari semua server.
+     * Dipakai untuk mencoba server satu per satu sampai dapat media URL asli.
+     */
+    val serverCandidates: List<String>
+        get() = buildList {
+            streaming?.main_url?.url?.let { add(it) }
+            streaming?.servers?.forEach { it.url?.let { u -> add(u) } }
+            data?.streams?.forEach { it.url?.let { u -> add(u) } }
+        }.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
 }
 
 @JsonClass(generateAdapter = true)

@@ -1,10 +1,14 @@
 package com.jayra.app.ui.media
 
 import android.content.Context
+import android.util.Log
 import coil.ImageLoader
 import coil.disk.DiskCache
+import coil.event.EventListener
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
+import coil.request.ErrorResult
+import coil.request.ImageRequest
 import okhttp3.OkHttpClient
 
 /**
@@ -30,19 +34,26 @@ object MediaImageLoaderProvider {
     }
 
     private fun build(context: Context): ImageLoader {
-        // OkHttp default (trust store sistem). Hanya menambah User-Agent
-        // agar CDN tidak menolak request.
+        // OkHttp default (trust store sistem) + header browser.
+        // Banyak CDN anime (anichin.moe, donghive.vip, i0.wp.com/animasu.love)
+        // menolak request tanpa User-Agent / Referer yang wajar (403 Cloudflare).
+        // Interceptor ini menambahkan header yang benar per host sumber gambar.
         val client = OkHttpClient.Builder()
             .retryOnConnectionFailure(true)
             .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
+                val original = chain.request()
+                val url = original.url.toString()
+                val referer = refererFor(url)
+                val builder = original.newBuilder()
                     .header(
                         "User-Agent",
                         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 " +
                             "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
                     )
-                    .build()
-                chain.proceed(request)
+                    .header("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.9,id;q=0.8")
+                if (referer != null) builder.header("Referer", referer)
+                chain.proceed(builder.build())
             }
             .build()
 
@@ -64,10 +75,37 @@ object MediaImageLoaderProvider {
             .okHttpClient(client)
             .memoryCache(memoryCache)
             .diskCache(diskCache)
+            // Cache aktif penuh: memory + disk + network.
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .networkCachePolicy(CachePolicy.ENABLED)
             // Jangan pakai ulang hasil cache secara agresif — tapi tetap cache
             // di memori/disk agar scroll balik instan.
             .respectCacheHeaders(false)
+            .eventListener(object : EventListener {
+                override fun onError(request: ImageRequest, result: ErrorResult) {
+                    Log.e(
+                        "JayraPoster",
+                        "Gagal load poster: ${result.request.data} | ${result.throwable.javaClass.simpleName}: ${result.throwable.message}"
+                    )
+                }
+            })
             .build()
+    }
+
+    /**
+     * Referer yang wajar per domain sumber poster. CDN anime sering menolak
+     * request tanpa Referer dari domain asalnya.
+     */
+    private fun refererFor(url: String): String? {
+        val host = runCatching { java.net.URI(url).host?.lowercase() }.getOrNull() ?: return null
+        return when {
+            host.contains("anichin.") -> "https://anichin.moe/"
+            host.contains("donghive.") -> "https://donghive.vip/"
+            host.contains("animasu") || host.contains("wp.com") -> "https://animasu.love/"
+            host.contains("sankavollerei") -> "https://www.sankavollerei.web.id/"
+            else -> null
+        }
     }
 }
 

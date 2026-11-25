@@ -457,7 +457,7 @@ class AnimeViewModel : ViewModel() {
     companion object {
         const val USER_AGENT = "okhttp/4.12.0"
         private val GOOGLEVIDEO_REGEX = Regex(
-            """https://rr\d+---[a-z0-9-]+\.googlevideo\.com/videoplayback\?[^"\\\s]*"""
+            """https://[a-z0-9.-]*googlevideo\.com/videoplayback\?[^"\\\s]*"""
         )
     }
 }

@@ -25,10 +25,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import android.util.Log
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ErrorResult
+import coil.request.ImageRequest
 import com.jayra.app.data.DramaItem
 import com.jayra.app.ui.media.MediaGlassColors
 import com.jayra.app.ui.media.MediaGlassTheme
@@ -208,7 +212,21 @@ private fun DramaHero(drama: DramaItem, onClick: () -> Unit) {
                 modifier = Modifier.size(40.dp)
             )
             AsyncImage(
-                model = drama.bestCover,
+                model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(drama.bestCover)
+                    .crossfade(true)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .listener(
+                        onError = { _, result: ErrorResult ->
+                            Log.e(
+                                "JayraPoster",
+                                "Error poster strem (hero): ${drama.bestCover} -> ${result.throwable.javaClass.simpleName}: ${result.throwable.message}"
+                            )
+                        }
+                    )
+                    .build(),
                 contentDescription = drama.title,
                 modifier = Modifier.matchParentSize(),
                 contentScale = ContentScale.Crop,
@@ -339,7 +357,21 @@ fun DramaCard(drama: DramaItem, onClick: (String) -> Unit) {
                     modifier = Modifier.size(30.dp)
                 )
                 AsyncImage(
-                    model = drama.bestCover,
+                    model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        .data(drama.bestCover)
+                        .crossfade(true)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .listener(
+                            onError = { _, result: ErrorResult ->
+                                Log.e(
+                                    "JayraPoster",
+                                    "Error poster strem (card): ${drama.bestCover} -> ${result.throwable.javaClass.simpleName}: ${result.throwable.message}"
+                                )
+                            }
+                        )
+                        .build(),
                     contentDescription = drama.title,
                     modifier = Modifier.matchParentSize(),
                     contentScale = ContentScale.Crop,

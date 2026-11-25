@@ -31,11 +31,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.util.Log
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.jayra.app.data.DramaItem
@@ -438,23 +444,95 @@ private fun DramaPlayerOverlay(
         val url = state.streamUrl
         if (url.isNullOrBlank()) null
         else runCatching {
-            ExoPlayer.Builder(context).build().apply {
-                val dataSourceFactory = DefaultDataSource.Factory(
-                    context,
-                    DefaultHttpDataSource.Factory()
-                        .setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
-                        .setAllowCrossProtocolRedirects(true)
+            val isHls = url.lowercase().contains(".m3u8")
+            val referer = runCatching { java.net.URI(url).let { "${it.scheme}://${it.host}/" } }.getOrNull()
+            val dataSourceFactory = DefaultDataSource.Factory(
+                context,
+                DefaultHttpDataSource.Factory()
+                    .setUserAgent(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                            "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                    )
+                    .setAllowCrossProtocolRedirects(true)
+                    .setDefaultRequestProperties(
+                        if (referer != null) mapOf("Referer" to referer) else emptyMap()
+                    )
+            )
+            // Decoder fallback + extension renderer: cegah layar hitam saat
+            // codec HEVC/AV1 tidak didukung hardware device.
+            val renderersFactory = DefaultRenderersFactory(context)
+                .setEnableDecoderFallback(true)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            val trackSelector = DefaultTrackSelector(context).apply {
+                setParameters(
+                    buildUponParameters()
+                        .setAllowVideoMixedMimeTypeAdaptiveness(true)
+                        .setAllowVideoNonSeamlessAdaptiveness(true)
                 )
-                val mediaSourceFactory = ProgressiveMediaSource.Factory(dataSourceFactory)
-                setMediaSource(
-                    mediaSourceFactory.createMediaSource(MediaItem.fromUri(url))
-                )
+            }
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(50_000, 50_000, 2_500, 5_000)
+                .build()
+            val mediaItem = MediaItem.Builder()
+                .setUri(url)
+                .setMimeType(if (isHls) MimeTypes.APPLICATION_M3U8 else MimeTypes.VIDEO_MP4)
+                .build()
+            ExoPlayer.Builder(
+                context,
+                renderersFactory,
+                DefaultMediaSourceFactory(dataSourceFactory),
+                trackSelector,
+                loadControl
+            ).build().apply {
+                Log.d("JayraStream", "ExoPlayer prepare: $url (hls=$isHls)")
+                setMediaItem(mediaItem)
                 prepare()
                 playWhenReady = true
             }
         }.getOrNull()
     }
     DisposableEffect(exoPlayer) { onDispose { exoPlayer?.release() } }
+
+    var playError by remember { mutableStateOf<String?>(null) }
+    var isBuffering by remember { mutableStateOf(true) }
+
+    // Log state player (IDLE/BUFFERING/READY/ENDED) + error asli ExoPlayer.
+    LaunchedEffect(exoPlayer) {
+        val player = exoPlayer ?: return@LaunchedEffect
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                isBuffering = playbackState == Player.STATE_BUFFERING
+                val name = when (playbackState) {
+                    Player.STATE_IDLE -> "IDLE"
+                    Player.STATE_BUFFERING -> "BUFFERING"
+                    Player.STATE_READY -> "READY"
+                    Player.STATE_ENDED -> "ENDED"
+                    else -> "?"
+                }
+                Log.d("JayraStream", "Player state: $name")
+                if (playbackState == Player.STATE_READY) playError = null
+            }
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                Log.d("JayraStream", "Video size: ${videoSize.width}x${videoSize.height}")
+            }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                playError = error.message ?: "Gagal memutar video"
+                Log.e(
+                    "JayraStream",
+                    "ExoPlayer error ${error.errorCodeName}(${error.errorCode}): ${error.message}",
+                    error.cause
+                )
+            }
+        }
+        player.addListener(listener)
+        try {
+            while (true) {
+                kotlinx.coroutines.delay(500)
+            }
+        } finally {
+            player.removeListener(listener)
+        }
+    }
 
     MediaGlassTheme {
         Column(
@@ -509,6 +587,34 @@ private fun DramaPlayerOverlay(
                             },
                             modifier = Modifier.fillMaxSize()
                         )
+                        if (isBuffering && playError == null) {
+                            Box(
+                                Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.35f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = Color.White)
+                            }
+                        }
+                        if (playError != null) {
+                            Box(
+                                Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.85f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.padding(24.dp)
+                                ) {
+                                    Text(
+                                        playError ?: "Gagal memutar video",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = { viewModel.retryStream() }) { Text("Coba Lagi") }
+                                }
+                            }
+                        }
                     }
                     else -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -31,9 +31,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import android.util.Log
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ErrorResult
 import coil.request.ImageRequest
 
 /**
@@ -109,7 +112,18 @@ fun MediaImage(
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(url)
-                    .crossfade(false)
+                    .crossfade(true)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .listener(
+                        onError = { _, result: ErrorResult ->
+                            Log.e(
+                                "JayraPoster",
+                                "Error media image: $url -> ${result.throwable.javaClass.simpleName}: ${result.throwable.message}"
+                            )
+                        }
+                    )
                     .build(),
                 contentDescription = contentDescription,
                 modifier = Modifier.matchParentSize(),
