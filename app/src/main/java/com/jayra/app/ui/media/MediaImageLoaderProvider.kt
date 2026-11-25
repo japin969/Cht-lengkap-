@@ -37,19 +37,33 @@ object MediaImageLoaderProvider {
         val client = OkHttpClient.Builder()
             .retryOnConnectionFailure(true)
             .addInterceptor { chain ->
-                val original = chain.request()
-                val url = original.url.toString()
+                val request = chain.request()
+                val url = request.url.toString()
+                val ua =
+                    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 " +
+                        "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
                 val referer = refererFor(url)
-                val builder = original.newBuilder()
-                    .header(
-                        "User-Agent",
-                        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 " +
-                            "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
-                    )
+                val builder = request.newBuilder()
+                    .header("User-Agent", ua)
                     .header("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
                     .header("Accept-Language", "en-US,en;q=0.9,id;q=0.8")
                 if (referer != null) builder.header("Referer", referer)
-                chain.proceed(builder.build())
+                val response = chain.proceed(builder.build())
+                // anichin.moe / donghive.vip membalas 403 Cloudflare ke banyak
+                // jaringan. Kalau gagal, ulang lewat proxy gambar publik (native
+                // HTTP, bukan WebView) yang mengambil dari IP berbeda.
+                if ((response.code == 403 || response.code == 404) && isBlockedPosterHost(url)) {
+                    response.close()
+                    val proxied = request.newBuilder()
+                        .url(
+                            "https://proxy.duckduckgo.com/iu/?u=" +
+                                java.net.URLEncoder.encode(url, "UTF-8")
+                        )
+                        .header("User-Agent", ua)
+                        .build()
+                    return@addInterceptor chain.proceed(proxied)
+                }
+                response
             }
             .build()
 
@@ -94,6 +108,12 @@ object MediaImageLoaderProvider {
             host.contains("sankavollerei") -> "https://www.sankavollerei.web.id/"
             else -> null
         }
+    }
+
+    /** Host poster yang terbukti membalas 403 Cloudflare (butuh fallback proxy). */
+    private fun isBlockedPosterHost(url: String): Boolean {
+        val host = runCatching { java.net.URI(url).host?.lowercase() }.getOrNull() ?: return false
+        return host.contains("anichin.") || host.contains("donghive.")
     }
 }
 

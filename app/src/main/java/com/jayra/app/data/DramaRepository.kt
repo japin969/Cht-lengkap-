@@ -106,11 +106,9 @@ class DramaRepository private constructor(context: Context) {
     }
 
     suspend fun stream(slug: String): String? {
-        val cacheKey = "stream:$slug"
-        val cached = prefs.getString(cacheKey, null)
-        if (cached != null && isFresh(cacheKey)) return cached
-
-        // Kumpulkan kandidat dari donghua -> donghub -> nekopoi (semua server).
+        // Stream URL (ok.ru/googlevideo) berumur pendek (token + IP). JANGAN
+        // di-cache 30 menit — itu bikin play berikutnya memakai token kedaluwarsa
+        // dan muncul "Source error". Selalu resolve fresh.
         val candidates = buildList {
             runCatching { api.donghuaEpisode(slug) }.getOrNull()?.body()?.serverCandidates
                 ?.let { addAll(it) }
@@ -119,17 +117,18 @@ class DramaRepository private constructor(context: Context) {
             runCatching { api.nekopoiEpisode(slug) }.getOrNull()?.body()?.serverCandidates
                 ?.let { addAll(it) }
         }.distinct()
+        Log.d("JayraStream", "Kandidat server ($slug): ${candidates.size}")
 
         // Coba tiap kandidat. Kalau sudah media langsung pakai; kalau embed,
         // resolve ke mp4/m3u8. JANGAN pakai URL embed sebagai fallback — ExoPlayer
         // tidak bisa memutar halaman HTML (itu penyebab layar hitam).
-        for (candidate in candidates) {
+        for ((index, candidate) in candidates.withIndex()) {
             val direct = if (isDirectMedia(candidate)) candidate else resolveEmbedToMp4(candidate)
             if (!direct.isNullOrBlank()) {
-                Log.d("JayraStream", "Stream resolved: $direct")
-                prefs.edit().putString(cacheKey, direct).putLong("$cacheKey.ts", now()).apply()
+                Log.d("JayraStream", "Server #${index + 1} OK: $direct")
                 return direct
             }
+            Log.w("JayraStream", "Server #${index + 1} gagal resolve: $candidate")
         }
         Log.w("JayraStream", "Tidak ada sumber video yang bisa di-resolve (slug=$slug)")
         return null

@@ -1,6 +1,7 @@
 package com.jayra.app.ui.drama
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.DramaEpisode
@@ -113,7 +114,9 @@ class DramaViewModel(app: Application) : AndroidViewModel(app) {
         lastStreamSlug = slug
         _uiState.value = _uiState.value.copy(streamLoading = true, streamUrl = null, streamError = null)
         viewModelScope.launch {
+            Log.d("JayraStream", "loadStream slug=$slug")
             val url = repo.stream(slug)
+            Log.d("JayraStream", "loadStream hasil=$url")
             _uiState.value = _uiState.value.copy(
                 streamLoading = false,
                 streamUrl = url,

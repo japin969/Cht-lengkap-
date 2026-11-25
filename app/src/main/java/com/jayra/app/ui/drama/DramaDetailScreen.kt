@@ -445,7 +445,7 @@ private fun DramaPlayerOverlay(
         if (url.isNullOrBlank()) null
         else runCatching {
             val isHls = url.lowercase().contains(".m3u8")
-            val referer = runCatching { java.net.URI(url).let { "${it.scheme}://${it.host}/" } }.getOrNull()
+            val referer = refererForMedia(url)
             val dataSourceFactory = DefaultDataSource.Factory(
                 context,
                 DefaultHttpDataSource.Factory()
@@ -653,6 +653,22 @@ private fun DramaPlayerOverlay(
 }
 
 // ── State helpers ─────────────────────────────────────────────────────
+
+/**
+ * Referer yang benar untuk tiap server stream. CDN ok.ru (vkuser.net) menerima
+ * manifest hanya dengan Referer domain ok.ru; server lain pakai domainnya sendiri.
+ */
+private fun refererForMedia(url: String): String? {
+    val host = runCatching { java.net.URI(url).host?.lowercase() }.getOrNull() ?: return null
+    return when {
+        host.contains("vkuser.net") || host.contains("okcdn.ru") || host.contains("ok.ru") ->
+            "https://ok.ru/"
+        host.contains("rumble.com") -> "https://rumble.com/"
+        host.contains("d.tube") -> "https://play.d.tube/"
+        host.contains("odysee.com") -> "https://odysee.com/"
+        else -> "https://$host/"
+    }
+}
 
 @Composable
 private fun DramaLoading() {
