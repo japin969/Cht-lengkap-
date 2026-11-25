@@ -493,6 +493,9 @@ private fun DramaPlayerOverlay(
 
     var playError by remember { mutableStateOf<String?>(null) }
     var isBuffering by remember { mutableStateOf(true) }
+    // Retry otomatis SEKALI per episode kalau player error (biasanya token
+    // stream kedaluwarsa). Mencegah loop tak berujung.
+    var retriedFor by remember(ep) { mutableStateOf<String?>(null) }
 
     // Log state player (IDLE/BUFFERING/READY/ENDED) + error asli ExoPlayer.
     LaunchedEffect(exoPlayer) {
@@ -520,6 +523,11 @@ private fun DramaPlayerOverlay(
                     "ExoPlayer error ${error.errorCodeName}(${error.errorCode}): ${error.message}",
                     error.cause
                 )
+                if (retriedFor != ep) {
+                    retriedFor = ep
+                    Log.w("JayraStream", "Retry stream sekali untuk ep=$ep")
+                    viewModel.retryStream()
+                }
             }
         }
         player.addListener(listener)

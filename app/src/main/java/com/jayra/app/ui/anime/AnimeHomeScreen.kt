@@ -89,18 +89,28 @@ fun AnimeHomeScreen(
                         onAction = { viewModel.retry() }
                     )
 
-                    else -> AnimeHomeContent(
-                        ongoing = state.ongoing,
-                        popular = state.popular,
-                        completed = state.completed,
-                        recent = state.recent,
-                        topRated = state.topRated,
-                        recommendations = state.recommendations,
-                        genres = state.genres,
-                        enrichment = enrichment,
-                        onAnimeClick = onAnimeClick,
-                        onViewAllClick = onViewAllClick
-                    )
+                    else -> Column(Modifier.fillMaxSize()) {
+                        // Kalau sebagian section gagal tapi sebagian tampil,
+                        // jangan bikin home kosong — tampilkan banner + retry.
+                        if (state.homeError != null) {
+                            HomeErrorBanner(
+                                message = state.homeError,
+                                onRetry = { viewModel.retry() }
+                            )
+                        }
+                        AnimeHomeContent(
+                            ongoing = state.ongoing,
+                            popular = state.popular,
+                            completed = state.completed,
+                            recent = state.recent,
+                            topRated = state.topRated,
+                            recommendations = state.recommendations,
+                            genres = state.genres,
+                            enrichment = enrichment,
+                            onAnimeClick = onAnimeClick,
+                            onViewAllClick = onViewAllClick
+                        )
+                    }
                 }
             }
         }
@@ -581,6 +591,47 @@ fun AnimePosterCard(
         Spacer(Modifier.height(5.dp))
     }
 }
+/**
+ * Banner kecil: sebagian section gagal dimuat. Home tetap tampil, retry
+ * memanggil ulang API (viewModel.retry -> loadHome(force=true)).
+ */
+@Composable
+private fun HomeErrorBanner(message: String?, onRetry: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0x33FF9500)
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Sebagian data gagal dimuat",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color(0xFFFFB340),
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (!message.isNullOrBlank()) {
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFFB340).copy(alpha = 0.85f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            TextButton(onClick = onRetry) { Text("Coba Lagi") }
+        }
+    }
+}
+
 /**
  * Banner kecil yang menunjukkan sumber API yang sedang aktif.
  * Membuat jelas bahwa kedua sumber (Nexadev + Sankavollerei) dipakai.

@@ -113,7 +113,10 @@ object MediaImageLoaderProvider {
     /** Host poster yang terbukti membalas 403 Cloudflare (butuh fallback proxy). */
     private fun isBlockedPosterHost(url: String): Boolean {
         val host = runCatching { java.net.URI(url).host?.lowercase() }.getOrNull() ?: return false
-        return host.contains("anichin.") || host.contains("donghive.")
+        return host.contains("anichin.") ||
+            host.contains("donghive.") ||
+            host.contains("animasu") ||
+            host.contains("wp.com")
     }
 }
 

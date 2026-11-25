@@ -431,6 +431,12 @@ interface SankavollereiApi {
     @GET("comic/genre/{genre}")
     suspend fun comicGenre(@Path("genre") genre: String): Response<SankavollereiComicListResponse>
 
+    @GET("comic/type/{type}")
+    suspend fun comicType(@Path("type") type: String): Response<SankavollereiComicListResponse>
+
+    @GET("comic/docs")
+    suspend fun comicDocs(): Response<SankavollereiComicListResponse>
+
     @GET("comic/genres")
     suspend fun comicGenres(): Response<SankavollereiGenreResponse>
 
