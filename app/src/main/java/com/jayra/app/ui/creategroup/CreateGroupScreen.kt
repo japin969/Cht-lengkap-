@@ -37,6 +37,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.util.GlassEffectPrefs
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -240,10 +243,18 @@ fun CreateGroupContent(
     var showEmojiPicker by remember { mutableStateOf(false) }
     var showWebSearch by remember { mutableStateOf(false) }
 
+    val glassSpec = remember(GlassEffectPrefs.enabledState.value) {
+        LiquidGlassSpecV2.forTier(GlassEffectPrefs.resolveTier(), isDark)
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Box(modifier = Modifier.fillMaxWidth().glassSurface(solidColor = bg, tintAlpha = 0.85f, blurRadius = 16.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .glassSurfaceV2(glassSpec.surface, solidColor = bg, cornerRadius = 0.dp)
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

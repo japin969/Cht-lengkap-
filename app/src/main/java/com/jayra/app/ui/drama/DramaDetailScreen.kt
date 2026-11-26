@@ -18,145 +18,208 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
+import com.jayra.app.data.DramaRepository
+import com.jayra.app.ui.video.NativeVideoPlayer
 
 @Composable
 fun DramaDetailScreen(
-    dramaUrl: String,
+    dramaId: String,
     viewModel: DramaViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    var playingUrl by remember { mutableStateOf<String?>(null) }
+    var playingEpisode by remember { mutableStateOf<DramaRepository.DramaEpisode?>(null) }
 
-    LaunchedEffect(dramaUrl) {
-        viewModel.loadDetail(dramaUrl)
+    LaunchedEffect(dramaId) {
+        viewModel.loadDetail(dramaId)
     }
 
-    // Jika ada URL video yang dipilih, tampilkan Player Fullscreen
-    if (playingUrl != null) {
-        FullScreenVideoPlayer(
-            videoUrl = playingUrl!!,
-            onBack = { playingUrl = null }
-        )
-        return
-    }
+    // Fullscreen Video Player Overlay
+    if (playingEpisode != null) {
+        val ep = playingEpisode!!
+        val videoUrl = ep.mp4 ?: ep.videoUrl
+        val hasVideo = videoUrl?.isNotBlank() == true
 
-    if (state.isLoading) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-    } else if (state.error != null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Error: ${state.error}", color = Color.Red)
-        }
-    } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            // Header Info Drama
-            item {
-                Row(modifier = Modifier.padding(16.dp)) {
-                    AsyncImage(
-                        model = state.detail?.cover,
+        if (hasVideo) {
+            NativeVideoPlayer(
+                videoUrl = videoUrl!!,
+                headers = mapOf(
+                    "Referer" to "https://www.tvmaze.com/",
+                    "User-Agent" to "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36"
+                ),
+                title = "${state.detail?.title ?: "Drama"} - ${ep.name ?: "Episode ${ep.index}"}",
+                autoPlay = true,
+                onError = { error ->
+                    playingEpisode = null
+                },
+                onCompletion = {
+                    playingEpisode = null
+                }
+            )
+        } else {
+            // No video URL available - show error and auto-dismiss
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    androidx.compose.material.Icon(
+                        imageVector = Icons.Rounded.ErrorOutlined,
                         contentDescription = null,
-                        modifier = Modifier
-                            .width(120.dp)
-                            .height(180.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
+                        tint = Color.Red,
+                        modifier = Modifier.size(48.dp)
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = state.detail?.title ?: "Judul Drama",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "${state.detail?.chapterCount ?: 0} Episode",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = state.detail?.intro ?: "",
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 5
-                        )
+                    Spacer(Modifier.height(16.dp))
+                    Text("Video tidak tersedia", color = Color.White, fontSize = 18.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Episode ini belum memiliki link streaming", color = Color.LightGray, fontSize = 14.sp)
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { playingEpisode = null },
+                        colors = ButtonDefaults.buttonColors(containerColor = com.jayra.app.ui.theme.JayraBlue)
+                    ) {
+                        Text("Tutup", color = Color.White)
                     }
                 }
             }
-
-            // List Episode
-            item {
-                Text(
-                    text = "Daftar Episode",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+        }
+    } else {
+        // Detail Screen
+        if (state.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        } else if (state.error != null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text("Error: ${state.error}", color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = { viewModel.loadDetail(dramaId) }) { Text("Coba Lagi") }
+                }
             }
-            items(state.episodes) { ep ->
-                val isUnlocked = ep.unlock == true && ep.videoUrl != null
-                ListItem(
-                    headlineContent = { Text(ep.name ?: "Episode ${ep.index}") },
-                    supportingContent = { Text(if (isUnlocked) "Tersedia" else "Terkunci") },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Rounded.PlayArrow,
+        } else {
+            val detail = state.detail
+            val episodes = state.episodes
+
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                // Header Info Drama
+                item {
+                    Row(modifier = Modifier.padding(16.dp)) {
+                        AsyncImage(
+                            model = detail?.cover,
                             contentDescription = null,
-                            tint = if (isUnlocked) MaterialTheme.colorScheme.primary else Color.Gray
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop,
+                            placeholder = placeholder(),
+                            error = errorPlaceholder()
                         )
-                    },
-                    modifier = Modifier.clickable(enabled = isUnlocked) {
-                        // Catatan: URL mp4 asli perlu di-fetch dari API /video, 
-                        // tapi untuk sekarang kita pakai videoUrl sebagai dummy validasi
-                        playingUrl = ep.mp4 ?: ep.videoUrl
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = detail?.title ?: "Judul Drama",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "${detail?.chapterCount ?: 0} Episode",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = detail?.intro ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 5
+                            )
+                        }
                     }
-                )
-                Divider()
+                }
+
+                // List Episode
+                item {
+                    Text(
+                        text = "Daftar Episode (${episodes.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+                items(episodes) { ep ->
+                    val hasVideo = ep.mp4?.isNotBlank() == true || ep.videoUrl?.isNotBlank() == true
+                    ListItem(
+                        headlineContent = { Text(ep.name ?: "Episode ${ep.index}") },
+                        supportingContent = { Text(if (hasVideo) "Tersedia" else "Belum tersedia") },
+                        leadingContent = {
+                            androidx.compose.material.Icon(
+                                imageVector = Icons.Rounded.PlayArrow,
+                                contentDescription = null,
+                                tint = if (hasVideo) MaterialTheme.colorScheme.primary else Color.Gray
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = hasVideo) {
+                                if (hasVideo) playingEpisode = ep
+                            }
+                            .padding(vertical = 4.dp)
+                    )
+                    Divider()
+                }
             }
         }
     }
+}
+
+// ═══════════════════════════════════════════
+// HELPER COMPOSABLES
+// ═══════════════════════════════════════════
+
+@Composable
+private fun placeholder() = Box(
+    Modifier
+        .width(120.dp)
+        .height(180.dp)
+        .clip(RoundedCornerShape(8.dp))
+        .background(MaterialTheme.colorScheme.surfaceVariant)
+) {
+    androidx.compose.material.Icon(
+        imageVector = Icons.Rounded.Movie,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+        modifier = Modifier.align(Alignment.Center)
+    )
 }
 
 @Composable
-fun FullScreenVideoPlayer(videoUrl: String, onBack: () -> Unit) {
-    val context = LocalContext.current
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(videoUrl))
-            prepare()
-            playWhenReady = true
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose { exoPlayer.release() }
-    }
-
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = exoPlayer
-                    useController = true
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center)
-                .aspectRatio(16f / 9f)
+private fun errorPlaceholder() = Box(
+    Modifier
+        .width(120.dp)
+        .height(180.dp)
+        .clip(RoundedCornerShape(8.dp))
+        .background(MaterialTheme.colorScheme.errorContainer)
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        androidx.compose.material.Icon(
+            imageVector = Icons.Rounded.BrokenImage,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onErrorContainer
         )
-        
-        // Tombol Back
-        TextButton(
-            onClick = onBack,
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text("Tutup", color = Color.White)
-        }
+        Spacer(Modifier.height(4.dp))
+        Text("Gagal muat", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onErrorContainer)
     }
 }
+
+import androidx.compose.foundation.layout.Arrangement

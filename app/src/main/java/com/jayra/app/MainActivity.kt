@@ -32,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.jayra.app.data.OperationType
 import com.jayra.app.data.handleFirestoreError
+import com.jayra.app.data.VideoPlayerManager
 import com.jayra.app.di.AppModule
 import com.jayra.app.model.NavItem
 import com.jayra.app.service.MyFirebaseMessagingService
@@ -65,6 +66,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+
+        // Initialize VideoPlayerManager singleton
+        VideoPlayerManager.init(applicationContext)
 
         AppModule.init(applicationContext)
         if (BuildConfig.DEBUG) {
@@ -132,7 +136,19 @@ class MainActivity : ComponentActivity() {
                 // Ignore if FirebaseAuth is unavailable in preview/test environments
             }
         }
+        // Release VideoPlayerManager
+        VideoPlayerManager.release()
         super.onDestroy()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        VideoPlayerManager.onAppBackground()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        VideoPlayerManager.onAppForeground()
     }
 
     private fun extractNotificationExtras(incomingIntent: Intent?) {

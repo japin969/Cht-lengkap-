@@ -724,48 +724,64 @@ private fun MainNavigationGraph(
                     val encoded = java.net.URLEncoder.encode(url, "UTF-8")
                     navController.navigate("drama_detail?url=$encoded")
                 },
-                onAnimeClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("anime_detail?url=$encoded")
+                onAnimeClick = { anime ->
+                    navController.navigate("anime_detail/${anime.id ?: anime.link ?: anime.title ?: ""}")
                 },
-                onKomikClick = { slug ->
-                    navController.navigate("komik_detail?slug=$slug")
+                onKomikClick = { komik ->
+                    navController.navigate("komik_detail/${komik.slug}")
+                },
+                onDramaGenreClick = { genre ->
+                    // TODO: Navigate to filtered drama list
+                },
+                onAnimeGenreClick = { genre ->
+                    // TODO: Navigate to filtered anime list
+                },
+                onKomikGenreClick = { genre ->
+                    // TODO: Navigate to filtered komik list
                 }
             )
         }
 
         composable(
-            route = "anime_detail?url={url}",
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+            route = "anime_detail/{animeId}",
+            arguments = listOf(androidx.navigation.navArgument("animeId") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
         ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
+            val animeId = backStackEntry.arguments?.getString("animeId") ?: ""
             com.jayra.app.ui.anime.AnimeDetailScreen(
-                animeUrl = decoded,
-                onPlayEpisode = { epUrl ->
-                    val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
-                    navController.navigate("anime_player?url=$epEncoded")
+                animeId = animeId,
+                onPlayEpisode = { episode ->
+                    val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+                    val state by vm.uiState.collectAsState()
+                    vm.loadStream(episode.episodeUrl ?: "")
+                    val streamUrl = state.streamUrl
+                    if (streamUrl != null) {
+                        navController.navigate("anime_player") {
+                            // Pass streamUrl via ViewModel state
+                        }
+                    }
                 }
             )
         }
 
         composable(
-            route = "anime_player?url={url}",
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+            route = "anime_player"
         ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
             val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
             val state by vm.uiState.collectAsState()
-            LaunchedEffect(decoded) { vm.loadStream(decoded) }
-            val stream = state.streamUrl
-            if (stream.isNullOrBlank()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream ?: "")
-            }
+            val streamUrl = state.streamUrl
+            val detail = state.detail
+            val episodes = state.episodes
+            
+            // Find current episode from episodes (simplified: first episode with streamUrl)
+            val currentEpisode = episodes.find { it.episodeUrl?.isNotBlank() == true }
+            
+            com.jayra.app.ui.anime.AnimePlayerScreen(
+                streamUrl = streamUrl,
+                animeTitle = detail?.title,
+                episodeTitle = currentEpisode?.title,
+                onBack = { navController.popBackStack() },
+                onNextEpisode = { /* TODO: implement next episode */ }
+            )
         }
 
         composable(
