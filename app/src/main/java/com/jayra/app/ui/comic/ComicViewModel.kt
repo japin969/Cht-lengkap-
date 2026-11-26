@@ -110,7 +110,7 @@ class ComicViewModel : ViewModel() {
                 if (res.isSuccessful && d != null) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        detail = KomikItem(title = d.title, slug = slug, cover = d.cover, updatedAt = d.status, rating = d.rating),
+                        detail = KomikItem(title = d.title, slug = slug, cover = d.cover.sanitizeCover(), updatedAt = d.status, rating = d.rating),
                         synopsis = d.synopsis.orEmpty(),
                         chapters = d.chapters.orEmpty().map { KomikChapter(title = it.title, slug = it.slug, link = it.slug) },
                         error = null
@@ -151,7 +151,7 @@ class ComicViewModel : ViewModel() {
                 if (res.isSuccessful && m != null) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        detail = KomikItem(title = m.title, slug = slug, cover = m.banner ?: m.banner, updatedAt = m.status, rating = m.rating),
+                        detail = KomikItem(title = m.title, slug = slug, cover = m.banner.sanitizeCover(), updatedAt = m.status, rating = m.rating),
                         synopsis = m.description.orEmpty(),
                         chapters = m.chapters.orEmpty().map { KomikChapter(title = it.title, slug = it.slug, link = it.slug) },
                         error = null

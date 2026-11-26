@@ -94,6 +94,7 @@ data class DonghuaDetailResponse(
     val type: String? = null,
     val episodes_count: String? = null,
     val status_detail: String? = null,
+    val status: String? = null,
     val synopsis: String? = null,
     val genres: List<DhGenre>? = null,
     val episodes_list: List<DhEpisodeLink>? = null,

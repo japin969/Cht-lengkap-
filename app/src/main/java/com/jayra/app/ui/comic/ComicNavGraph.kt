@@ -153,7 +153,13 @@ fun ComicNavGraph(
                 title = title,
                 tagId = tagId,
                 onBack = { navController.popBackStack() },
-                onComicClick = { slug -> navController.navigate("comic_detail/$slug") }
+                onComicClick = { slug ->
+                    when (spec) {
+                        "BacaKomik" -> navController.navigate("comic_bk_detail/$slug")
+                        "Maid" -> navController.navigate("comic_maid_detail/$slug")
+                        else -> navController.navigate("comic_detail/$slug")
+                    }
+                }
             )
         }
         composable(
