@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * AnimeKuindoApi — SATU-SATUNYA sumber anime: https://www.sankavollerei.web.id
- * Endpoint /anime/animekuindo/*. SSL valid (Cloudflare), tanpa bypass.
+ * Endpoint /anime/animekuindo/ (home, latest, dll). SSL valid (Cloudflare), tanpa bypass.
  * Semua pemanggilan di ViewModel dijalankan PARELAL (async), bukan fallback.
  */
 interface AnimeKuindoApi {
