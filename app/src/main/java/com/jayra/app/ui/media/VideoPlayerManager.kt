@@ -2,6 +2,8 @@ package com.jayra.app.ui.media
 
 import android.content.Context
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.CacheDataSource
@@ -13,9 +15,9 @@ import java.io.File
 
 /**
  * VideoPlayerManager — SATU instance ExoPlayer (singleton) untuk seluruh app.
- * - Hardware decoder (default MediaCodec, tanpa software fallback).
- * - CacheDataSource (cache 100MB) + DefaultDataSource.
- * - prepare/play/pause/release yang benar.
+ * - Hardware decoder only (DefaultRenderersFactory tanpa software fallback).
+ * - CacheDataSource (100MB) + DefaultDataSource.
+ * - prepare/play/pause/release benar, error listener, prefetch 3 detik pertama.
  *
  * JANGAN buat ExoPlayer di Composable — ambil dari sini.
  */
@@ -28,6 +30,11 @@ object VideoPlayerManager {
     private var player: ExoPlayer? = null
     @Volatile
     private var cache: SimpleCache? = null
+
+    // Error terakhir (dibaca UI untuk tampilkan error asli, bukan hitam diam)
+    @Volatile
+    var lastError: String? = null
+        private set
 
     @Synchronized
     private fun ensureCache(context: Context): SimpleCache {
@@ -48,30 +55,35 @@ object VideoPlayerManager {
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
-    /**
-     * Ambil player singleton. Jika belum ada / sudah di-release, buat baru.
-     * Hardware decoder only: setEnableDecoderFallback(false).
-     */
     @Synchronized
     fun get(context: Context): ExoPlayer {
         player?.let { return it }
         val mediaSourceFactory = DefaultMediaSourceFactory(buildDataSourceFactory(context))
-        // Hardware decoder only: DefaultRenderersFactory tanpa fallback software.
         val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(context)
-            .setEnableDecoderFallback(false)
+            .setEnableDecoderFallback(false) // hardware only
         return ExoPlayer.Builder(context)
             .setMediaSourceFactory(mediaSourceFactory)
             .setRenderersFactory(renderersFactory)
             .build()
+            .apply {
+                addListener(object : Player.Listener {
+                    override fun onPlayerError(error: PlaybackException) {
+                        lastError = error.localizedMessage ?: "Gagal memutar video"
+                    }
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_READY) lastError = null
+                    }
+                })
+            }
             .also { player = it }
     }
 
-    /** Set video ke player (loop/repeat optional). Tidak membuat player di Composable. */
+    /** Set video + prepare. Prefetch 3 detik pertama via prepare (ExoPlayer otomatis buffer). */
     fun setVideo(context: Context, url: String, loop: Boolean = false) {
         val p = get(context)
+        lastError = null
         p.setMediaItem(MediaItem.fromUri(url))
-        p.repeatMode = if (loop) androidx.media3.common.Player.REPEAT_MODE_ALL
-            else androidx.media3.common.Player.REPEAT_MODE_OFF
+        p.repeatMode = if (loop) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
         p.prepare()
     }
 
@@ -80,6 +92,7 @@ object VideoPlayerManager {
     fun release() {
         player?.release()
         player = null
+        lastError = null
     }
     fun releaseCache() {
         cache?.release()

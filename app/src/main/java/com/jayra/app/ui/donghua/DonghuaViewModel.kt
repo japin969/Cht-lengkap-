@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.DhEpisodeLink
 import com.jayra.app.data.DhItem
 import com.jayra.app.data.DonghuaApi
+import com.jayra.app.data.StreamResolver
 import com.jayra.app.data.DramaEpisode
 import com.jayra.app.data.DramaItem
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -144,14 +145,17 @@ class DonghuaViewModel : ViewModel() {
             try {
                 val res = api.episode(episodeSlug)
                 val ep = res.body()
-                val servers = buildList {
+                val raw = buildList {
                     ep?.streaming?.main_url?.let { add((it.name ?: "Server 1") to (it.url ?: "")) }
                     ep?.streaming?.servers?.forEach { add((it.name ?: "Server") to (it.url ?: "")) }
                 }.filter { it.second.isNotBlank() }
+                // Resolve embed -> direct media URL (native, tanpa WebView)
+                val servers = raw.map { (label, u) -> label to (StreamResolver.resolve(u) ?: u) }
+                val direct = servers.firstOrNull { StreamResolver.isDirect(it.second) }?.second
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     servers = servers,
-                    streamUrl = servers.firstOrNull()?.second,
+                    streamUrl = direct ?: servers.firstOrNull()?.second,
                     error = if (servers.isEmpty()) "Server streaming tidak tersedia" else null
                 )
             } catch (e: Exception) {

@@ -3,6 +3,8 @@ package com.jayra.app.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -125,18 +133,36 @@ private fun HubCard(
     accent: Color,
     onClick: () -> Unit
 ) {
+    var pressed by remember { mutableStateOf(false) }
+    val pressScale by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.96f else 1f, label = "press")
+    val shape = RoundedCornerShape(26.dp)
     Row(
         Modifier
             .fillMaxWidth()
             .height(96.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .graphicsLayer {
+                // spring press animation (no blur)
+                scaleX = pressScale; scaleY = pressScale
+            }
+            .shadow(12.dp, shape, clip = false, ambientColor = Color.White.copy(alpha = 0.06f), spotColor = Color.White.copy(alpha = 0.10f))
+            .clip(shape)
+            .background(Color.White.copy(alpha = 0.14f))
             .background(
-                Brush.horizontalGradient(
-                    listOf(accent.copy(alpha = 0.18f), MediaColors.Surface)
+                Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.10f), Color.Transparent)
                 )
             )
-            .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-            .clickable { onClick() }
+            .border(1.dp, Color.White.copy(alpha = 0.40f), shape)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        pressed = true
+                        tryAwaitRelease()
+                        pressed = false
+                        onClick()
+                    }
+                )
+            }
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

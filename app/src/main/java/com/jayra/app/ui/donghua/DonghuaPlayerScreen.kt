@@ -60,20 +60,17 @@ fun DonghuaPlayerScreen(
     LaunchedEffect(state.streamUrl) { state.streamUrl?.let { currentUrl = it } }
 
     val servers = state.servers.ifEmpty { listOf("Server 1" to videoUrl) }
-    val isDirect = currentUrl.startsWith("http") &&
-        (currentUrl.contains(".mp4") || currentUrl.contains(".m3u8") ||
-            currentUrl.contains("googlevideo") || currentUrl.contains("commondatastorage"))
 
     LaunchedEffect(currentUrl) { failed = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when {
-            state.isLoading && state.streamUrl == null && !videoUrl.startsWith("http") -> {
+            state.isLoading && state.streamUrl == null -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = MediaColors.Strem)
                 }
             }
-            isDirect -> {
+            currentUrl.startsWith("http") -> {
                 NativeVideoPlayer(
                     videoUrl = currentUrl,
                     modifier = Modifier.fillMaxSize()
@@ -81,9 +78,9 @@ fun DonghuaPlayerScreen(
             }
             else -> {
                 NativeError(
-                    message = "Sumber embed tidak dapat diputar native. Pilih server lain (mp4/m3u8).",
+                    message = "Sumber video tidak tersedia. Coba server lain.",
                     servers = servers,
-                    onRetry = { failed = false; currentUrl = videoUrl },
+                    onRetry = { currentUrl = videoUrl },
                     onPick = { currentUrl = it },
                     onBack = onBack
                 )

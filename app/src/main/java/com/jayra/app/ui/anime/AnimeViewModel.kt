@@ -7,6 +7,7 @@ import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeKuindoApi
 import com.jayra.app.data.AnimeSearchItem
+import com.jayra.app.data.StreamResolver
 import com.jayra.app.data.KuindoDay
 import com.jayra.app.data.KuindoGenre
 import com.jayra.app.data.KuindoItem
@@ -198,7 +199,7 @@ class AnimeViewModel : ViewModel() {
                 val ep = kuindo.episode(episodeSlug).body()?.data
                 val servers = ep?.streams.orEmpty().mapNotNull { s ->
                     val u = s.url ?: return@mapNotNull null
-                    (s.server ?: "Server") to u
+                    (s.server ?: "Server") to (StreamResolver.resolve(u) ?: u)
                 }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
