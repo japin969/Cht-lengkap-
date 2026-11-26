@@ -62,18 +62,27 @@ import kotlinx.coroutines.launch
  * hero cover + judul + metadata + tombol "Mulai Baca" + bookmark,
  * tab yang bisa di-swipe: "Daftar Chapter" / "Info".
  */
+enum class ComicDetailMode { DEFAULT, BK, MAID }
+
 @Composable
 fun ComicDetailScreen(
     slug: String,
     onBack: () -> Unit,
     onChapterClick: (String) -> Unit,
-    viewModel: ComicViewModel = viewModel()
+    viewModel: ComicViewModel = viewModel(),
+    mode: ComicDetailMode = ComicDetailMode.DEFAULT
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var bookmarked by remember { mutableStateOf(MediaStore.isBookmarked(context, "comic", slug)) }
 
-    LaunchedEffect(slug) { viewModel.loadDetail(slug) }
+    LaunchedEffect(slug, mode) {
+        when (mode) {
+            ComicDetailMode.BK -> viewModel.loadBkDetail(slug)
+            ComicDetailMode.MAID -> viewModel.loadMaidManga(slug)
+            ComicDetailMode.DEFAULT -> viewModel.loadDetail(slug)
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
         DetailTopBar(onBack, bookmarked) {

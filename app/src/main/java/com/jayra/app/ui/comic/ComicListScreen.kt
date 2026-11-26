@@ -78,11 +78,22 @@ fun ComicListScreen(
     Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
         ComicListTopBar(title, onBack)
         Box(Modifier.fillMaxSize()) {
+            val shown = when (tagId) {
+                "BacaKomik" -> state.bkLatest
+                "Maid" -> state.maidLatest
+                else -> state.results
+            }
             MediaStateView(
-                isLoading = state.isLoading && state.results.isEmpty(),
-                isEmpty = state.results.isEmpty(),
+                isLoading = state.isLoading && shown.isEmpty(),
+                isEmpty = shown.isEmpty(),
                 error = state.error,
-                onRetry = { viewModel.loadList(tagId = tagId, reset = true) },
+                onRetry = {
+                    when (tagId) {
+                        "BacaKomik" -> viewModel.loadBacakomik()
+                        "Maid" -> viewModel.loadMaid()
+                        else -> viewModel.loadList(tagId = tagId, reset = true)
+                    }
+                },
                 accent = MediaColors.Comic,
                 emptyTitle = "Tidak ada komik",
                 emptySubtitle = "Coba muat ulang atau pilih genre lain."
@@ -95,7 +106,7 @@ fun ComicListScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(state.results) { item -> ComicGridItem(item) { onComicClick(it) } }
+                    items(shown) { item -> ComicGridItem(item) { onComicClick(it) } }
                     if (state.isLoadingMore) {
                         item {
                             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {

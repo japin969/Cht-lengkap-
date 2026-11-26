@@ -100,7 +100,11 @@ fun ComicNavGraph(
             ComicHomeScreen(
                 onComicClick = { slug -> navController.navigate("comic_detail/$slug") },
                 onSearchClick = { navController.navigate("comic_search") },
-                onSeeAll = { navController.navigate("comic_list/Semua Komik") }
+                onSeeAll = { navController.navigate("comic_list/Semua Komik") },
+                onSeeAllBacakomik = { navController.navigate("comic_list/BacaKomik") },
+                onSeeAllMaid = { navController.navigate("comic_list/Maid") },
+                onBkClick = { slug -> navController.navigate("comic_bk_detail/$slug") },
+                onMaidClick = { slug -> navController.navigate("comic_maid_detail/$slug") }
             )
         }
         composable("comic_search") {
@@ -134,8 +138,17 @@ fun ComicNavGraph(
             arguments = listOf(navArgument("spec") { type = NavType.StringType })
         ) { entry ->
             val spec = entry.arguments?.getString("spec") ?: "Semua Komik"
-            val tagId = if (spec.startsWith("Genre:")) spec.removePrefix("Genre:") else null
-            val title = if (tagId != null) "Genre" else "Semua Komik"
+            val tagId = when {
+                spec == "Semua Komik" -> null
+                spec.startsWith("Genre:") -> spec.removePrefix("Genre:")
+                else -> spec
+            }
+            val title = when (spec) {
+                "Semua Komik" -> "Semua Komik"
+                "BacaKomik" -> "BacaKomik"
+                "Maid" -> "Maid"
+                else -> "Genre"
+            }
             ComicListScreen(
                 title = title,
                 tagId = tagId,
@@ -162,6 +175,57 @@ fun ComicNavGraph(
             ComicReaderScreen(
                 slug = slug,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        // ── BACA KOMIK ──
+        composable(
+            route = "comic_bk_detail/{slug}",
+            arguments = listOf(navArgument("slug") { type = NavType.StringType })
+        ) { entry ->
+            val slug = entry.arguments?.getString("slug") ?: ""
+            ComicDetailScreen(
+                slug = slug,
+                onBack = { navController.popBackStack() },
+                onChapterClick = { ch -> navController.navigate("comic_bk_reader/$ch") },
+                viewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+                mode = ComicDetailMode.BK
+            )
+        }
+        composable(
+            route = "comic_bk_reader/{slug}",
+            arguments = listOf(navArgument("slug") { type = NavType.StringType })
+        ) { entry ->
+            val slug = entry.arguments?.getString("slug") ?: ""
+            ComicReaderScreen(
+                slug = slug,
+                onBack = { navController.popBackStack() },
+                mode = ComicReaderMode.BK
+            )
+        }
+
+        // ── MAID ──
+        composable(
+            route = "comic_maid_detail/{slug}",
+            arguments = listOf(navArgument("slug") { type = NavType.StringType })
+        ) { entry ->
+            val slug = entry.arguments?.getString("slug") ?: ""
+            ComicDetailScreen(
+                slug = slug,
+                onBack = { navController.popBackStack() },
+                onChapterClick = { ch -> navController.navigate("comic_maid_reader/$ch") },
+                mode = ComicDetailMode.MAID
+            )
+        }
+        composable(
+            route = "comic_maid_reader/{slug}",
+            arguments = listOf(navArgument("slug") { type = NavType.StringType })
+        ) { entry ->
+            val slug = entry.arguments?.getString("slug") ?: ""
+            ComicReaderScreen(
+                slug = slug,
+                onBack = { navController.popBackStack() },
+                mode = ComicReaderMode.MAID
             )
         }
     }

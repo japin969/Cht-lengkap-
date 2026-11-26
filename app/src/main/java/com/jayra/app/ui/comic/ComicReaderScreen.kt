@@ -69,18 +69,27 @@ import com.jayra.app.ui.theme.SFProFontFamily
  *  - retry per-gambar jika 1 halaman gagal (yang lain tetap jalan)
  *  - progress tersimpan ke History
  */
+enum class ComicReaderMode { DEFAULT, BK, MAID }
+
 @Composable
 fun ComicReaderScreen(
     slug: String,
     onBack: () -> Unit,
-    viewModel: ComicViewModel = viewModel()
+    viewModel: ComicViewModel = viewModel(),
+    mode: ComicReaderMode = ComicReaderMode.DEFAULT
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showControls by remember { mutableStateOf(true) }
-    var mode by remember { mutableStateOf(ReaderMode.VERTICAL) }
+    var readerMode by remember { mutableStateOf(ReaderMode.VERTICAL) }
 
-    LaunchedEffect(slug) { viewModel.loadStream(slug) }
+    LaunchedEffect(slug, mode) {
+        when (mode) {
+            ComicReaderMode.BK -> viewModel.loadBkChapter(slug)
+            ComicReaderMode.MAID -> viewModel.loadMaidChapter(slug)
+            ComicReaderMode.DEFAULT -> viewModel.loadStream(slug)
+        }
+    }
 
     // Pulihkan brightness saat keluar
     DisposableEffect(Unit) {
@@ -104,7 +113,7 @@ fun ComicReaderScreen(
                 ReaderError(state.error ?: "Gagal memuat", onRetry = { viewModel.retryStream(slug) }, onBack = onBack)
             }
             else -> {
-                if (mode == ReaderMode.VERTICAL) {
+                if (readerMode == ReaderMode.VERTICAL) {
                     VerticalReader(state.pages) { idx ->
                         val total = state.pages.size
                         val progress = if (total > 0) (idx + 1).toFloat() / total else 0f
@@ -135,8 +144,8 @@ fun ComicReaderScreen(
         AnimatedVisibility(visible = showControls, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter)) {
             ReaderTopBar(
                 title = state.streamTitle ?: "Baca",
-                mode = mode,
-                onToggleMode = { mode = if (mode == ReaderMode.VERTICAL) ReaderMode.PAGED else ReaderMode.VERTICAL },
+                mode = readerMode,
+                onToggleMode = { readerMode = if (readerMode == ReaderMode.VERTICAL) ReaderMode.PAGED else ReaderMode.VERTICAL },
                 onBack = onBack
             )
         }

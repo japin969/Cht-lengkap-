@@ -2,7 +2,13 @@ package com.jayra.app.ui.comic
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jayra.app.data.BkChapterResponse
+import com.jayra.app.data.BkDetailResponse
+import com.jayra.app.data.BkItem
+import com.jayra.app.data.BkListResponse
 import com.jayra.app.data.ComicApi
+import com.jayra.app.data.MaidItem
+import com.jayra.app.data.MaidMangaResponse
 import com.jayra.app.data.KomikChapter
 import com.jayra.app.data.KomikItem
 import com.jayra.app.data.KomikPage
@@ -17,6 +23,9 @@ data class ComicUiState(
     val latest: List<KomikItem> = emptyList(),
     val popular: List<KomikItem> = emptyList(),
     val trending: List<KomikItem> = emptyList(),
+    val bkLatest: List<KomikItem> = emptyList(),
+    val bkPopuler: List<KomikItem> = emptyList(),
+    val maidLatest: List<KomikItem> = emptyList(),
     val results: List<KomikItem> = emptyList(),
     val isLoadingMore: Boolean = false,
     val canLoadMore: Boolean = true,
@@ -72,6 +81,109 @@ class ComicViewModel : ViewModel() {
     }
 
     fun retryHome() = loadHome()
+
+
+    // ── BACA KOMIK (sankavollerei) ──
+    fun loadBacakomik() {
+        viewModelScope.launch {
+            val latest = runCatching { api.bkLatest().body()?.komikList.orEmpty().map { it.toItem() } }.getOrDefault(emptyList())
+            val populer = runCatching { api.bkPopuler().body()?.komikList.orEmpty().map { it.toItem() } }.getOrDefault(emptyList())
+            _uiState.value = _uiState.value.copy(bkLatest = latest, bkPopuler = populer)
+        }
+    }
+
+    // ── MAID (sankavollerei) ──
+    fun loadMaid() {
+        viewModelScope.launch {
+            val items = runCatching { api.maidLatest(1).body()?.data.orEmpty().map { it.toItem() } }.getOrDefault(emptyList())
+            _uiState.value = _uiState.value.copy(maidLatest = items)
+        }
+    }
+
+    // ── BACA KOMIK detail/reader ──
+    fun loadBkDetail(slug: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val res = api.bkDetail(slug)
+                val d = res.body()?.detail
+                if (res.isSuccessful && d != null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        detail = KomikItem(title = d.title, slug = slug, cover = d.cover, updatedAt = d.status, rating = d.rating),
+                        synopsis = d.synopsis.orEmpty(),
+                        chapters = d.chapters.orEmpty().map { KomikChapter(title = it.title, slug = it.slug, link = it.slug) },
+                        error = null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = "Gagal memuat detail komik")
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Gagal memuat detail")
+            }
+        }
+    }
+
+    fun loadBkChapter(slug: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, pages = emptyList())
+            try {
+                val res = api.bkChapter(slug)
+                val imgs = res.body()?.images.orEmpty()
+                val pages = imgs.mapIndexed { i, u -> KomikPage(page = i + 1, url = u) }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false, pages = pages,
+                    error = if (pages.isEmpty()) "Halaman chapter tidak tersedia" else null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Gagal memuat chapter")
+            }
+        }
+    }
+
+    // ── MAID detail/reader ──
+    fun loadMaidManga(slug: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val res = api.maidManga(slug)
+                val m = res.body()?.data
+                if (res.isSuccessful && m != null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        detail = KomikItem(title = m.title, slug = slug, cover = m.banner ?: m.banner, updatedAt = m.status, rating = m.rating),
+                        synopsis = m.description.orEmpty(),
+                        chapters = m.chapters.orEmpty().map { KomikChapter(title = it.title, slug = it.slug, link = it.slug) },
+                        error = null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = "Gagal memuat detail komik")
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Gagal memuat detail")
+            }
+        }
+    }
+
+    fun loadMaidChapter(slug: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, pages = emptyList())
+            try {
+                val res = api.maidChapter(slug)
+                val imgs = res.body()?.images.orEmpty()
+                val pages = imgs.mapIndexed { i, u -> KomikPage(page = i + 1, url = u) }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false, pages = pages,
+                    error = if (pages.isEmpty()) "Halaman chapter tidak tersedia" else null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Gagal memuat chapter")
+            }
+        }
+    }
+
+    private fun BkItem.toItem(): KomikItem = KomikItem(title = title, slug = slug, cover = cover, updatedAt = chapter, rating = null)
+    private fun MaidItem.toItem(): KomikItem = KomikItem(title = title, slug = slug, cover = banner, updatedAt = latest_chapter?.title, rating = rating)
 
     // ── TAGS / GENRES (statis, tidak dipakai endpoint eksternal) ──
     fun loadTags() {

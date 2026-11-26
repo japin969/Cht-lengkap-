@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,9 +57,14 @@ fun ComicHomeScreen(
     onComicClick: (String) -> Unit,
     onSearchClick: () -> Unit,
     onSeeAll: () -> Unit,
+    onSeeAllBacakomik: () -> Unit = {},
+    onSeeAllMaid: () -> Unit = {},
+    onBkClick: (String) -> Unit = {},
+    onMaidClick: (String) -> Unit = {},
     viewModel: ComicViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.loadBacakomik(); viewModel.loadMaid() }
 
     Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
         // Top bar
@@ -136,6 +142,29 @@ fun ComicHomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)
                         ) {
                             items(state.trending) { ComicPosterCard(it) { onComicClick(it) } }
+                        }
+                    }
+                }
+
+                if (state.bkLatest.isNotEmpty()) {
+                    item { SectionHeader("BacaKomik Terbaru", MediaColors.Comic, onSeeAll = onSeeAllBacakomik) }
+                    item {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding),
+                            horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)
+                        ) {
+                            items(state.bkLatest) { ComicPosterCard(it) { onBkClick(it) } }
+                        }
+                    }
+                }
+                if (state.maidLatest.isNotEmpty()) {
+                    item { SectionHeader("Maid Collection", MediaColors.Comic, onSeeAll = onSeeAllMaid) }
+                    item {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding),
+                            horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)
+                        ) {
+                            items(state.maidLatest) { ComicPosterCard(it) { onMaidClick(it) } }
                         }
                     }
                 }
