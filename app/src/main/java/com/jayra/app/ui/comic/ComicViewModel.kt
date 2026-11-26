@@ -258,28 +258,62 @@ class ComicViewModel : ViewModel() {
 
     fun retrySearch() = search(_uiState.value.query)
 
-    // ── DETAIL (upstream bermasalah → error jelas) ──
+    // ── DETAIL (multi-source: bacakomik -> maid) ──
     fun loadDetail(slug: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            // Kedua host detail komik sedang 500/403. Tampilkan error jelas.
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                error = "Detail komik belum tersedia dari sumber saat ini."
-            )
+            // Coba bacakomik dulu, lalu maid (jangan placeholder).
+            val bk = runCatching { api.bkDetail(slug).body()?.detail }.getOrNull()
+            if (bk != null) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    detail = KomikItem(title = bk.title, slug = slug, cover = bk.cover.sanitizeCover(), updatedAt = bk.status, rating = bk.rating),
+                    synopsis = bk.synopsis.orEmpty(),
+                    chapters = bk.chapters.orEmpty().map { KomikChapter(title = it.title, slug = it.slug, link = it.slug) },
+                    error = null
+                )
+                return@launch
+            }
+            val md = runCatching { api.maidManga(slug).body()?.data }.getOrNull()
+            if (md != null) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    detail = KomikItem(title = md.title, slug = slug, cover = md.banner.sanitizeCover(), updatedAt = md.status, rating = md.rating),
+                    synopsis = md.description.orEmpty(),
+                    chapters = md.chapters.orEmpty().map { KomikChapter(title = it.title, slug = it.slug, link = it.slug) },
+                    error = null
+                )
+                return@launch
+            }
+            _uiState.value = _uiState.value.copy(isLoading = false, error = "Detail komik tidak ditemukan")
         }
     }
 
     fun retryDetail(slug: String) = loadDetail(slug)
 
-    // ── READER (upstream bermasalah → error jelas) ──
+    // ── READER (multi-source: bacakomik -> maid) ──
     fun loadStream(chapterSlug: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, pages = emptyList())
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                error = "Pembaca komik belum tersedia dari sumber saat ini."
-            )
+            val bk = runCatching { api.bkChapter(chapterSlug).body()?.images.orEmpty() }.getOrDefault(emptyList())
+            if (bk.isNotEmpty()) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    pages = bk.mapIndexed { i, u -> KomikPage(page = i + 1, url = u) },
+                    error = null
+                )
+                return@launch
+            }
+            val md = runCatching { api.maidChapter(chapterSlug).body()?.images.orEmpty() }.getOrDefault(emptyList())
+            if (md.isNotEmpty()) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    pages = md.mapIndexed { i, u -> KomikPage(page = i + 1, url = u) },
+                    error = null
+                )
+                return@launch
+            }
+            _uiState.value = _uiState.value.copy(isLoading = false, error = "Halaman chapter tidak tersedia")
         }
     }
 
