@@ -2,11 +2,10 @@ package com.jayra.app.ui.anime
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jayra.app.data.AnimeApi
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeSearchItem
-import com.jayra.app.data.KitsuAnime
-import com.jayra.app.data.KitsuApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -27,13 +26,17 @@ data class AnimeUiState(
     val error: String? = null
 )
 
+/**
+ * AnimeViewModel — sumber resmi: https://api.nexadev.my.id (animasu).
+ * Terpisah total dari Comic. Poster memakai field image/poster dari API (tidak diubah).
+ */
 class AnimeViewModel : ViewModel() {
 
-    private val api = KitsuApi.create()
+    private val api = AnimeApi.create()
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
-    private var listOffset = 0
+    private var listPage = 1
     private val pageSize = 20
 
     init { loadHome() }
@@ -41,28 +44,23 @@ class AnimeViewModel : ViewModel() {
     fun loadHome() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            // Sumber ANIME (Kitsu) — terpisah total dari Comic.
-            // Tiap section punya runCatching sendiri: kalau 1 section gagal,
-            // section lain tetap tampil (tidak jadi kosong semua).
             var hadError: String? = null
             val popular = runCatching {
-                api.list(limit = 20, sort = "-userCount").body()?.data.orEmpty()
+                api.popular(page = 1).body()?.data?.animeList.orEmpty()
             }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
             val ongoing = runCatching {
-                api.list(limit = 20, sort = "-userCount", status = "current").body()?.data.orEmpty()
+                api.ongoing(page = 1).body()?.data?.animeList.orEmpty()
             }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
             val completed = runCatching {
-                api.list(limit = 20, sort = "-averageRating", status = "finished").body()?.data.orEmpty()
+                api.completed(page = 1).body()?.data?.animeList.orEmpty()
             }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
 
             val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                popular = popular.map { it.toItem() },
-                ongoing = ongoing.map { it.toItem() },
-                completed = completed.map { it.toItem() },
-                // Error hanya kalau benar-benar gagal (bukan sekadar kosong).
-                // Pesan khusus ANIME — tidak pernah memakai teks Comic.
+                popular = popular,
+                ongoing = ongoing,
+                completed = completed,
                 error = if (hasData) null else (hadError?.let { "Gagal memuat daftar anime" } ?: null)
             )
         }
@@ -72,7 +70,7 @@ class AnimeViewModel : ViewModel() {
 
     // ── LIST (genre / all) ──
     fun loadList(genre: String? = null, reset: Boolean = true) {
-        if (reset) listOffset = 0
+        if (reset) listPage = 1
         if (reset) {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, activeGenre = genre)
         } else {
@@ -80,14 +78,13 @@ class AnimeViewModel : ViewModel() {
         }
         viewModelScope.launch {
             try {
-                // Kitsu: filter teks = genre
-                val res = if (genre != null) {
-                    api.search(query = genre, limit = pageSize)
+                // Genre di animasu = search teks; "Semua" = popular.
+                val items: List<AnimeSearchItem> = if (genre != null) {
+                    api.search(genre).body()?.data?.results.orEmpty()
                 } else {
-                    api.list(limit = pageSize, sort = "-userCount")
+                    api.popular(page = listPage).body()?.data?.animeList.orEmpty()
                 }
-                val items = res.body()?.data.orEmpty().map { it.toItem() }
-                listOffset += pageSize
+                listPage++
                 val current = if (reset) emptyList() else _uiState.value.results
                 _uiState.value = _uiState.value.copy(
                     isLoading = false, isLoadingMore = false,
@@ -103,7 +100,8 @@ class AnimeViewModel : ViewModel() {
 
     fun loadMore() {
         if (!_uiState.value.canLoadMore || _uiState.value.isLoadingMore || _uiState.value.isLoading) return
-        loadList(genre = _uiState.value.activeGenre, reset = false)
+        if (_uiState.value.activeGenre != null) return // search tidak dipaginasi
+        loadList(genre = null, reset = false)
     }
 
     // ── SEARCH ──
@@ -116,8 +114,7 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val res = api.search(query = query, limit = 30)
-                val items = res.body()?.data.orEmpty().map { it.toItem() }
+                val items = api.search(query).body()?.data?.results.orEmpty()
                 _uiState.value = _uiState.value.copy(isLoading = false, results = items, error = if (items.isEmpty()) "Tidak ada hasil" else null)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
@@ -128,34 +125,24 @@ class AnimeViewModel : ViewModel() {
     fun retrySearch() = search(_uiState.value.query)
 
     // ── DETAIL ──
-    fun loadDetail(id: String) {
+    fun loadDetail(url: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val res = api.detail(id)
+                val res = api.detail(url)
                 val data = res.body()?.data
                 if (res.isSuccessful && data != null) {
-                    val attrs = data.attributes
-                    val info = buildMap {
-                        attrs?.status?.let { put("Status", it) }
-                        attrs?.startDate?.let { put("Mulai", it) }
-                        attrs?.episodeCount?.let { put("Episode", "$it") }
-                        attrs?.subtype?.let { put("Tipe", it) }
-                    }
-                    val epCount = attrs?.episodeCount ?: 12
-                    val eps = (1..epCount).map { n ->
-                        AnimeEpisode(episode = n.toString(), title = "Episode $n", episodeUrl = id)
-                    }
+                    val eps = data.episodes.orEmpty()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         detail = AnimeDetailData(
-                            title = attrs?.displayTitle(),
-                            image = attrs?.posterImage?.best()?.takeIf { it.isNotBlank() } ?: attrs?.coverImage?.best(),
-                            synopsis = attrs?.synopsis,
-                            rating = attrs?.averageRating?.toDoubleOrNull(),
-                            totalEpisodes = attrs?.episodeCount,
-                            genres = null,
-                            info = info,
+                            title = data.title,
+                            image = data.image,
+                            synopsis = data.sinopsis ?: data.synopsis,
+                            rating = data.rating,
+                            totalEpisodes = data.totalEpisodes,
+                            genres = data.genres,
+                            info = data.info,
                             episodes = eps
                         ),
                         episodes = eps,
@@ -170,28 +157,27 @@ class AnimeViewModel : ViewModel() {
         }
     }
 
-    fun retryDetail(id: String) = loadDetail(id)
+    fun retryDetail(url: String) = loadDetail(url)
 
     /**
-     * Kitsu tidak menyediakan streaming. Player memakai URL episode bila ada,
-     * jika kosong memakai sample video publik (selalu bisa diputar, tidak hitam).
+     * Ambil URL stream dari animasu. Jika kosong / gagal, player memakai demo CC BY 3.0
+     * (legal) supaya tidak hitam — bukan sumber bajakan.
      */
     fun loadStream(episodeUrl: String?) {
-        val url = episodeUrl?.takeIf { it.startsWith("http") }
-            ?: SAMPLE_STREAM
-        _uiState.value = _uiState.value.copy(streamUrl = url)
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, streamUrl = null)
+            val url = runCatching {
+                api.stream(episodeUrl ?: "").body()?.data?.streamUrl
+            }.getOrNull()
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                streamUrl = url?.takeIf { it.startsWith("http") } ?: SAMPLE_STREAM
+            )
+        }
     }
 
-    private fun KitsuAnime.toItem(): AnimeSearchItem = AnimeSearchItem(
-        title = attributes?.displayTitle(),
-        link = id,
-        image = attributes?.posterImage?.best()?.takeIf { it.isNotBlank() } ?: attributes?.coverImage?.best(),
-        latestEpisode = attributes?.episodeCount?.let { "$it eps" } ?: attributes?.status,
-        type = attributes?.subtype
-    )
-
     companion object {
-        // Sample publik (Google) — dipakai agar player selalu bisa diputar.
+        // Demo legal (CC BY 3.0) — fallback agar player tidak hitam.
         const val SAMPLE_STREAM =
             "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
     }

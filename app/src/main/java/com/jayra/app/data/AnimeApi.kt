@@ -10,6 +10,10 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
+/**
+ * AnimeApi — sumber resmi anime: https://api.nexadev.my.id (animasu).
+ * Hanya hostname ini yang dipakai untuk fitur Anime (sesuai aturan).
+ */
 interface AnimeApi {
     @GET("animasu")
     suspend fun search(@Query("search") q: String): Response<AnimeSearchResponse>
@@ -29,20 +33,16 @@ interface AnimeApi {
     @GET("animasu")
     suspend fun popular(@Query("popular") on: Int = 1, @Query("page") page: Int = 1): Response<AnimeListResponse>
 
-    @GET("animasu")
-    suspend fun schedule(@Query("schedule") on: Int = 1): Response<AnimeListResponse>
-
     companion object {
-        private const val BASE_URL = "https://apii.nexadev.my.id/"
+        private const val BASE_URL = "https://api.nexadev.my.id/"
 
         fun create(): AnimeApi {
             val client = OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
+                .followRedirects(true)
                 .build()
-
             val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-
             return Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .client(client)

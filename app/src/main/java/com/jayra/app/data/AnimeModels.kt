@@ -34,6 +34,7 @@ data class AnimeDetailData(
     @Json(name = "title") val title: String? = null,
     @Json(name = "image") val image: String? = null,
     @Json(name = "synopsis") val synopsis: String? = null,
+    @Json(name = "sinopsis") val sinopsis: String? = null,
     @Json(name = "rating") val rating: Double? = null,
     @Json(name = "totalEpisodes") val totalEpisodes: Int? = null,
     @Json(name = "genres") val genres: List<String>? = null,
