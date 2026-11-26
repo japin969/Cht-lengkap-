@@ -15,16 +15,26 @@ fun DonghuaPlayerScreen(
     title: String = "Memutar Donghua",
     onBack: () -> Unit
 ) {
-    val servers = remember {
-        listOf(
-            "Server 1 (Utama)" to videoUrl,
-            "Server 2 (Cadangan)" to DonghuaViewModel.SAMPLE_STREAM
-        )
+    // Metadata donghua (TVMaze) tidak menyediakan stream berlisensi.
+    // Kalau URL bukan http valid, pakai demo CC BY 3.0 yang legal (bukan hitam).
+    val isRealStream = remember(videoUrl) { videoUrl.startsWith("http") }
+    val effectiveUrl = remember(videoUrl, isRealStream) {
+        if (isRealStream) videoUrl else DonghuaViewModel.SAMPLE_STREAM
+    }
+    val servers = remember(videoUrl, isRealStream) {
+        if (isRealStream) {
+            listOf(
+                "Server 1 (Utama)" to videoUrl,
+                "Server 2 (Demo CC)" to DonghuaViewModel.SAMPLE_STREAM
+            )
+        } else {
+            listOf("Demo (CC BY 3.0)" to DonghuaViewModel.SAMPLE_STREAM)
+        }
     }
     MediaVideoPlayer(
-        videoUrl = videoUrl,
+        videoUrl = effectiveUrl,
         accent = MediaColors.Strem,
-        title = title,
+        title = if (isRealStream) title else "$title (demo)",
         onBack = onBack,
         servers = servers
     )

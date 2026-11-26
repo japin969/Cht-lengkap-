@@ -9,6 +9,9 @@ import com.jayra.app.data.TvmazeShow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
+import java.security.cert.CertPathValidatorException
+import javax.net.ssl.SSLException
 
 data class DonghuaUiState(
     val isLoading: Boolean = false,
@@ -53,7 +56,7 @@ class DonghuaViewModel : ViewModel() {
                     error = if (items.isEmpty()) "Gagal memuat daftar donghua" else null
                 )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
+                _uiState.value = _uiState.value.copy(isLoading = false, error = friendlyError(e))
             }
         }
     }
@@ -77,7 +80,7 @@ class DonghuaViewModel : ViewModel() {
                     error = if (items.isEmpty()) "Tidak ada donghua" else null
                 )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
+                _uiState.value = _uiState.value.copy(isLoading = false, error = friendlyError(e))
             }
         }
     }
@@ -94,7 +97,7 @@ class DonghuaViewModel : ViewModel() {
                 val items = api.search(query).body().orEmpty().mapNotNull { it.show?.toItem() }
                 _uiState.value = _uiState.value.copy(isLoading = false, results = items, error = if (items.isEmpty()) "Tidak ada hasil" else null)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
+                _uiState.value = _uiState.value.copy(isLoading = false, error = friendlyError(e))
             }
         }
     }
@@ -125,7 +128,7 @@ class DonghuaViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(isLoading = false, error = "Gagal memuat detail donghua")
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Gagal memuat detail")
+                _uiState.value = _uiState.value.copy(isLoading = false, error = friendlyError(e))
             }
         }
     }
@@ -149,6 +152,15 @@ class DonghuaViewModel : ViewModel() {
     private fun stripHtml(raw: String): String =
         raw.replace(Regex("<[^>]*>"), "")
             .replace("&nbsp;", " ").replace("&amp;", "&").replace("&quot;", "\"").trim()
+
+
+    /** Pesan error koneksi yang jelas (tanpa membocorkan detail teknis / tanpa bypass SSL). */
+    private fun friendlyError(e: Exception): String = when (e) {
+        is SSLException -> "Koneksi tidak aman (SSL). Periksa tanggal/jam perangkat atau jaringan."
+        is CertPathValidatorException -> "Sertifikat server tidak valid. Coba jaringan lain."
+        is IOException -> "Tidak ada koneksi ke server. Periksa jaringan Anda."
+        else -> e.localizedMessage ?: "Koneksi bermasalah"
+    }
 
     companion object {
         const val SAMPLE_STREAM =
