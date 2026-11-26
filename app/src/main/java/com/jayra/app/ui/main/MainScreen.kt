@@ -175,9 +175,9 @@ class MainViewModel(
             icon = Icons.Rounded.MusicNote
         ),
         NavItem(
-            route = ROUTE_DRAMA_HOME,
+            route = ROUTE_HUB,
             icon = Icons.Rounded.PlayArrow,
-            label = "VidHub"
+            label = "Hub"
         ),
         NavItem(
             route = ROUTE_SETTINGS,
@@ -216,10 +216,6 @@ class MainViewModel(
         const val ROUTE_CHAT_LIST = "chat_list"
         const val ROUTE_CALLS = "calls"
         const val ROUTE_MUSIC_HOME = "music_home"
-    const val ROUTE_DRAMA_HOME = "drama_home"
-    const val ROUTE_DRAMA_DETAIL = "drama_detail?url={url}"
-    const val ROUTE_KOMIK_DETAIL = "komik_detail?slug={slug}"
-    const val ROUTE_KOMIK_READER = "komik_reader?slug={slug}"
         const val ROUTE_SETTINGS = "settings"
         const val ROUTE_GLOBAL_SEARCH = "global_search"
         const val ROUTE_COMMUNITIES = "communities"
@@ -229,9 +225,14 @@ class MainViewModel(
             ROUTE_CHAT_LIST,
             ROUTE_CALLS,
             ROUTE_MUSIC_HOME,
-            ROUTE_DRAMA_HOME,
             ROUTE_SETTINGS
         )
+
+        // Rute fitur media (Hub + 3 fitur). Tidak memakai bottom nav utama.
+        const val ROUTE_HUB = "hub"
+        const val ROUTE_ANIME = "anime"
+        const val ROUTE_COMIC = "comic"
+        const val ROUTE_STREM = "strem"
     }
 }
 
@@ -338,7 +339,7 @@ fun MainScreen(
                             "chat_list" -> 0
                             "calls" -> 1
                             "music_home" -> 2
-                            "drama_home", "vidhub" -> 3
+                            "hub" -> 3
                             "settings" -> 4
                             else -> 0
                         },
@@ -347,7 +348,7 @@ fun MainScreen(
                                 0 -> "chat_list"
                                 1 -> "calls"
                                 2 -> "music_home"
-                                3 -> "drama_home"
+                                3 -> "hub"
                                 4 -> "settings"
                                 else -> "chat_list"
                             }
@@ -718,85 +719,37 @@ private fun MainNavigationGraph(
             )
         }
 
-        composable(MainViewModel.ROUTE_DRAMA_HOME) {
-            com.jayra.app.ui.VidHubScreen(
-                onDramaClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("drama_detail?url=$encoded")
-                },
-                onAnimeClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("anime_detail?url=$encoded")
-                },
-                onKomikClick = { slug ->
-                    navController.navigate("komik_detail?slug=$slug")
-                }
+        // ── HUB (pintu 3 fitur) ──
+        composable(MainViewModel.ROUTE_HUB) {
+            com.jayra.app.ui.HubScreen(
+                onAnimeClick = { navController.navigate(MainViewModel.ROUTE_ANIME) },
+                onComicClick = { navController.navigate(MainViewModel.ROUTE_COMIC) },
+                onStremClick = { navController.navigate(MainViewModel.ROUTE_STREM) },
+                onBack = { navController.popBackStack() }
             )
         }
 
-        composable(
-            route = "anime_detail?url={url}",
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
-            com.jayra.app.ui.anime.AnimeDetailScreen(
-                animeUrl = decoded,
-                onPlayEpisode = { epUrl ->
-                    val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
-                    navController.navigate("anime_player?url=$epEncoded")
-                }
+        // ── FITUR ANIME (NavGraph + BottomNav sendiri) ──
+        composable(MainViewModel.ROUTE_ANIME) {
+            com.jayra.app.ui.anime.AnimeFeature(
+                onExit = { navController.popBackStack() }
             )
         }
 
-        composable(
-            route = "anime_player?url={url}",
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
-            val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-            val state by vm.uiState.collectAsState()
-            LaunchedEffect(decoded) { vm.loadStream(decoded) }
-            val stream = state.streamUrl
-            if (stream.isNullOrBlank()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream ?: "")
-            }
-        }
-
-        composable(
-            route = MainViewModel.ROUTE_DRAMA_DETAIL,
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            com.jayra.app.ui.drama.DramaDetailScreen(dramaUrl = java.net.URLDecoder.decode(url, "UTF-8"))
-        }
-
-        
-        composable(
-            route = MainViewModel.ROUTE_KOMIK_DETAIL,
-            arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val slug = backStackEntry.arguments?.getString("slug") ?: ""
-            com.jayra.app.ui.komik.KomikDetailScreen(
-                slug = slug,
-                onChapterClick = { chapterSlug ->
-                    navController.navigate("komik_reader?slug=$chapterSlug")
-                }
+        // ── FITUR COMIC (NavGraph + BottomNav sendiri) ──
+        composable(MainViewModel.ROUTE_COMIC) {
+            com.jayra.app.ui.comic.ComicFeature(
+                onExit = { navController.popBackStack() }
             )
         }
 
-        composable(
-            route = MainViewModel.ROUTE_KOMIK_READER,
-            arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val slug = backStackEntry.arguments?.getString("slug") ?: ""
-            com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
+        // ── FITUR STREM / DONGHUA (NavGraph + BottomNav sendiri) ──
+        composable(MainViewModel.ROUTE_STREM) {
+            com.jayra.app.ui.donghua.DonghuaFeature(
+                onExit = { navController.popBackStack() }
+            )
         }
+
 
         composable("archived_chats") {
             com.jayra.app.ui.chatlist.ArchivedChatsScreen(

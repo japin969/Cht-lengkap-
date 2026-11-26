@@ -1,7 +1,7 @@
 name: Build Jayra APK
 on:
   push:
-    branches: [main]
+    branches: [main, kilo/bitter-redwood-2o8]
   workflow_dispatch:
 jobs:
   build:

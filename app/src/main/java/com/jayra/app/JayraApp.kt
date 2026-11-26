@@ -8,6 +8,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.jayra.app.di.AppModule
 import com.jayra.app.util.ErrorHandler
+import com.jayra.app.util.MediaImageLoader
 import timber.log.Timber
 
 class JayraApp : Application() {
@@ -16,6 +17,12 @@ class JayraApp : Application() {
         super.onCreate()
         com.jayra.app.util.GlassEffectPrefs.init(this)
         instance = this
+
+        // Pasang ImageLoader Coil global (User-Agent browser) supaya poster
+        // anime/komik/donghua tidak kena 403 dari CDN.
+        runCatching {
+            coil.Coil.setImageLoader(MediaImageLoader.get(this))
+        }.onFailure { Timber.w(it, "Coil setImageLoader gagal") }
 
         initTimber()
 
