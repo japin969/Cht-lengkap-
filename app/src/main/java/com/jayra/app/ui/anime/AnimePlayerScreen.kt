@@ -15,7 +15,7 @@ import com.jayra.app.ui.media.MediaColors
 import com.jayra.app.ui.media.MediaVideoPlayer
 
 /**
- * AnimePlayer — resolve URL stream dari animasu (api.nexadev.my.id) via loadStream.
+ * AnimePlayer — resolve URL stream dari animekuindo (sankavollerei) via loadStream.
  * Kalau stream kosong/gagal → demo CC BY 3.0 (legal), tidak hitam.
  * Poster tidak disentuh.
  */
