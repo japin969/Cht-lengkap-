@@ -2,8 +2,6 @@ package com.jayra.app.util
 
 import android.content.Context
 import coil.ImageLoader
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.ImageRequest
@@ -60,14 +58,6 @@ object MediaImageLoader {
                     .directory(context.cacheDir.resolve("media_image_cache"))
                     .maxSizeBytes(80L * 1024 * 1024)
                     .build()
-            }
-            .components {
-                // Dukungan GIF (beberapa cover donghua/drama berupa GIF)
-                if (android.os.Build.VERSION.SDK_INT >= 28) {
-                    add(ImageDecoderDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
             }
             .build()
     }
