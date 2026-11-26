@@ -225,6 +225,7 @@ class MainViewModel(
             ROUTE_CHAT_LIST,
             ROUTE_CALLS,
             ROUTE_MUSIC_HOME,
+            ROUTE_HUB,
             ROUTE_SETTINGS
         )
 
