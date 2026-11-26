@@ -178,7 +178,9 @@ data class NkHomeResponse(
 @JsonClass(generateAdapter = true)
 data class NkHomeData(
     val recommended: List<NkItem>? = null,
-    val latest: List<NkItem>? = null
+    @com.squareup.moshi.Json(name = "latest_hentai") val latest: List<NkItem>? = null,
+    @com.squareup.moshi.Json(name = "latest_episodes") val latestEpisodes: List<NkItem>? = null,
+    @com.squareup.moshi.Json(name = "latest_jav") val latestJav: List<NkItem>? = null
 )
 @JsonClass(generateAdapter = true)
 data class NkListResponse(
