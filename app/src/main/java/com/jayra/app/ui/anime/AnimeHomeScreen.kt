@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.jayra.app.data.AnimeRepository
+import com.jayra.app.data.AnimeSearchItem
 import com.jayra.app.util.glassSurfaceV2
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.util.GlassEffectPrefs
@@ -32,7 +32,7 @@ import com.jayra.app.util.GlassEffectPrefs
 @Composable
 fun AnimeHomeScreen(
     viewModel: AnimeViewModel = viewModel(),
-    onAnimeClick: (AnimeRepository.AnimeItem) -> Unit
+    onAnimeClick: (AnimeSearchItem) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val glassSpec = remember(GlassEffectPrefs.enabledState.value) {
@@ -116,8 +116,8 @@ fun AnimeHomeScreen(
 @Composable
 fun ContentSection(
     title: String,
-    items: List<AnimeRepository.AnimeItem>,
-    onItemClick: (AnimeRepository.AnimeItem) -> Unit,
+    items: List<AnimeSearchItem>,
+    onItemClick: (AnimeSearchItem) -> Unit,
     glassSpec: LiquidGlassSpecV2,
     modifier: Modifier = Modifier
 ) {
@@ -151,7 +151,7 @@ fun ContentSection(
 
 @Composable
 fun SpringAnimeCard(
-    anime: AnimeRepository.AnimeItem,
+    anime: AnimeSearchItem,
     onClick: () -> Unit,
     glassSpec: LiquidGlassSpecV2,
     modifier: Modifier = Modifier

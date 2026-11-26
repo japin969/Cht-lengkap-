@@ -18,14 +18,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.jayra.app.data.AnimeRepository
+import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.ui.video.NativeVideoPlayer
 
 @Composable
 fun AnimeDetailScreen(
     animeId: String,
     viewModel: AnimeViewModel = viewModel(),
-    onPlayEpisode: (AnimeRepository.AnimeEpisode) -> Unit
+    onPlayEpisode: (AnimeEpisode) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -136,9 +136,17 @@ fun AnimeDetailScreen(
 // NATIVE ANIME PLAYER SCREEN (NO WEBVIEW!)
 // ═══════════════════════════════════════════
 
+// Local StreamUrl data class (replaces deleted AnimeRepository.StreamUrl)
+data class StreamUrl(
+    val streamUrl: String? = null,
+    val alternativeLinks: List<String> = emptyList(),
+    val headers: Map<String, String> = emptyMap(),
+    val referer: String? = null
+)
+
 @Composable
 fun AnimePlayerScreen(
-    streamUrl: AnimeRepository.StreamUrl?,
+    streamUrl: StreamUrl?,
     animeTitle: String? = null,
     episodeTitle: String? = null,
     onBack: () -> Unit,

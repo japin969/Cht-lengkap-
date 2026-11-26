@@ -2,11 +2,10 @@ package com.jayra.app.ui.drama
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jayra.app.data.BaseRepository
-import com.jayra.app.data.DramaRepository
-import com.jayra.app.data.DramaRepository.DramaDetail
-import com.jayra.app.data.DramaRepository.DramaEpisode
-import com.jayra.app.data.DramaRepository.DramaItem
+import com.jayra.app.data.DramaItem
+import com.jayra.app.data.DramaDetailResponse
+import com.jayra.app.data.DramaEpisode
+import com.jayra.app.data.TvmazeApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -14,13 +13,13 @@ import kotlinx.coroutines.launch
 data class DramaUiState(
     val isLoading: Boolean = false,
     val featured: List<DramaItem> = emptyList(),
-    val detail: DramaDetail? = null,
+    val detail: DramaDetailResponse? = null,
     val episodes: List<DramaEpisode> = emptyList(),
     val error: String? = null
 )
 
 class DramaViewModel : ViewModel() {
-    private val repository = DramaRepository()
+    private val api = TvmazeApi.create()
     private val _uiState = MutableStateFlow(DramaUiState())
     val uiState: StateFlow<DramaUiState> = _uiState
 
@@ -29,18 +28,21 @@ class DramaViewModel : ViewModel() {
     fun loadHome() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val result = repository.fetchFeatured()
-
-            if (result is DramaRepository.RepositoryResult.Success) {
+            try {
+                val response = api.shows(page = 0)
+                val shows = response.body().orEmpty()
+                val items = shows
+                    .filter { it.image?.original?.isNotBlank() == true || it.image?.medium?.isNotBlank() == true }
+                    .map { it.toDramaItem() }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    featured = result.data,
-                    error = if (result.data.isEmpty()) "Gagal memuat daftar drama" else null
+                    featured = items,
+                    error = if (items.isEmpty()) "Gagal memuat daftar drama" else null
                 )
-            } else {
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = result.message
+                    error = e.localizedMessage ?: "Koneksi bermasalah"
                 )
             }
         }
@@ -51,24 +53,61 @@ class DramaViewModel : ViewModel() {
     fun loadDetail(dramaId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val result = repository.fetchDetail(dramaId)
-
-            if (result is DramaRepository.RepositoryResult.Success) {
-                val detail = result.data.firstOrNull()
-                val episodes = detail?.episodes ?: emptyList()
-
+            try {
+                val id = dramaId.toLongOrNull()
+                if (id == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Drama tidak ditemukan"
+                    )
+                    return
+                }
+                val response = api.detail(id, embed = "episodes")
+                val show = response.body()
+                if (response.isSuccessful && show != null) {
+                    val episodes = show.embedded?.episodes.orEmpty().map { ep ->
+                        DramaEpisode(
+                            index = ep.number,
+                            name = ep.name,
+                            unlock = false,
+                            mp4 = null,
+                            videoUrl = null
+                        )
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        detail = show.toDramaDetail(),
+                        episodes = episodes,
+                        error = null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Gagal memuat detail drama"
+                    )
+                }
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    detail = detail,
-                    episodes = episodes,
-                    error = if (detail != null) null else "Gagal memuat detail drama"
-                )
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = result.message
+                    error = e.localizedMessage ?: "Gagal memuat detail drama"
                 )
             }
         }
+    }
+
+    private fun TvmazeShow.toDramaDetail(): DramaDetailResponse {
+        return DramaDetailResponse(
+            ok = true,
+            book = this.toDramaItem(),
+            episodes = embedded?.episodes?.map { ep ->
+                DramaEpisode(
+                    index = ep.number,
+                    name = ep.name,
+                    unlock = false,
+                    mp4 = null,
+                    videoUrl = null
+                )
+            } ?: emptyList()
+        )
     }
 }

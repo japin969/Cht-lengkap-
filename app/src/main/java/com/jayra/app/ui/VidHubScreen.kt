@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.jayra.app.data.AnimeRepository
-import com.jayra.app.data.DramaRepository
-import com.jayra.app.data.KomikRepository
+import com.jayra.app.data.AnimeSearchItem
+import com.jayra.app.data.DramaItem
+import com.jayra.app.data.KomikItem
 import com.jayra.app.ui.drama.DramaScreen
 import com.jayra.app.ui.anime.AnimeHomeScreen
 import com.jayra.app.ui.komik.KomikHomeScreen
@@ -14,8 +14,8 @@ import com.jayra.app.ui.komik.KomikHomeScreen
 @Composable
 fun VidHubScreen(
     onDramaClick: (String) -> Unit,
-    onAnimeClick: (AnimeRepository.AnimeItem) -> Unit,
-    onKomikClick: (KomikRepository.KomikItem) -> Unit
+    onAnimeClick: (AnimeSearchItem) -> Unit,
+    onKomikClick: (KomikItem) -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Drama", "Anime", "Komik")

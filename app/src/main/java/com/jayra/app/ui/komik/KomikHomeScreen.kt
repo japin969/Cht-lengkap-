@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.jayra.app.data.KomikRepository
+import com.jayra.app.data.KomikItem
 import com.jayra.app.util.glassSurfaceV2
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.util.GlassEffectPrefs
@@ -32,7 +32,7 @@ import com.jayra.app.util.GlassEffectPrefs
 @Composable
 fun KomikHomeScreen(
     viewModel: KomikViewModel = viewModel(),
-    onKomikClick: (KomikRepository.KomikItem) -> Unit
+    onKomikClick: (KomikItem) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val glassSpec = remember(GlassEffectPrefs.enabledState.value) {
@@ -93,8 +93,8 @@ fun KomikHomeScreen(
 @Composable
 fun KomikGridSection(
     title: String,
-    items: List<KomikRepository.KomikItem>,
-    onItemClick: (KomikRepository.KomikItem) -> Unit,
+    items: List<KomikItem>,
+    onItemClick: (KomikItem) -> Unit,
     glassSpec: LiquidGlassSpecV2,
     modifier: Modifier = Modifier
 ) {
@@ -128,7 +128,7 @@ fun KomikGridSection(
 
 @Composable
 fun SpringKomikCard(
-    komik: KomikRepository.KomikItem,
+    komik: KomikItem,
     onClick: () -> Unit,
     glassSpec: LiquidGlassSpecV2,
     modifier: Modifier = Modifier

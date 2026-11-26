@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.jayra.app.data.DramaRepository
+import com.jayra.app.data.DramaItem
 import com.jayra.app.util.glassSurfaceV2
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.util.GlassEffectPrefs
@@ -104,7 +104,7 @@ fun DramaScreen(
 
 @Composable
 fun SpringBannerItem(
-    drama: DramaRepository.DramaItem,
+    drama: DramaItem,
     onClick: (String) -> Unit,
     glassSpec: LiquidGlassSpecV2,
     modifier: Modifier = Modifier
@@ -204,7 +204,7 @@ fun SpringBannerItem(
 @Composable
 fun ContentSection(
     title: String,
-    items: List<DramaRepository.DramaItem>,
+    items: List<DramaItem>,
     onItemClick: (String) -> Unit,
     glassSpec: LiquidGlassSpecV2,
     modifier: Modifier = Modifier
@@ -237,7 +237,7 @@ fun ContentSection(
 
 @Composable
 fun SpringDramaCard(
-    drama: DramaRepository.DramaItem,
+    drama: DramaItem,
     onClick: () -> Unit,
     glassSpec: LiquidGlassSpecV2,
     modifier: Modifier = Modifier

@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.jayra.app.data.DramaRepository
+import com.jayra.app.data.DramaEpisode
 import com.jayra.app.ui.video.NativeVideoPlayer
 
 @Composable
@@ -29,7 +29,7 @@ fun DramaDetailScreen(
     viewModel: DramaViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    var playingEpisode by remember { mutableStateOf<DramaRepository.DramaEpisode?>(null) }
+    var playingEpisode by remember { mutableStateOf<DramaEpisode?>(null) }
 
     LaunchedEffect(dramaId) {
         viewModel.loadDetail(dramaId)
