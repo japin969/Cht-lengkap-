@@ -56,9 +56,12 @@ object VideoPlayerManager {
     fun get(context: Context): ExoPlayer {
         player?.let { return it }
         val mediaSourceFactory = DefaultMediaSourceFactory(buildDataSourceFactory(context))
+        // Hardware decoder only: DefaultRenderersFactory tanpa fallback software.
+        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(context)
+            .setEnableDecoderFallback(false)
         return ExoPlayer.Builder(context)
             .setMediaSourceFactory(mediaSourceFactory)
-            .setEnableDecoderFallback(false) // hardware only, no software fallback
+            .setRenderersFactory(renderersFactory)
             .build()
             .also { player = it }
     }
