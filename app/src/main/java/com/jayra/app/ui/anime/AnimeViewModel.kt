@@ -41,21 +41,30 @@ class AnimeViewModel : ViewModel() {
     fun loadHome() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            try {
-                val popular = runCatching { api.list(limit = 20, sort = "-userCount").body()?.data.orEmpty() }.getOrDefault(emptyList())
-                val ongoing = runCatching { api.list(limit = 20, sort = "-userCount", status = "current").body()?.data.orEmpty() }.getOrDefault(emptyList())
-                val completed = runCatching { api.list(limit = 20, sort = "-averageRating", status = "finished").body()?.data.orEmpty() }.getOrDefault(emptyList())
-                val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    popular = popular.map { it.toItem() },
-                    ongoing = ongoing.map { it.toItem() },
-                    completed = completed.map { it.toItem() },
-                    error = if (hasData) null else "Gagal memuat daftar anime"
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
-            }
+            // Sumber ANIME (Kitsu) — terpisah total dari Comic.
+            // Tiap section punya runCatching sendiri: kalau 1 section gagal,
+            // section lain tetap tampil (tidak jadi kosong semua).
+            var hadError: String? = null
+            val popular = runCatching {
+                api.list(limit = 20, sort = "-userCount").body()?.data.orEmpty()
+            }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
+            val ongoing = runCatching {
+                api.list(limit = 20, sort = "-userCount", status = "current").body()?.data.orEmpty()
+            }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
+            val completed = runCatching {
+                api.list(limit = 20, sort = "-averageRating", status = "finished").body()?.data.orEmpty()
+            }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
+
+            val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                popular = popular.map { it.toItem() },
+                ongoing = ongoing.map { it.toItem() },
+                completed = completed.map { it.toItem() },
+                // Error hanya kalau benar-benar gagal (bukan sekadar kosong).
+                // Pesan khusus ANIME — tidak pernah memakai teks Comic.
+                error = if (hasData) null else (hadError?.let { "Gagal memuat daftar anime" } ?: null)
+            )
         }
     }
 
