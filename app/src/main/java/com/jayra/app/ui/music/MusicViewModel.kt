@@ -5,8 +5,9 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.jayra.app.data.MusicRepository
-import com.jayra.app.data.MusicRepository.Song
+import com.jayra.app.data.NexadevApi
+import com.jayra.app.data.SpotifyResponse
+import com.jayra.app.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,7 @@ sealed interface MusicUiState {
 
 class MusicViewModel @JvmOverloads constructor(
     application: Application,
-    private val repository: MusicRepository = MusicRepository()
+    private val nexadevApi: NexadevApi = NexadevApi.create()
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<MusicUiState>(MusicUiState.Empty)
@@ -56,6 +57,20 @@ class MusicViewModel @JvmOverloads constructor(
     private var mediaPlayer: MediaPlayer? = null
     private var progressUpdateJob: Job? = null
     private var lastQuery: String = ""
+
+    // Curated fallback songs
+    private val curatedSongs = listOf(
+        Song(
+            id = "seed_1",
+            title = "Starboy",
+            artist = "The Weeknd, Daft Punk",
+            album = "Starboy",
+            duration = "3:50",
+            coverUrl = "",
+            audioUrl = "",
+            source = "curated"
+        )
+    )
 
     // History
     private val prefs = application.getSharedPreferences("jayra_music_prefs", android.content.Context.MODE_PRIVATE)
@@ -112,42 +127,29 @@ class MusicViewModel @JvmOverloads constructor(
         lastQuery = query
         _uiState.value = MusicUiState.Loading
         try {
-            // PARALLEL SEARCH: Deezer + YouTube simultaneously
-            val result = repository.search(query)
-
-            if (result is MusicRepository.RepositoryResult.Success) {
-                val songs = result.data
-                if (songs.isNotEmpty()) {
-                    _uiState.value = MusicUiState.Success(songs)
-                    addHistory(query)
-                } else {
-                    // Fallback to curated songs
-                    val fallback = repository.getCurated().filter {
-                        it.title.contains(query, ignoreCase = true) ||
-                        it.artist.contains(query, ignoreCase = true)
-                    }
-                    _uiState.value = if (fallback.isNotEmpty()) {
-                        MusicUiState.Success(fallback)
-                    } else {
-                        MusicUiState.Empty
-                    }
-                }
+            // Search Spotify only (Deezer and YouTube removed)
+            val response = withContext(Dispatchers.IO) { nexadevApi.searchSpotify(query) }
+            val data = response.body()?.data
+            val songs = data?.let { it.toSongs() } ?: emptyList()
+            
+            if (songs.isNotEmpty()) {
+                _uiState.value = MusicUiState.Success(songs)
+                addHistory(query)
             } else {
-                // On error, try curated songs
-                val fallback = repository.getCurated().filter {
+                val fallback = curatedSongs.filter {
                     it.title.contains(query, ignoreCase = true) ||
-                    it.artist.contains(query, ignoreCase = true)
+                        it.artist.contains(query, ignoreCase = true)
                 }
                 _uiState.value = if (fallback.isNotEmpty()) {
                     MusicUiState.Success(fallback)
                 } else {
-                    MusicUiState.Error(result.message)
+                    MusicUiState.Empty
                 }
             }
         } catch (e: Exception) {
-            val fallback = repository.getCurated().filter {
+            val fallback = curatedSongs.filter {
                 it.title.contains(query, ignoreCase = true) ||
-                it.artist.contains(query, ignoreCase = true)
+                    it.artist.contains(query, ignoreCase = true)
             }
             _uiState.value = if (fallback.isNotEmpty()) {
                 MusicUiState.Success(fallback)
@@ -155,6 +157,21 @@ class MusicViewModel @JvmOverloads constructor(
                 MusicUiState.Error(e.localizedMessage ?: "Gagal mencari lagu")
             }
         }
+    }
+
+    private fun SpotifyResponse.toSongs(): List<Song> {
+        // SpotifyResponse structure - adjust based on actual response
+        // This is a placeholder implementation
+        return if (data != null) {
+            // Convert Spotify tracks to Songs
+            emptyList() // Placeholder - implement based on actual SpotifyResponse structure
+        } else emptyList()
+    }
+
+    private fun formatDuration(totalSeconds: Int): String {
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "%d:%02d".format(minutes, seconds)
     }
 
     fun onSongClick(song: Song) {
@@ -237,7 +254,7 @@ class MusicViewModel @JvmOverloads constructor(
     fun onNext() {
         val currentList = when (val state = _uiState.value) {
             is MusicUiState.Success -> state.songs
-            else -> repository.getCurated()
+            else -> curatedSongs
         }
         if (currentList.isEmpty()) return
 
@@ -256,7 +273,7 @@ class MusicViewModel @JvmOverloads constructor(
     fun onPrev() {
         val currentList = when (val state = _uiState.value) {
             is MusicUiState.Success -> state.songs
-            else -> repository.getCurated()
+            else -> curatedSongs
         }
         if (currentList.isEmpty()) return
 

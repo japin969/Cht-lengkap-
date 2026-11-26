@@ -15,9 +15,6 @@ interface NexadevApi {
     @GET("api/spotifyplay")
     suspend fun searchSpotify(@Query("q") query: String): Response<SpotifyResponse>
 
-    @GET("api/ytplay")
-    suspend fun searchYouTube(@Query("q") query: String): Response<YouTubeResponse>
-
     @GET("api/spotify")
     suspend fun getSpotifyByUrl(@Query("url") url: String): Response<SpotifyResponse>
 

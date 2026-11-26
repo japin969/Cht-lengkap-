@@ -2,12 +2,12 @@ package com.jayra.app.ui.komik
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jayra.app.data.BaseRepository
-import com.jayra.app.data.KomikRepository
-import com.jayra.app.data.KomikRepository.KomikChapter
-import com.jayra.app.data.KomikRepository.KomikDetail
-import com.jayra.app.data.KomikRepository.KomikItem
-import com.jayra.app.data.KomikRepository.KomikPage
+import com.jayra.app.data.KomikApi
+import com.jayra.app.data.KomikChapter
+import com.jayra.app.data.KomikDetailResponse
+import com.jayra.app.data.KomikItem
+import com.jayra.app.data.KomikPage
+import com.jayra.app.data.KomikStreamResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 data class KomikUiState(
     val isLoading: Boolean = false,
     val latest: List<KomikItem> = emptyList(),
-    val detail: KomikDetail? = null,
+    val detail: KomikDetailResponse? = null,
     val chapters: List<KomikChapter> = emptyList(),
     val streamTitle: String? = null,
     val pages: List<KomikPage> = emptyList(),
@@ -23,7 +23,7 @@ data class KomikUiState(
 )
 
 class KomikViewModel : ViewModel() {
-    private val repository = KomikRepository()
+    private val api = KomikApi.create()
     private val _uiState = MutableStateFlow(KomikUiState())
     val uiState: StateFlow<KomikUiState> = _uiState
 
@@ -32,18 +32,18 @@ class KomikViewModel : ViewModel() {
     fun loadHome() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val result = repository.fetchLatest()
-            
-            if (result is KomikRepository.RepositoryResult.Success) {
+            try {
+                val res = api.update(page = 1)
+                val items = res.body()?.results.orEmpty()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    latest = result.data,
-                    error = if (result.data.isEmpty()) "Gagal memuat daftar komik" else null
+                    latest = items,
+                    error = if (items.isEmpty()) "Gagal memuat daftar komik" else null
                 )
-            } else {
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = result.message
+                    error = e.localizedMessage ?: "Koneksi bermasalah"
                 )
             }
         }
@@ -54,22 +54,26 @@ class KomikViewModel : ViewModel() {
     fun loadDetail(slug: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val result = repository.fetchDetail(slug)
-            
-            if (result is KomikRepository.RepositoryResult.Success) {
-                val detail = result.data.firstOrNull()
-                val chapters = detail?.chapters ?: emptyList()
-                
+            try {
+                val detailRes = api.detail(slug = slug)
+                val data = detailRes.body()
+                if (detailRes.isSuccessful && data != null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        detail = data,
+                        chapters = data.chapters.orEmpty(),
+                        error = null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Gagal memuat detail komik"
+                    )
+                }
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    detail = detail,
-                    chapters = chapters,
-                    error = if (detail != null) null else "Gagal memuat detail komik"
-                )
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = result.message
+                    error = e.localizedMessage ?: "Gagal memuat detail komik"
                 )
             }
         }
@@ -78,20 +82,20 @@ class KomikViewModel : ViewModel() {
     fun loadStream(slug: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val result = repository.fetchChapterImages(slug)
-            
-            if (result is KomikRepository.RepositoryResult.Success) {
-                val pages = result.data
+            try {
+                val res = api.stream(slug = slug)
+                val data = res.body()
+                val pages = data?.pages.orEmpty()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     streamTitle = _uiState.value.detail?.title,
                     pages = pages,
                     error = if (pages.isEmpty()) "Halaman chapter tidak tersedia" else null
                 )
-            } else {
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = result.message
+                    error = e.localizedMessage ?: "Gagal memuat chapter"
                 )
             }
         }

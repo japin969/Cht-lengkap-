@@ -32,20 +32,11 @@ import com.jayra.app.util.GlassEffectPrefs
 @Composable
 fun KomikHomeScreen(
     viewModel: KomikViewModel = viewModel(),
-    onKomikClick: (KomikRepository.KomikItem) -> Unit,
-    onGenreClick: (String) -> Unit
+    onKomikClick: (KomikRepository.KomikItem) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val glassSpec = remember(GlassEffectPrefs.enabledState.value) {
         LiquidGlassSpecV2.forTier(GlassEffectPrefs.resolveTier(), isSystemInDarkTheme())
-    }
-
-    // Collect genres from komik (using updatedAt as genre placeholder)
-    val allGenres = remember(state) {
-        state.latest
-            .mapNotNull { it.updatedAt?.takeIf { it.isNotBlank() } }
-            .distinct()
-            .sorted()
     }
 
     Box(
@@ -82,15 +73,6 @@ fun KomikHomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Genre Section
-                    if (allGenres.isNotEmpty()) {
-                        GenreSection(
-                            genres = allGenres,
-                            onGenreClick = onGenreClick,
-                            glassSpec = glassSpec
-                        )
-                    }
-
                     // Latest Komik Grid
                     KomikGridSection(
                         title = "Komik Terbaru",
@@ -101,82 +83,6 @@ fun KomikHomeScreen(
                 }
             }
         }
-    }
-}
-
-// ═══════════════════════════════════════════
-// GENRE SECTION
-// ═══════════════════════════════════════════
-
-@Composable
-fun GenreSection(
-    genres: List<String>,
-    onGenreClick: (String) -> Unit,
-    glassSpec: LiquidGlassSpecV2,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.padding(horizontal = 16.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Genre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-
-        androidx.compose.foundation.lazy.LazyRow(
-            contentPadding = PaddingValues(horizontal = 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(genres) { genre ->
-                GenreChip(
-                    label = genre,
-                    onClick = { onGenreClick(genre) },
-                    glassSpec = glassSpec
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun GenreChip(
-    label: String,
-    onClick: () -> Unit,
-    glassSpec: LiquidGlassSpecV2,
-    modifier: Modifier = Modifier
-) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.95f else 1f,
-        animationSpec = spring(stiffness = 200, dampingRatio = 15),
-        label = "genre_chip_scale"
-    )
-
-    Box(
-        modifier = modifier
-            .height(32.dp)
-            .padding(horizontal = 12.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .glassSurfaceV2(glassSpec.surface, solidColor = MaterialTheme.colorScheme.surface, cornerRadius = 16.dp)
-            .scale(scale)
-            .pointerInput(Unit) {
-                androidx.compose.foundation.gestures.detectTapGestures(
-                    onPress = { pressed = true },
-                    onRelease = { pressed = false; onClick() },
-                    onCancel = { pressed = false }
-                )
-            }
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(vertical = 4.dp).align(Alignment.Center)
-        )
     }
 }
 

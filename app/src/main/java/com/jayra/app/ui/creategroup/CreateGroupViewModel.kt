@@ -173,8 +173,6 @@ class CreateGroupViewModel(
     private val _webSearchLoading = MutableStateFlow(false)
     val webSearchLoading: StateFlow<Boolean> = _webSearchLoading.asStateFlow()
 
-    private val siputzxApi = com.jayra.app.data.SiputzxApi.create()
-
     fun onWebSearchQueryChange(q: String) {
         _webSearchQuery.value = q
     }
@@ -185,16 +183,7 @@ class CreateGroupViewModel(
         viewModelScope.launch {
             _webSearchLoading.value = true
             try {
-                val res = siputzxApi.searchPinterest(query = q)
-                if (res.isSuccessful && res.body()?.status == true) {
-                    _webSearchResults.value = res.body()?.data
-                        ?.mapNotNull { it.imageUrl }
-                        ?.distinct()
-                        ?: emptyList()
-                } else {
-                    _webSearchResults.value = emptyList()
-                }
-            } catch (_: Exception) {
+                // Pinterest search removed (SiputzxApi removed)
                 _webSearchResults.value = emptyList()
             } finally {
                 _webSearchLoading.value = false

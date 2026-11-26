@@ -729,15 +729,6 @@ private fun MainNavigationGraph(
                 },
                 onKomikClick = { komik ->
                     navController.navigate("komik_detail/${komik.slug}")
-                },
-                onDramaGenreClick = { genre ->
-                    // TODO: Navigate to filtered drama list
-                },
-                onAnimeGenreClick = { genre ->
-                    // TODO: Navigate to filtered anime list
-                },
-                onKomikGenreClick = { genre ->
-                    // TODO: Navigate to filtered komik list
                 }
             )
         }

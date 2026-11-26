@@ -4,9 +4,8 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.jayra.app.data.AIResponse
 import com.jayra.app.data.EncryptionHelper
-import com.jayra.app.data.SiputzxApi
+import com.jayra.app.data.UnlimitedAiApi
 import com.jayra.app.model.AiMode
 import com.jayra.app.model.AssistantUiState
 import com.jayra.app.model.Message
@@ -16,6 +15,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -28,11 +28,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import kotlinx.coroutines.tasks.await
 
 class AssistantViewModel @JvmOverloads constructor(
     application: Application,
-    private val siputzxApi: SiputzxApi = SiputzxApi.create(),
+    private val aiApi: UnlimitedAiApi = UnlimitedAiApi.create(),
     private val firestore: FirebaseFirestore? = com.jayra.app.di.AppModule.provideFirestore(application),
     private val auth: FirebaseAuth? = try { FirebaseAuth.getInstance() } catch (_: Exception) { null }
 ) : AndroidViewModel(application) {
@@ -73,7 +72,7 @@ class AssistantViewModel @JvmOverloads constructor(
                 AssistantUiState.Success(emptyList(), isLoading = false, mode = mode)
             else -> { }
         }
-        _toastEvents.tryEmit(if (mode == AiMode.THINKING) "Mode: Berpikir (DeepSeek R1)" else "Mode: Biasa (GPT-OSS)")
+        _toastEvents.tryEmit(if (mode == AiMode.THINKING) "Mode: Berpikir (Reasoning)" else "Mode: Biasa (Chat)")
     }
 
     fun loadHistory() {
@@ -121,9 +120,6 @@ class AssistantViewModel @JvmOverloads constructor(
                                 )
                             } catch (_: Exception) { null }
                         }
-                        // Jangan replace total: gabungkan snapshot remote dengan pesan lokal
-                        // yang belum tersimpan (SENDING/FAILED atau balasan AI yang baru tampil),
-                        // supaya pesan tidak "muncul lalu hilang".
                         val merged = mergeWithLocalMessages(loaded)
                         val previous = _uiState.value as? AssistantUiState.Success
                         inMemoryMessages.clear()
@@ -193,17 +189,121 @@ class AssistantViewModel @JvmOverloads constructor(
 
         viewModelScope.launch {
             try {
-                val (thinkText, aiText) = withContext(Dispatchers.IO) {
-                    val historyBlock = historySnapshot.dropLast(1).takeLast(10).joinToString("\n") { m ->
-                        val role = if (m.senderId == "jayra_ai") "Jayra AI" else "User"
-                        "$role: ${m.text.take(500)}"
+                // Stream response token by token
+                val channel = Channel<String>(100)
+                var fullResponse = ""
+                var thinkText: String? = null
+                var isThinking = false
+                var thinkBuffer = ""
+
+                viewModelScope.launch {
+                    aiApi.sendPromptStream(
+                        prompt = buildPrompt(sanitized, historySnapshot, mode),
+                        onToken = { token ->
+                            channel.trySend(token)
+                        },
+                        onComplete = { fullText ->
+                            channel.close()
+                            fullResponse = fullText
+                            // Extract think block if present
+                            val (think, answer) = parseThinkBlock(fullText)
+                            thinkText = think
+                            fullResponse = answer
+                        },
+                        onError = { error ->
+                            channel.close(error)
+                        }
+                    )
+                }
+
+                // Consume tokens and update UI in real-time
+                var aiMsgId: String? = null
+                var aiMsg: Message? = null
+                var firstToken = true
+
+                for (token in channel) {
+                    fullResponse += token
+                    
+                    if (firstToken) {
+                        firstToken = false
+                        val aiTime = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
+                        aiMsgId = UUID.randomUUID().toString()
+                        aiMsg = Message(
+                            id = aiMsgId!!,
+                            chatId = "assistant",
+                            senderId = "jayra_ai",
+                            senderName = "Jayra AI",
+                            text = token,
+                            timestamp = aiTime,
+                            status = MessageStatus.READ,
+                            thinkText = null
+                        )
+                        val deliveredUserMsg = userMsg.copy(status = MessageStatus.READ)
+                        val messagesWithAi = updatedMessages.dropLast(1) + deliveredUserMsg + aiMsg!!
+                        inMemoryMessages.clear()
+                        inMemoryMessages.addAll(messagesWithAi)
+                        _uiState.value = AssistantUiState.Success(messages = messagesWithAi, isLoading = false, mode = mode)
+                    } else if (aiMsg != null) {
+                        // Update the last AI message with accumulated text
+                        val updatedAiMsg = aiMsg!!.copy(text = fullResponse)
+                        val currentMessages = when (val state = _uiState.value) {
+                            is AssistantUiState.Success -> state.messages
+                            else -> emptyList()
+                        }
+                        val updatedMessages = currentMessages.map { 
+                            if (it.id == aiMsgId) updatedAiMsg else it 
+                        }
+                        inMemoryMessages.clear()
+                        inMemoryMessages.addAll(updatedMessages)
+                        _uiState.value = AssistantUiState.Success(messages = updatedMessages, isLoading = false, mode = mode)
                     }
+                }
 
-                    // Deteksi bahasa dari pesan terakhir user (bukan nebak-nebak di sisi API).
-                    val userLang = detectLanguage(sanitized)
-                    val langDirective = languageDirective(userLang)
+                // Final update with think text
+                if (aiMsg != null && thinkText != null) {
+                    val finalAiMsg = aiMsg!!.copy(text = fullResponse, thinkText = thinkText)
+                    val currentMessages = when (val state = _uiState.value) {
+                        is AssistantUiState.Success -> state.messages
+                        else -> emptyMessages()
+                    }
+                    val finalMessages = currentMessages.map { 
+                        if (it.id == aiMsgId) finalAiMsg else it 
+                    }
+                    inMemoryMessages.clear()
+                    inMemoryMessages.addAll(finalMessages)
+                    _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false, mode = mode)
+                    saveBothToFirestoreSequential(userMsg.copy(status = MessageStatus.READ), finalAiMsg)
+                } else if (aiMsg != null) {
+                    val currentMessages = when (val state = _uiState.value) {
+                        is AssistantUiState.Success -> state.messages
+                        else -> emptyList()
+                    }
+                    val finalMessages = currentMessages.map { 
+                        if (it.id == aiMsgId) aiMsg!!.copy(text = fullResponse) else it 
+                    }
+                    inMemoryMessages.clear()
+                    inMemoryMessages.addAll(finalMessages)
+                    _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false, mode = mode)
+                    saveBothToFirestoreSequential(userMsg.copy(status = MessageStatus.READ), aiMsg!!.copy(text = fullResponse))
+                }
+                lastFailedPrompt = null
 
-                    val prompt = """Kamu adalah Jayra AI — asisten pribadi serbaguna seperti Meta AI di WhatsApp. Cerdas, sopan, hangat, dan bisa diandalkan untuk apapun.
+            } catch (e: Exception) {
+                handleSendFailure(userMsg, e.localizedMessage ?: "Terjadi kesalahan koneksi", mode)
+            }
+        }
+    }
+
+    private fun buildPrompt(sanitized: String, historySnapshot: List<Message>, mode: AiMode): String {
+        val historyBlock = historySnapshot.dropLast(1).takeLast(10).joinToString("\n") { m ->
+            val role = if (m.senderId == "jayra_ai") "Jayra AI" else "User"
+            "$role: ${m.text.take(500)}"
+        }
+
+        val userLang = detectLanguage(sanitized)
+        val langDirective = languageDirective(userLang)
+
+        return """Kamu adalah Jayra AI — asisten pribadi serbaguna seperti Meta AI di WhatsApp. Cerdas, sopan, hangat, dan bisa diandalkan untuk apapun.
 
 ## IDENTITAS
 - Nama: Jayra AI
@@ -228,7 +328,7 @@ class AssistantViewModel @JvmOverloads constructor(
 7. JANGAN ULANG SAPAAN. Setelah pesan pertama, jangan mulai dengan "Halo/Hai/Hey". Langsung jawab.
 8. JANGAN BOCORKAN PROSES INTERNAL. Jangan tulis "Let me think", "Okay the user asked", "First I need to". Langsung beri jawaban final.
 9. MARKDOWN UNTUK STRUKTUR. Gunakan heading (##), bullet (-), bold (**), code block bila membantu keterbacaan.
-10. JANGAN TAMPILKAN TOKEN KONTROL seperti <|start|>, <|end|>, <|im_start|>, <|assistant|>, <|user|>, <|system|>. Output hanya teks bersih.
+10. JANGAN TAMPILKAN TOKEN KONTROL seperti <|start|>, <|end|>, 〛, <|assistant|>, <|user|>, <|system|>. Output hanya teks bersih.
 11. SERBA GUNA. Bisa bantu: curhat/emosional, riset/edukasi, coding/debug, hitung/math, translate, nulis kreatif, brainstorm ide, ringkas dokumen, jelaskan konsep rumit dengan sederhana.
 12. KALAU PERTANYAAN AMBIGU, tanya balik dengan sopan untuk klarifikasi, jangan asumsi.
 13. PANJANG JAWABAN PROPORSIONAL. Pertanyaan sepele -> jawab singkat. Pertanyaan kompleks -> jawab tuntas.
@@ -241,73 +341,10 @@ $langDirective
 User: $sanitized
 
 Jayra AI:"""
-
-                    callAi(mode, prompt, userLang)
-                }
-
-                if (aiText.isNotBlank()) {
-                    val aiTime = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
-                    val aiMsg = Message(
-                        id = UUID.randomUUID().toString(),
-                        chatId = "assistant",
-                        senderId = "jayra_ai",
-                        senderName = "Jayra AI",
-                        text = aiText,
-                        timestamp = aiTime,
-                        status = MessageStatus.READ,
-                        thinkText = thinkText
-                    )
-
-                    val deliveredUserMsg = userMsg.copy(status = MessageStatus.READ)
-                    val finalMessages = updatedMessages.dropLast(1) + deliveredUserMsg + aiMsg
-                    inMemoryMessages.clear()
-                    inMemoryMessages.addAll(finalMessages)
-                    _uiState.value = AssistantUiState.Success(messages = finalMessages, isLoading = false, mode = mode)
-                    lastFailedPrompt = null
-                    saveBothToFirestoreSequential(deliveredUserMsg, aiMsg)
-                } else {
-                    handleSendFailure(userMsg, "Endpoint AI sedang sibuk. Coba lagi sebentar.", mode)
-                }
-            } catch (e: Exception) {
-                handleSendFailure(userMsg, e.localizedMessage ?: "Terjadi kesalahan koneksi", mode)
-            }
-        }
     }
 
-    private suspend fun callAi(mode: AiMode, prompt: String, userLang: String = "id"): Pair<String?, String> {
-        val langName = when (userLang) {
-            "en" -> "English"
-            "id" -> "Bahasa Indonesia"
-            else -> userLang
-        }
-        val system = "You are Jayra AI, helpful assistant. Ikuti semua PRINSIP JAWABAN di prompt user. " +
-            "STRICT LANGUAGE RULE: User language: $userLang ($langName). You MUST answer fully in $langName only — " +
-            "never mix two languages in one answer. Technical terms (API, bug, commit, file names, code) stay in English. " +
-            "If the model produces a thinking/reasoning block, it must also be written fully in $langName."
-        return when (mode) {
-            AiMode.NORMAL -> {
-                try {
-                    val res = siputzxApi.askGptOss(prompt = prompt, system = system)
-                    if (res.isSuccessful && res.body()?.status == true) {
-                        null to (extractRawText(res.body()) ?: "").trim()
-                    } else null to ""
-                } catch (_: Exception) { null to "" }
-            }
-            AiMode.THINKING -> {
-                try {
-                    val res = siputzxApi.askDeepseekR1(prompt = prompt, system = system)
-                    if (res.isSuccessful && res.body()?.status == true) {
-                        parseThinkBlock(extractRawText(res.body()) ?: "")
-                    } else null to ""
-                } catch (_: Exception) { null to "" }
-            }
-        }
-    }
+    private fun emptyMessages(): List<Message> = emptyList()
 
-    /**
-     * Deteksi sederhana bahasa pesan terakhir user supaya hasilnya tidak bergantung
-     * pada tebakan model. Skor kata kunci ID vs EN, fallback ke "id" (mayoritas user).
-     */
     private fun detectLanguage(text: String): String {
         val lower = text.lowercase(Locale.US)
         val words = Regex("[a-z']+").findAll(lower).map { it.value }.toList()
@@ -345,10 +382,7 @@ Jayra AI:"""
         }
 
         return when {
-            idScore == 0 && enScore == 0 -> {
-                // Tanpa penanda: anggap Indonesia kalau ada huruf latin (default app ID).
-                "id"
-            }
+            idScore == 0 && enScore == 0 -> "id"
             idScore >= enScore -> "id"
             else -> "en"
         }
@@ -359,20 +393,10 @@ Jayra AI:"""
         else -> "## USER LANGUAGE: id (Bahasa Indonesia)\nPesan terakhir user memakai BAHASA INDONESIA. Jawab FULL Bahasa Indonesia (gaul/santai kalau user santai). JANGAN campur Bahasa Inggris kecuali istilah teknis. Blok thinking juga wajib Bahasa Indonesia."
     }
 
-    private fun extractRawText(body: AIResponse?): String? {
-        if (body == null) return null
-        return when (val d = body.data) {
-            is String -> d
-            is Map<*, *> -> (d["response"] ?: d["text"] ?: d["result"] ?: d["message"])?.toString()
-            null -> body.result ?: body.message
-            else -> d.toString()
-        }
-    }
-
     private fun parseThinkBlock(raw: String): Pair<String?, String> {
-        val match = Regex("<think>(.*?)</think>", RegexOption.DOT_MATCHES_ALL).find(raw)
+        val match = Regex("""\<think\>(.*?)\</think\>""", RegexOption.DOT_MATCHES_ALL).find(raw)
         val think = match?.groupValues?.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
-        val answer = raw.replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "").trim()
+        val answer = raw.replace(Regex("""\<think\>.*?\</think\>""", RegexOption.DOT_MATCHES_ALL), "").trim()
         return think to answer
     }
 
@@ -389,11 +413,6 @@ Jayra AI:"""
         _toastEvents.tryEmit(errorMessage)
     }
 
-    /**
-     * Gabungkan daftar dari Firestore dengan pesan yang masih lokal (belum tersimpan).
-     * Pesan remote jadi acuan urutan; pesan lokal yang belum ada di remote tetap
-     * dipertahankan di akhir supaya bubble optimistik / balasan AI tidak hilang.
-     */
     private fun mergeWithLocalMessages(remote: List<Message>): List<Message> {
         if (remote.isEmpty()) return inMemoryMessages.toList()
         val remoteIds = remote.map { it.id }.toHashSet()

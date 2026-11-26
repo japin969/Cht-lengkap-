@@ -15,10 +15,7 @@ import com.jayra.app.ui.komik.KomikHomeScreen
 fun VidHubScreen(
     onDramaClick: (String) -> Unit,
     onAnimeClick: (AnimeRepository.AnimeItem) -> Unit,
-    onKomikClick: (KomikRepository.KomikItem) -> Unit,
-    onDramaGenreClick: (String) -> Unit = {},
-    onAnimeGenreClick: (String) -> Unit = {},
-    onKomikGenreClick: (String) -> Unit = {}
+    onKomikClick: (KomikRepository.KomikItem) -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Drama", "Anime", "Komik")
@@ -35,18 +32,9 @@ fun VidHubScreen(
         }
 
         when (selectedTab) {
-            0 -> DramaScreen(
-                onDramaClick = onDramaClick,
-                onGenreClick = onDramaGenreClick
-            )
-            1 -> AnimeHomeScreen(
-                onAnimeClick = onAnimeClick,
-                onGenreClick = onAnimeGenreClick
-            )
-            2 -> KomikHomeScreen(
-                onKomikClick = onKomikClick,
-                onGenreClick = onKomikGenreClick
-            )
+            0 -> DramaScreen(onDramaClick = onDramaClick)
+            1 -> AnimeHomeScreen(onAnimeClick = onAnimeClick)
+            2 -> KomikHomeScreen(onKomikClick = onKomikClick)
         }
     }
 }
