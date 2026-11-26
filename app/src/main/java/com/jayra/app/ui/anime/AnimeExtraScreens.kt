@@ -15,9 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,19 +28,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jayra.app.data.AnimeDay
+import com.jayra.app.data.KuindoDay
 import com.jayra.app.ui.media.MediaColors
 import com.jayra.app.ui.media.MediaDimens
 import com.jayra.app.ui.media.MediaStateView
 import com.jayra.app.ui.theme.SFProFontFamily
 
 /**
- * AnimeSchedule — jadwal rilis anime (sankavollerei /anime/schedule).
+ * AnimeSchedule — jadwal rilis (animekuindo /anime/schedule). PARELAL load.
  */
 @Composable
 fun AnimeScheduleScreen(
@@ -52,7 +48,7 @@ fun AnimeScheduleScreen(
     viewModel: AnimeViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { viewModel.loadSankaHome() }
+    LaunchedEffect(Unit) { viewModel.loadSchedule() }
 
     Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
         AnimeExtraTopBar("Jadwal", onBack)
@@ -60,57 +56,19 @@ fun AnimeScheduleScreen(
             isLoading = state.isLoading && state.schedule.isEmpty(),
             isEmpty = state.schedule.isEmpty(),
             error = state.error,
-            onRetry = { viewModel.loadSankaHome() },
+            onRetry = { viewModel.loadSchedule() },
             accent = MediaColors.Anime,
             emptyTitle = "Jadwal kosong",
             emptySubtitle = "Coba muat ulang."
         ) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(MediaDimens.ScreenPadding)) {
-                state.schedule.forEach { day: AnimeDay ->
+                state.schedule.forEach { day: KuindoDay ->
                     item {
                         Text(day.day ?: "", fontFamily = SFProFontFamily, fontWeight = FontWeight.Bold,
                             fontSize = 17.sp, color = MediaColors.Anime, modifier = Modifier.padding(vertical = 8.dp))
                     }
-                    items(day.anime_list.orEmpty()) { a ->
-                        AnimePosterCard(a.toSearchItem()) { onAnimeClick(it) }
-                    }
+                    items(day.anime_list.orEmpty()) { a -> AnimePosterCard(a.toSearchItem()) { onAnimeClick(it) } }
                 }
-            }
-        }
-    }
-}
-
-/**
- * AnimeNekopoi — daftar dari /anime/nekopoi/latest-hentai.
- */
-@Composable
-fun AnimeNekopoiScreen(
-    onBack: () -> Unit,
-    onAnimeClick: (String) -> Unit,
-    viewModel: AnimeViewModel = viewModel()
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { viewModel.loadNekopoi() }
-
-    Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
-        AnimeExtraTopBar("Nekopoi", onBack)
-        MediaStateView(
-            isLoading = state.isLoading && state.nkLatest.isEmpty(),
-            isEmpty = state.nkLatest.isEmpty(),
-            error = state.error,
-            onRetry = { viewModel.loadNekopoi() },
-            accent = MediaColors.Anime,
-            emptyTitle = "Belum ada konten",
-            emptySubtitle = "Coba muat ulang."
-        ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                contentPadding = PaddingValues(MediaDimens.ScreenPadding),
-                horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(state.nkLatest) { AnimeGridItem(it) { onAnimeClick(it) } }
             }
         }
     }
@@ -130,11 +88,12 @@ private fun AnimeExtraTopBar(title: String, onBack: () -> Unit) {
             color = MediaColors.TextPrimary, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
     }
 }
-private fun com.jayra.app.data.AnimeSankaItem.toSearchItem(): com.jayra.app.data.AnimeSearchItem =
+
+private fun com.jayra.app.data.KuindoItem.toSearchItem(): com.jayra.app.data.AnimeSearchItem =
     com.jayra.app.data.AnimeSearchItem(
         title = title,
-        link = animeId ?: slug,
+        link = slug,
         image = poster,
-        latestEpisode = episodes?.let { "$it eps" },
-        type = null
+        latestEpisode = episode ?: status,
+        type = type
     )

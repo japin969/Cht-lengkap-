@@ -2,15 +2,14 @@ package com.jayra.app.ui.anime
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jayra.app.data.AnimeApi
-import com.jayra.app.data.AnimeSankaApi
-import com.jayra.app.data.AnimeSankaItem
-import com.jayra.app.data.AnimeDay
-import com.jayra.app.data.AnimeGenreItem
-import com.jayra.app.data.NkItem
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
+import com.jayra.app.data.AnimeKuindoApi
 import com.jayra.app.data.AnimeSearchItem
+import com.jayra.app.data.KuindoDay
+import com.jayra.app.data.KuindoGenre
+import com.jayra.app.data.KuindoItem
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -28,21 +27,24 @@ data class AnimeUiState(
     val detail: AnimeDetailData? = null,
     val episodes: List<AnimeEpisode> = emptyList(),
     val streamUrl: String? = null,
+    val servers: List<Pair<String, String>> = emptyList(),
     val error: String? = null,
-    val sankaOngoing: List<AnimeSearchItem> = emptyList(),
-    val schedule: List<AnimeDay> = emptyList(),
-    val sankaGenres: List<AnimeGenreItem> = emptyList(),
-    val nkLatest: List<AnimeSearchItem> = emptyList()
+    // section tambahan (semua dari animekuindo, PARELAL)
+    val hero: AnimeSearchItem? = null,
+    val latest: List<AnimeSearchItem> = emptyList(),
+    val movie: List<AnimeSearchItem> = emptyList(),
+    val schedule: List<KuindoDay> = emptyList(),
+    val genres: List<KuindoGenre> = emptyList(),
+    val seasons: List<KuindoGenre> = emptyList()
 )
 
 /**
- * AnimeViewModel — sumber resmi: https://api.nexadev.my.id (animasu).
- * Terpisah total dari Comic. Poster memakai field image/poster dari API (tidak diubah).
+ * AnimeViewModel — SATU sumber: https://www.sankavollerei.web.id (animekuindo).
+ * Semua section dimuat PARELAL (async), bukan fallback/berurutan.
  */
 class AnimeViewModel : ViewModel() {
 
-    private val api = AnimeApi.create()
-    private val sanka = AnimeSankaApi.create()
+    private val api = AnimeKuindoApi.create()
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
@@ -54,46 +56,36 @@ class AnimeViewModel : ViewModel() {
     fun loadHome() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            var hadError: String? = null
-            // Sumber utama: nexadev (animasu)
-            val popular = runCatching {
-                api.popular(page = 1).body()?.data?.animeList.orEmpty()
-            }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
-            val ongoing = runCatching {
-                api.ongoing(page = 1).body()?.data?.animeList.orEmpty()
-            }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
-            val completed = runCatching {
-                api.completed(page = 1).body()?.data?.animeList.orEmpty()
-            }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
+            // PARELAL: semua section sekaligus
+            val popularD = async { runCatching { api.popular().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val latestD = async { runCatching { api.latest().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val ongoingD = async { runCatching { api.home().body()?.data?.latest.orEmpty() }.getOrDefault(emptyList()) }
+            val movieD = async { runCatching { api.movie().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val homeD = async { runCatching { api.home().body()?.data }.getOrNull() }
 
-            // Fallback: kalau nexadev kosong/gagal, pakai sankavollerei (/anime/*)
-            var hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
-            var fPopular = popular
-            var fOngoing = ongoing
-            var fCompleted = completed
-            if (!hasData) {
-                val sOngoing = runCatching { sanka.ongoing().body()?.data?.animeList.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList())
-                val sComplete = runCatching { sanka.complete().body()?.data?.animeList.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList())
-                val sHome = runCatching { sanka.home().body()?.data }.getOrNull()
-                fOngoing = sOngoing.ifEmpty { sHome?.ongoing?.animeList?.map { it.toSearch() }.orEmpty() }
-                fCompleted = sComplete.ifEmpty { sHome?.complete?.animeList?.map { it.toSearch() }.orEmpty() }
-                fPopular = fOngoing
-                hasData = fPopular.isNotEmpty() || fOngoing.isNotEmpty() || fCompleted.isNotEmpty()
-            }
+            val popular = popularD.await().map { it.toSearch() }
+            val latest = latestD.await().map { it.toSearch() }
+            val ongoing = ongoingD.await().map { it.toSearch() }
+            val movie = movieD.await().map { it.toSearch() }
+            val hero = homeD.await()?.hero?.toSearch()
 
+            val hasData = popular.isNotEmpty() || latest.isNotEmpty() || ongoing.isNotEmpty() || movie.isNotEmpty()
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                popular = fPopular,
-                ongoing = fOngoing,
-                completed = fCompleted,
-                error = if (hasData) null else (hadError?.let { "Gagal memuat daftar anime" } ?: "Gagal memuat daftar anime")
+                popular = popular,
+                latest = latest,
+                ongoing = ongoing,
+                movie = movie,
+                hero = hero,
+                completed = movie, // "movie" dipakai sebagai section selesai/film
+                error = if (hasData) null else "Gagal memuat daftar anime"
             )
         }
     }
 
     fun retryHome() = loadHome()
 
-    // ── LIST (genre / all) ──
+    // ── LIST (genre / season / all) — PARELAL terhadap state ──
     fun loadList(genre: String? = null, reset: Boolean = true) {
         if (reset) listPage = 1
         if (reset) {
@@ -103,11 +95,10 @@ class AnimeViewModel : ViewModel() {
         }
         viewModelScope.launch {
             try {
-                // Genre di animasu = search teks; "Semua" = popular.
                 val items: List<AnimeSearchItem> = if (genre != null) {
-                    api.search(genre).body()?.data?.results.orEmpty()
+                    api.genre(genre).body()?.data.orEmpty().map { it.toSearch() }
                 } else {
-                    api.popular(page = listPage).body()?.data?.animeList.orEmpty()
+                    api.latest().body()?.data.orEmpty().map { it.toSearch() }
                 }
                 listPage++
                 val current = if (reset) emptyList() else _uiState.value.results
@@ -125,7 +116,7 @@ class AnimeViewModel : ViewModel() {
 
     fun loadMore() {
         if (!_uiState.value.canLoadMore || _uiState.value.isLoadingMore || _uiState.value.isLoading) return
-        if (_uiState.value.activeGenre != null) return // search tidak dipaginasi
+        if (_uiState.value.activeGenre != null) return
         loadList(genre = null, reset = false)
     }
 
@@ -139,7 +130,7 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val items = api.search(query).body()?.data?.results.orEmpty()
+                val items = api.search(query).body()?.data.orEmpty().map { it.toSearch() }
                 _uiState.value = _uiState.value.copy(isLoading = false, results = items, error = if (items.isEmpty()) "Tidak ada hasil" else null)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
@@ -150,24 +141,26 @@ class AnimeViewModel : ViewModel() {
     fun retrySearch() = search(_uiState.value.query)
 
     // ── DETAIL ──
-    fun loadDetail(url: String) {
+    fun loadDetail(slug: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val res = api.detail(url)
-                val data = res.body()?.data
-                if (res.isSuccessful && data != null) {
-                    val eps = data.episodes.orEmpty()
+                val res = api.detail(slug)
+                val d = res.body()?.data
+                if (res.isSuccessful && d != null) {
+                    val eps = d.episode_list.orEmpty().map {
+                        AnimeEpisode(episode = it.episode, title = it.title, episodeUrl = it.slug)
+                    }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         detail = AnimeDetailData(
-                            title = data.title,
-                            image = data.image,
-                            synopsis = data.sinopsis ?: data.synopsis,
-                            rating = data.rating,
-                            totalEpisodes = data.totalEpisodes,
-                            genres = data.genres,
-                            info = data.info,
+                            title = d.title,
+                            image = d.poster,
+                            synopsis = d.synopsis,
+                            rating = d.rating?.toDoubleOrNull(),
+                            totalEpisodes = eps.size,
+                            genres = d.genres?.mapNotNull { it.name },
+                            info = d.info,
                             episodes = eps
                         ),
                         episodes = eps,
@@ -182,72 +175,64 @@ class AnimeViewModel : ViewModel() {
         }
     }
 
-    fun retryDetail(url: String) = loadDetail(url)
+    fun retryDetail(slug: String) = loadDetail(slug)
 
-    /**
-     * Ambil URL stream dari animasu. Jika kosong / gagal, player memakai demo CC BY 3.0
-     * (legal) supaya tidak hitam — bukan sumber bajakan.
-     */
-    fun loadStream(episodeUrl: String?) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, streamUrl = null)
-            val url = runCatching {
-                api.stream(episodeUrl ?: "").body()?.data?.streamUrl
-            }.getOrNull()
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                streamUrl = url?.takeIf { it.startsWith("http") } ?: SAMPLE_STREAM
-            )
+    // ── STREAM (player) — PARELAL resolve server ──
+    fun loadStream(episodeSlug: String?) {
+        if (episodeSlug.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(streamUrl = null, servers = emptyList())
+            return
         }
-    }
-
-
-    // ── sankavollerei anime (home/schedule/genre) ──
-    fun loadSankaHome() {
-        viewModelScope.launch {
-            val ongoing = runCatching { sanka.ongoing().body()?.data?.animeList.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList())
-            val sched = runCatching { sanka.schedule().body()?.data.orEmpty() }.getOrDefault(emptyList())
-            val genres = runCatching { sanka.genres().body()?.data?.genreList.orEmpty() }.getOrDefault(emptyList())
-            _uiState.value = _uiState.value.copy(sankaOngoing = ongoing, schedule = sched, sankaGenres = genres)
-        }
-    }
-
-    fun loadNekopoi() {
-        viewModelScope.launch {
-            val items = runCatching { sanka.nkHome().body()?.data?.latest.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList())
-            _uiState.value = _uiState.value.copy(nkLatest = items)
-        }
-    }
-
-    fun searchSanka(query: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val items = sanka.search(query).body()?.data?.animeList.orEmpty().map { it.toSearch() }
-                _uiState.value = _uiState.value.copy(isLoading = false, results = items, error = if (items.isEmpty()) "Tidak ada hasil" else null)
+                val ep = api.episode(episodeSlug).body()?.data
+                val servers = ep?.streams.orEmpty().mapNotNull { s ->
+                    val u = s.url ?: return@mapNotNull null
+                    (s.server ?: "Server") to u
+                }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    servers = servers,
+                    streamUrl = servers.firstOrNull()?.second,
+                    error = if (servers.isEmpty()) "Server streaming tidak tersedia" else null
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
             }
         }
     }
 
-    private fun AnimeSankaItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
-        title = title,
-        link = animeId ?: slug,
-        image = poster,
-        latestEpisode = episodes?.let { "$it eps" },
-        type = null
-    )
-    private fun NkItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
+    // ── schedule / genres / seasons (PARELAL) ──
+    fun loadSchedule() {
+        viewModelScope.launch {
+            val sched = async { runCatching { api.schedule().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val genres = async { runCatching { api.genres().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val seasons = async { runCatching { api.seasons().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            _uiState.value = _uiState.value.copy(
+                schedule = sched.await(), genres = genres.await(), seasons = seasons.await()
+            )
+        }
+    }
+
+    fun loadGenres() {
+        viewModelScope.launch {
+            val genres = async { runCatching { api.genres().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val seasons = async { runCatching { api.seasons().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            _uiState.value = _uiState.value.copy(genres = genres.await(), seasons = seasons.await())
+        }
+    }
+
+    private fun KuindoItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
         title = title,
         link = slug,
-        image = thumbnail,
-        latestEpisode = null,
-        type = "Hentai"
+        image = poster,
+        latestEpisode = episode ?: status,
+        type = type
     )
 
     companion object {
-        // Demo legal (CC BY 3.0) — fallback agar player tidak hitam.
+        // Fallback legal (CC BY 3.0) hanya jika server kosong — bukan sumber utama.
         const val SAMPLE_STREAM =
             "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
     }

@@ -56,11 +56,10 @@ fun AnimeHomeScreen(
     onSearchClick: () -> Unit,
     onSeeAll: () -> Unit,
     onScheduleClick: () -> Unit = {},
-    onNekopoiClick: () -> Unit = {},
     viewModel: AnimeViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { viewModel.loadSankaHome(); viewModel.loadNekopoi() }
+    LaunchedEffect(Unit) { viewModel.loadHome() }
 
     Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
         Row(
@@ -94,7 +93,7 @@ fun AnimeHomeScreen(
             emptySubtitle = "Daftar anime sedang kosong. Coba muat ulang."
         ) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-                val hero = state.ongoing.firstOrNull() ?: state.popular.firstOrNull()
+                val hero = state.hero ?: state.ongoing.firstOrNull() ?: state.popular.firstOrNull()
                 if (hero != null) item { AnimeHeroBanner(hero) { onAnimeClick(it) } }
 
                 if (state.ongoing.isNotEmpty()) {
@@ -122,19 +121,19 @@ fun AnimeHomeScreen(
                     }
                 }
 
-                if (state.sankaOngoing.isNotEmpty()) {
-                    item { SectionHeader("Sanka · Sedang Tayang", MediaColors.Anime, onSeeAll = onScheduleClick) }
+                if (state.latest.isNotEmpty()) {
+                    item { SectionHeader("Terbaru", MediaColors.Anime, onSeeAll = onSeeAll) }
                     item {
                         LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
-                            items(state.sankaOngoing) { AnimePosterCard(it) { onAnimeClick(it) } }
+                            items(state.latest) { AnimePosterCard(it) { onAnimeClick(it) } }
                         }
                     }
                 }
-                if (state.nkLatest.isNotEmpty()) {
-                    item { SectionHeader("Nekopoi · Latest", MediaColors.Anime, onSeeAll = onNekopoiClick) }
+                if (state.movie.isNotEmpty()) {
+                    item { SectionHeader("Movie", MediaColors.Anime, onSeeAll = onScheduleClick) }
                     item {
                         LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
-                            items(state.nkLatest) { AnimePosterCard(it) { onAnimeClick(it) } }
+                            items(state.movie) { AnimePosterCard(it) { onAnimeClick(it) } }
                         }
                     }
                 }
