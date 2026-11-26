@@ -2,6 +2,7 @@ package com.jayra.app.ui.anime
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jayra.app.data.AnimeApi
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeKuindoApi
@@ -9,6 +10,8 @@ import com.jayra.app.data.AnimeSearchItem
 import com.jayra.app.data.KuindoDay
 import com.jayra.app.data.KuindoGenre
 import com.jayra.app.data.KuindoItem
+import com.jayra.app.data.NekopoiApi
+import com.jayra.app.data.NkItem
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,9 +19,21 @@ import kotlinx.coroutines.launch
 
 data class AnimeUiState(
     val isLoading: Boolean = false,
+    // nexadev (animasu)
     val ongoing: List<AnimeSearchItem> = emptyList(),
     val popular: List<AnimeSearchItem> = emptyList(),
     val completed: List<AnimeSearchItem> = emptyList(),
+    // animekuindo
+    val hero: AnimeSearchItem? = null,
+    val latest: List<AnimeSearchItem> = emptyList(),
+    val movie: List<AnimeSearchItem> = emptyList(),
+    val schedule: List<KuindoDay> = emptyList(),
+    val genres: List<KuindoGenre> = emptyList(),
+    val seasons: List<KuindoGenre> = emptyList(),
+    // nekopoi (card sendiri)
+    val nekoLatest: List<AnimeSearchItem> = emptyList(),
+    val nekoRecommended: List<AnimeSearchItem> = emptyList(),
+    // list/search/detail/player
     val results: List<AnimeSearchItem> = emptyList(),
     val isLoadingMore: Boolean = false,
     val canLoadMore: Boolean = true,
@@ -28,23 +43,21 @@ data class AnimeUiState(
     val episodes: List<AnimeEpisode> = emptyList(),
     val streamUrl: String? = null,
     val servers: List<Pair<String, String>> = emptyList(),
-    val error: String? = null,
-    // section tambahan (semua dari animekuindo, PARELAL)
-    val hero: AnimeSearchItem? = null,
-    val latest: List<AnimeSearchItem> = emptyList(),
-    val movie: List<AnimeSearchItem> = emptyList(),
-    val schedule: List<KuindoDay> = emptyList(),
-    val genres: List<KuindoGenre> = emptyList(),
-    val seasons: List<KuindoGenre> = emptyList()
+    val error: String? = null
 )
 
 /**
- * AnimeViewModel — SATU sumber: https://www.sankavollerei.web.id (animekuindo).
- * Semua section dimuat PARELAL (async), bukan fallback/berurutan.
+ * AnimeViewModel — SEMUA sumber PARELAL (async), tidak ada fallback/hapus:
+ *  - NexaDev (animasu)      -> ongoing/popular/completed
+ *  - Animekuindo (sankavollerei) -> hero/latest/movie/schedule/genres/seasons
+ *  - Nekopoi (sankavollerei)     -> nekoLatest/nekoRecommended (card sendiri)
  */
 class AnimeViewModel : ViewModel() {
 
-    private val api = AnimeKuindoApi.create()
+    private val nexa = AnimeApi.create()
+    private val kuindo = AnimeKuindoApi.create()
+    private val neko = NekopoiApi.create()
+
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
@@ -56,28 +69,40 @@ class AnimeViewModel : ViewModel() {
     fun loadHome() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            // PARELAL: semua section sekaligus
-            val popularD = async { runCatching { api.popular().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-            val latestD = async { runCatching { api.latest().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-            val ongoingD = async { runCatching { api.home().body()?.data?.latest.orEmpty() }.getOrDefault(emptyList()) }
-            val movieD = async { runCatching { api.movie().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-            val homeD = async { runCatching { api.home().body()?.data }.getOrNull() }
 
-            val popular = popularD.await().map { it.toSearch() }
-            val latest = latestD.await().map { it.toSearch() }
-            val ongoing = ongoingD.await().map { it.toSearch() }
-            val movie = movieD.await().map { it.toSearch() }
+            // PARELAL — semua sumber sekaligus
+            val popularD = async { runCatching { nexa.popular(page = 1).body()?.data?.animeList.orEmpty() }.getOrDefault(emptyList()) }
+            val ongoingD = async { runCatching { nexa.ongoing(page = 1).body()?.data?.animeList.orEmpty() }.getOrDefault(emptyList()) }
+            val completedD = async { runCatching { nexa.completed(page = 1).body()?.data?.animeList.orEmpty() }.getOrDefault(emptyList()) }
+
+            val latestD = async { runCatching { kuindo.latest().body()?.data.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList()) }
+            val movieD = async { runCatching { kuindo.movie().body()?.data.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList()) }
+            val homeD = async { runCatching { kuindo.home().body()?.data }.getOrNull() }
+
+            val nekoHomeD = async { runCatching { neko.home().body()?.data }.getOrNull() }
+
+            val popular = popularD.await()
+            val ongoing = ongoingD.await()
+            val completed = completedD.await()
+            val latest = latestD.await()
+            val movie = movieD.await()
             val hero = homeD.await()?.hero?.toSearch()
+            val nekoHome = nekoHomeD.await()
+            val nekoLatest = nekoHome?.latest.orEmpty().map { it.toSearch() }
+            val nekoRecommended = nekoHome?.recommended.orEmpty().map { it.toSearch() }
 
-            val hasData = popular.isNotEmpty() || latest.isNotEmpty() || ongoing.isNotEmpty() || movie.isNotEmpty()
+            val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty() ||
+                latest.isNotEmpty() || movie.isNotEmpty() || nekoLatest.isNotEmpty()
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 popular = popular,
-                latest = latest,
                 ongoing = ongoing,
+                completed = completed,
+                latest = latest,
                 movie = movie,
                 hero = hero,
-                completed = movie, // "movie" dipakai sebagai section selesai/film
+                nekoLatest = nekoLatest,
+                nekoRecommended = nekoRecommended,
                 error = if (hasData) null else "Gagal memuat daftar anime"
             )
         }
@@ -85,7 +110,7 @@ class AnimeViewModel : ViewModel() {
 
     fun retryHome() = loadHome()
 
-    // ── LIST (genre / season / all) — PARELAL terhadap state ──
+    // ── LIST (genre / all) ──
     fun loadList(genre: String? = null, reset: Boolean = true) {
         if (reset) listPage = 1
         if (reset) {
@@ -96,9 +121,9 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val items: List<AnimeSearchItem> = if (genre != null) {
-                    api.genre(genre).body()?.data.orEmpty().map { it.toSearch() }
+                    kuindo.genre(genre).body()?.data.orEmpty().map { it.toSearch() }
                 } else {
-                    api.latest().body()?.data.orEmpty().map { it.toSearch() }
+                    kuindo.latest().body()?.data.orEmpty().map { it.toSearch() }
                 }
                 listPage++
                 val current = if (reset) emptyList() else _uiState.value.results
@@ -120,7 +145,7 @@ class AnimeViewModel : ViewModel() {
         loadList(genre = null, reset = false)
     }
 
-    // ── SEARCH ──
+    // ── SEARCH (nexadev + kuindo PARELAL) ──
     fun search(query: String) {
         _uiState.value = _uiState.value.copy(query = query)
         if (query.isBlank()) {
@@ -129,23 +154,21 @@ class AnimeViewModel : ViewModel() {
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            try {
-                val items = api.search(query).body()?.data.orEmpty().map { it.toSearch() }
-                _uiState.value = _uiState.value.copy(isLoading = false, results = items, error = if (items.isEmpty()) "Tidak ada hasil" else null)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
-            }
+            val a = async { runCatching { nexa.search(query).body()?.data?.results.orEmpty() }.getOrDefault(emptyList()) }
+            val b = async { runCatching { kuindo.search(query).body()?.data.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList()) }
+            val items = a.await() + b.await()
+            _uiState.value = _uiState.value.copy(isLoading = false, results = items, error = if (items.isEmpty()) "Tidak ada hasil" else null)
         }
     }
 
     fun retrySearch() = search(_uiState.value.query)
 
-    // ── DETAIL ──
+    // ── DETAIL (kuindo slug) ──
     fun loadDetail(slug: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val res = api.detail(slug)
+                val res = kuindo.detail(slug)
                 val d = res.body()?.data
                 if (res.isSuccessful && d != null) {
                     val eps = d.episode_list.orEmpty().map {
@@ -177,7 +200,7 @@ class AnimeViewModel : ViewModel() {
 
     fun retryDetail(slug: String) = loadDetail(slug)
 
-    // ── STREAM (player) — PARELAL resolve server ──
+    // ── STREAM (kuindo episode) ──
     fun loadStream(episodeSlug: String?) {
         if (episodeSlug.isNullOrBlank()) {
             _uiState.value = _uiState.value.copy(streamUrl = null, servers = emptyList())
@@ -186,7 +209,7 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val ep = api.episode(episodeSlug).body()?.data
+                val ep = kuindo.episode(episodeSlug).body()?.data
                 val servers = ep?.streams.orEmpty().mapNotNull { s ->
                     val u = s.url ?: return@mapNotNull null
                     (s.server ?: "Server") to u
@@ -206,33 +229,35 @@ class AnimeViewModel : ViewModel() {
     // ── schedule / genres / seasons (PARELAL) ──
     fun loadSchedule() {
         viewModelScope.launch {
-            val sched = async { runCatching { api.schedule().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-            val genres = async { runCatching { api.genres().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-            val seasons = async { runCatching { api.seasons().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val sched = async { runCatching { kuindo.schedule().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val genres = async { runCatching { kuindo.genres().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val seasons = async { runCatching { kuindo.seasons().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            _uiState.value = _uiState.value.copy(schedule = sched.await(), genres = genres.await(), seasons = seasons.await())
+        }
+    }
+
+    // ── NEKO (card sendiri) ──
+    fun loadNeko() {
+        viewModelScope.launch {
+            val home = async { runCatching { neko.home().body()?.data }.getOrNull() }
+            val latest = async { runCatching { neko.latestHentai().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+            val h = home.await()
             _uiState.value = _uiState.value.copy(
-                schedule = sched.await(), genres = genres.await(), seasons = seasons.await()
+                nekoLatest = latest.await().map { it.toSearch() },
+                nekoRecommended = h?.recommended.orEmpty().map { it.toSearch() }
             )
         }
     }
 
-    fun loadGenres() {
-        viewModelScope.launch {
-            val genres = async { runCatching { api.genres().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-            val seasons = async { runCatching { api.seasons().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-            _uiState.value = _uiState.value.copy(genres = genres.await(), seasons = seasons.await())
-        }
-    }
-
     private fun KuindoItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
-        title = title,
-        link = slug,
-        image = poster,
-        latestEpisode = episode ?: status,
-        type = type
+        title = title, link = slug, image = poster,
+        latestEpisode = episode ?: status, type = type
+    )
+    private fun NkItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
+        title = title, link = slug, image = thumbnail, latestEpisode = null, type = "Nekopoi"
     )
 
     companion object {
-        // Fallback legal (CC BY 3.0) hanya jika server kosong — bukan sumber utama.
         const val SAMPLE_STREAM =
             "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
     }

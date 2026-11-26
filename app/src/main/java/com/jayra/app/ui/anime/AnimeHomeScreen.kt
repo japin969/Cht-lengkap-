@@ -56,6 +56,7 @@ fun AnimeHomeScreen(
     onSearchClick: () -> Unit,
     onSeeAll: () -> Unit,
     onScheduleClick: () -> Unit = {},
+    onNekoClick: () -> Unit = {},
     viewModel: AnimeViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -134,6 +135,15 @@ fun AnimeHomeScreen(
                     item {
                         LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
                             items(state.movie) { AnimePosterCard(it) { onAnimeClick(it) } }
+                        }
+                    }
+                }
+
+                if (state.nekoLatest.isNotEmpty()) {
+                    item { SectionHeader("Nekopoi", MediaColors.Anime, onSeeAll = onNekoClick) }
+                    item {
+                        LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
+                            items(state.nekoLatest) { AnimePosterCard(it) { onAnimeClick(it) } }
                         }
                     }
                 }
