@@ -21,16 +21,25 @@ interface MangaDexApi {
     @GET("manga")
     suspend fun list(
         @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0,
         @Query("includes[]") includes: List<String> = listOf("cover_art"),
         @Query("order[followedCount]") order: String = "desc",
-        @Query("contentRating[]") ratings: List<String> = listOf("safe", "suggestive")
+        @Query("contentRating[]") ratings: List<String> = listOf("safe", "suggestive"),
+        @Query("title") title: String? = null,
+        @Query("includedTags[]") includedTags: List<String>? = null,
+        @Query("includedTagsMode") includedTagsMode: String = "AND"
     ): Response<MdxListResponse>
+
+    @GET("manga/tag")
+    suspend fun tags(): Response<MdxTagListResponse>
 
     @GET("manga")
     suspend fun search(
         @Query("title") title: String,
         @Query("limit") limit: Int = 20,
-        @Query("includes[]") includes: List<String> = listOf("cover_art")
+        @Query("offset") offset: Int = 0,
+        @Query("includes[]") includes: List<String> = listOf("cover_art"),
+        @Query("contentRating[]") ratings: List<String> = listOf("safe", "suggestive")
     ): Response<MdxListResponse>
 
     @GET("manga/{id}")
@@ -163,3 +172,23 @@ data class MdxAtHomeChapter(
     val data: List<String>? = null,
     val dataSaver: List<String>? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class MdxTagListResponse(
+    val result: String? = null,
+    val data: List<MdxTag>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class MdxTag(
+    val id: String? = null,
+    val attributes: MdxTagAttributes? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class MdxTagAttributes(
+    val name: Map<String, String>? = null,
+    val group: String? = null
+) {
+    fun displayName(): String = name?.get("en") ?: name?.values?.firstOrNull() ?: ""
+}
