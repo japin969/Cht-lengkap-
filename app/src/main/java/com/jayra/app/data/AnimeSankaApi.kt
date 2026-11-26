@@ -14,8 +14,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * AnimeSankaApi — sumber anime tambahan: https://www.sankavollerei.web.id.
- * Endpoint /anime/* (home, schedule, genre, search, detail, episode, server, batch)
- * + /anime/nekopoi/*. SSL valid, tanpa bypass.
+ * Endpoint /anime/ (home, schedule, genre, search, detail, episode, server, batch)
+ * + /anime/nekopoi/. SSL valid, tanpa bypass.
  */
 interface AnimeSankaApi {
 
