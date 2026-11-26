@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,9 +55,12 @@ fun AnimeHomeScreen(
     onAnimeClick: (String) -> Unit,
     onSearchClick: () -> Unit,
     onSeeAll: () -> Unit,
+    onScheduleClick: () -> Unit = {},
+    onNekopoiClick: () -> Unit = {},
     viewModel: AnimeViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.loadSankaHome(); viewModel.loadNekopoi() }
 
     Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
         Row(
@@ -114,6 +118,23 @@ fun AnimeHomeScreen(
                     item {
                         LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
                             items(state.completed) { AnimePosterCard(it) { onAnimeClick(it) } }
+                        }
+                    }
+                }
+
+                if (state.sankaOngoing.isNotEmpty()) {
+                    item { SectionHeader("Sanka · Sedang Tayang", MediaColors.Anime, onSeeAll = onScheduleClick) }
+                    item {
+                        LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
+                            items(state.sankaOngoing) { AnimePosterCard(it) { onAnimeClick(it) } }
+                        }
+                    }
+                }
+                if (state.nkLatest.isNotEmpty()) {
+                    item { SectionHeader("Nekopoi · Latest", MediaColors.Anime, onSeeAll = onNekopoiClick) }
+                    item {
+                        LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
+                            items(state.nkLatest) { AnimePosterCard(it) { onAnimeClick(it) } }
                         }
                     }
                 }

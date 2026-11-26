@@ -3,6 +3,11 @@ package com.jayra.app.ui.anime
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jayra.app.data.AnimeApi
+import com.jayra.app.data.AnimeSankaApi
+import com.jayra.app.data.AnimeSankaItem
+import com.jayra.app.data.AnimeDay
+import com.jayra.app.data.AnimeGenreItem
+import com.jayra.app.data.NkItem
 import com.jayra.app.data.AnimeDetailData
 import com.jayra.app.data.AnimeEpisode
 import com.jayra.app.data.AnimeSearchItem
@@ -23,7 +28,11 @@ data class AnimeUiState(
     val detail: AnimeDetailData? = null,
     val episodes: List<AnimeEpisode> = emptyList(),
     val streamUrl: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val sankaOngoing: List<AnimeSearchItem> = emptyList(),
+    val schedule: List<AnimeDay> = emptyList(),
+    val sankaGenres: List<AnimeGenreItem> = emptyList(),
+    val nkLatest: List<AnimeSearchItem> = emptyList()
 )
 
 /**
@@ -33,6 +42,7 @@ data class AnimeUiState(
 class AnimeViewModel : ViewModel() {
 
     private val api = AnimeApi.create()
+    private val sanka = AnimeSankaApi.create()
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
@@ -175,6 +185,51 @@ class AnimeViewModel : ViewModel() {
             )
         }
     }
+
+
+    // ── sankavollerei anime (home/schedule/genre) ──
+    fun loadSankaHome() {
+        viewModelScope.launch {
+            val ongoing = runCatching { sanka.ongoing().body()?.data?.animeList.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList())
+            val sched = runCatching { sanka.schedule().body()?.data.orEmpty() }.getOrDefault(emptyList())
+            val genres = runCatching { sanka.genres().body()?.data?.genreList.orEmpty() }.getOrDefault(emptyList())
+            _uiState.value = _uiState.value.copy(sankaOngoing = ongoing, schedule = sched, sankaGenres = genres)
+        }
+    }
+
+    fun loadNekopoi() {
+        viewModelScope.launch {
+            val items = runCatching { sanka.nkHome().body()?.data?.latest.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList())
+            _uiState.value = _uiState.value.copy(nkLatest = items)
+        }
+    }
+
+    fun searchSanka(query: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val items = sanka.search(query).body()?.data?.animeList.orEmpty().map { it.toSearch() }
+                _uiState.value = _uiState.value.copy(isLoading = false, results = items, error = if (items.isEmpty()) "Tidak ada hasil" else null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.localizedMessage ?: "Koneksi bermasalah")
+            }
+        }
+    }
+
+    private fun AnimeSankaItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
+        title = title,
+        link = animeId ?: slug,
+        image = poster,
+        latestEpisode = episodes?.let { "$it eps" },
+        type = null
+    )
+    private fun NkItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
+        title = title,
+        link = slug,
+        image = thumbnail,
+        latestEpisode = null,
+        type = "Hentai"
+    )
 
     companion object {
         // Demo legal (CC BY 3.0) — fallback agar player tidak hitam.

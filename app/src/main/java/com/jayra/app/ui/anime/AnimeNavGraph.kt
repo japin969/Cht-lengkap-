@@ -97,7 +97,9 @@ fun AnimeNavGraph(
             AnimeHomeScreen(
                 onAnimeClick = { id -> navController.navigate("anime_detail/$id") },
                 onSearchClick = { navController.navigate("anime_search") },
-                onSeeAll = { navController.navigate("anime_list/Semua Anime") }
+                onSeeAll = { navController.navigate("anime_list/Semua Anime") },
+                onScheduleClick = { navController.navigate("anime_schedule") },
+                onNekopoiClick = { navController.navigate("anime_nekopoi") }
             )
         }
         composable("anime_search") {
@@ -158,6 +160,19 @@ fun AnimeNavGraph(
             AnimePlayerScreen(
                 videoUrl = url,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("anime_schedule") {
+            AnimeScheduleScreen(
+                onBack = { navController.popBackStack() },
+                onAnimeClick = { id -> navController.navigate("anime_detail/$id") }
+            )
+        }
+        composable("anime_nekopoi") {
+            AnimeNekopoiScreen(
+                onBack = { navController.popBackStack() },
+                onAnimeClick = { id -> navController.navigate("anime_detail/$id") }
             )
         }
     }
