@@ -182,8 +182,11 @@ class ComicViewModel : ViewModel() {
         }
     }
 
-    private fun BkItem.toItem(): KomikItem = KomikItem(title = title, slug = slug, cover = cover, updatedAt = chapter, rating = null)
-    private fun MaidItem.toItem(): KomikItem = KomikItem(title = title, slug = slug, cover = banner, updatedAt = latest_chapter?.title, rating = rating)
+    private fun BkItem.toItem(): KomikItem = KomikItem(title = title, slug = slug, cover = cover.sanitizeCover(), updatedAt = chapter, rating = null)
+    private fun MaidItem.toItem(): KomikItem = KomikItem(title = title, slug = slug, cover = banner.sanitizeCover(), updatedAt = latest_chapter?.title, rating = rating)
+
+    /** Buang cover yang bukan URL gambar valid (data: URI placeholder / kosong) -> null agar MediaPoster tampilkan placeholder. */
+    private fun String?.sanitizeCover(): String? = this?.takeIf { it.startsWith("http") }
 
     // ── TAGS / GENRES (statis, tidak dipakai endpoint eksternal) ──
     fun loadTags() {
@@ -285,7 +288,7 @@ class ComicViewModel : ViewModel() {
     private fun SankaComicItem.toItem(): KomikItem = KomikItem(
         title = title,
         slug = slug,
-        cover = thumbnail,
+        cover = thumbnail.sanitizeCover(),
         updatedAt = description,
         rating = null
     )
@@ -293,7 +296,7 @@ class ComicViewModel : ViewModel() {
     private fun SankaComicGenreItem.toItem(): KomikItem = KomikItem(
         title = title,
         slug = link?.trimEnd('/')?.substringAfterLast('/'),
-        cover = image,
+        cover = image.sanitizeCover(),
         updatedAt = chapter,
         rating = rating
     )
