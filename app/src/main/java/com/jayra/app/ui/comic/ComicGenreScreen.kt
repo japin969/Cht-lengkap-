@@ -22,35 +22,30 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.jayra.app.data.MdxTag
 import com.jayra.app.ui.media.MediaColors
 import com.jayra.app.ui.media.MediaDimens
 import com.jayra.app.ui.theme.SFProFontFamily
 
 /**
- * ComicGenre — daftar genre (tag MangaDex) dalam grid chip besar.
- * Tap genre → ComicList dengan filter tag tersebut.
+ * ComicGenre — daftar genre (tag sankavollerei comic). Tap → ComicList filter.
  */
+private val comicGenres = listOf(
+    "action", "adventure", "comedy", "drama", "fantasi", "horror",
+    "romance", "sci-fi", "shounen", "slice of life", "sports", "supernatural",
+    "thriller", "mystery", "historical", "school", "magic", "martial arts"
+)
+
 @Composable
 fun ComicGenreScreen(
     onBack: () -> Unit,
-    onGenreClick: (String) -> Unit,
-    viewModel: ComicViewModel = viewModel()
+    onGenreClick: (String) -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { viewModel.loadTags() }
-
     Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
         Row(
             Modifier.fillMaxWidth().background(MediaColors.Bg).statusBarsPadding().height(56.dp).padding(horizontal = 8.dp),
@@ -63,46 +58,24 @@ fun ComicGenreScreen(
             Text("Genre", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 20.sp,
                 color = MediaColors.TextPrimary, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
         }
-
-        if (state.tags.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                androidx.compose.material3.CircularProgressIndicator(color = MediaColors.Comic)
-            }
-        } else {
-            LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(MediaDimens.ScreenPadding),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(state.tags.filter { it.attributes?.group == "genre" || it.attributes?.group == "theme" }) { tag ->
-                    GenreRow(tag) { onGenreClick(tag.id ?: "") }
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(MediaDimens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(comicGenres) { genre ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MediaColors.SurfaceElevated)
+                        .clickable { onGenreClick(genre) }.padding(horizontal = 16.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(MediaColors.Comic))
+                    Spacer(Modifier.size(12.dp))
+                    Text(genre.replaceFirstChar { it.uppercase() }, fontFamily = SFProFontFamily, fontWeight = FontWeight.Medium,
+                        fontSize = 15.sp, color = MediaColors.TextPrimary, modifier = Modifier.weight(1f))
+                    Text("›", fontFamily = SFProFontFamily, fontSize = 20.sp, color = MediaColors.TextTertiary)
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun GenreRow(tag: MdxTag, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MediaColors.SurfaceElevated)
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(MediaColors.Comic))
-        Spacer(Modifier.size(12.dp))
-        Text(
-            tag.attributes?.displayName() ?: "Genre",
-            fontFamily = SFProFontFamily,
-            fontWeight = FontWeight.Medium,
-            fontSize = 15.sp,
-            color = MediaColors.TextPrimary,
-            modifier = Modifier.weight(1f)
-        )
-        Text("›", fontFamily = SFProFontFamily, fontSize = 20.sp, color = MediaColors.TextTertiary)
     }
 }
