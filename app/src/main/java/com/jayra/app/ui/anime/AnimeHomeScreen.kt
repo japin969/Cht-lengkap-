@@ -1,16 +1,25 @@
 package com.jayra.app.ui.anime
 
 import androidx.compose.animation.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.stiffness
 import androidx.compose.animation.core.dampingRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focus.LocalFocusManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.ImeAction
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -39,40 +49,72 @@ fun AnimeHomeScreen(
         LiquidGlassSpecV2.forTier(GlassEffectPrefs.resolveTier(), isSystemInDarkTheme())
     }
 
+    var searchText by remember { mutableStateOf("") }
+    var showFilter by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    // Collect all genres from all anime
+    val allGenres = remember(state) {
+        (state.popular + state.ongoing + state.completed)
+            .flatMap { it.type?.let { listOf(it) } ?: emptyList() }
+            .distinct()
+            .sorted()
+    }
+
     Box(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when {
-            state.isLoading -> {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Top
+        ) {
+            // ── Top Bar with Search ─────────────────────────────────
+            TopSearchBar(
+                searchText = searchText,
+                onSearchTextChange = { searchText = it },
+                onFilterClick = { showFilter = !showFilter },
+                glassSpec = glassSpec,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+
+            // ── Genre Filter Chips ──────────────────────────────────
+            AnimatedVisibility(visible = showFilter) {
+                GenreFilterChips(
+                    genres = allGenres,
+                    glassSpec = glassSpec,
+                    modifier = Modifier.padding(horizontal = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            // ── Content ─────────────────────────────────────────────
+            if (state.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            }
-
-            state.error != null && !state.hasAnyData -> {
+            } else if (state.error != null && !state.hasAnyData) {
                 ErrorState(
                     message = state.error ?: "Koneksi bermasalah",
                     onRetry = { viewModel.retry() },
                     glassSpec = glassSpec
                 )
-            }
-
-            !state.hasAnyData -> {
+            } else if (!state.hasAnyData) {
                 EmptyState(
                     title = "Belum ada anime",
                     subtitle = "Daftar anime sedang kosong. Coba muat ulang.",
                     onRetry = { viewModel.retry() },
                     glassSpec = glassSpec
                 )
-            }
-
-            else -> {
+            } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 100.dp), // Space for bottom nav
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Ongoing Section
                     if (state.ongoing.isNotEmpty()) item {
@@ -109,9 +151,158 @@ fun AnimeHomeScreen(
     }
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
+// TOP SEARCH BAR (DeepSeek/ChatGPT Style)
+// ═════════════════════════════════════════════════════════════════
+
+@Composable
+fun TopSearchBar(
+    searchText: String,
+    onSearchTextChange: (String) -> Unit,
+    onFilterClick: () -> Unit,
+    glassSpec: LiquidGlassSpecV2,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Search field with glass background
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(44.dp)
+                .glassSurfaceV2(glassSpec.surface, solidColor = MaterialTheme.colorScheme.surface, cornerRadius = 22.dp)
+                .padding(horizontal = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = "Cari",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                androidx.compose.material3.TextField(
+                    value = searchText,
+                    onValueChange = onSearchTextChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    placeholder = {
+                        Text(
+                            text = "Cari anime...",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { /* TODO: handle search */ }),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+        }
+
+        // Filter button
+        IconButton(
+            onClick = { /* TODO: show filter bottom sheet */ },
+            modifier = Modifier.size(44.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.FilterList,
+                contentDescription = "Filter",
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// GENRE FILTER CHIPS
+// ════════════════════════════════════════════════════════════════
+
+@Composable
+fun GenreFilterChips(
+    genres: List<String>,
+    glassSpec: LiquidGlassSpecV2,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(40.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 0.dp)
+    ) {
+        items(genres) { genre ->
+            GenreChip(
+                label = genre,
+                onClick = { /* TODO: filter by genre */ },
+                glassSpec = glassSpec
+            )
+        }
+    }
+}
+
+@Composable
+fun GenreChip(
+    label: String,
+    onClick: () -> Unit,
+    glassSpec: LiquidGlassSpecV2,
+    modifier: Modifier = Modifier
+) {
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        animationSpec = spring(stiffness = 200, dampingRatio = 15),
+        label = "genre_chip_scale"
+    )
+
+    Box(
+        modifier = modifier
+            .height(32.dp)
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .glassSurfaceV2(glassSpec.surface, solidColor = MaterialTheme.colorScheme.surface, cornerRadius = 16.dp)
+            .scale(scale)
+            .pointerInput(Unit) {
+                androidx.compose.foundation.gestures.detectTapGestures(
+                    onPress = { pressed = true },
+                    onRelease = { pressed = false; onClick() },
+                    onCancel = { pressed = false }
+                )
+            }
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(vertical = 4.dp).align(Alignment.Center)
+        )
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
 // CONTENT SECTION (Spring Animated Cards)
-// ═══════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
 
 @Composable
 fun ContentSection(
@@ -121,20 +312,17 @@ fun ContentSection(
     glassSpec: LiquidGlassSpecV2,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.padding(horizontal = 16.dp)) {
+    Column(modifier = modifier) {
         // Section header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
 
         // Items in horizontal scroll
-        androidx.compose.foundation.lazy.LazyRow(
+        LazyRow(
             contentPadding = PaddingValues(horizontal = 0.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -170,10 +358,10 @@ fun SpringAnimeCard(
 
     Column(
         modifier = modifier
-            .width(120.dp)
+            .width(130.dp)
             .scale(scale)
-            .shadow(elevation = elevation.dp, shape = RoundedCornerShape(12.dp), clip = true)
-            .clip(RoundedCornerShape(12.dp))
+            .shadow(elevation = elevation.dp, shape = RoundedCornerShape(16.dp), clip = true)
+            .clip(RoundedCornerShape(16.dp))
             .pointerInput(Unit) {
                 androidx.compose.foundation.gestures.detectTapGestures(
                     onPress = { pressed = true },
@@ -185,9 +373,9 @@ fun SpringAnimeCard(
         // Poster with glass overlay
         Box(
             modifier = Modifier
-                .width(120.dp)
-                .height(180.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .width(130.dp)
+                .height(195.dp)
+                .clip(RoundedCornerShape(16.dp))
         ) {
             AsyncImage(
                 model = anime.image,
@@ -218,12 +406,12 @@ fun SpringAnimeCard(
         // Title & Info
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp, bottom = 4.dp)
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 4.dp, horizontal = 4.dp)
         ) {
             Text(
                 anime.title ?: "Unknown",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -239,9 +427,9 @@ fun SpringAnimeCard(
     }
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
 // ERROR & EMPTY STATES (Glass Style)
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
 
 @Composable
 fun ErrorState(
@@ -353,15 +541,15 @@ fun GlassCard(
     }
 }
 
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
 // PLACEHOLDERS
-// ═══════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
 
 @Composable
 private fun placeholder() = Box(
     Modifier
         .fillMaxSize()
-        .clip(RoundedCornerShape(12.dp))
+        .clip(RoundedCornerShape(16.dp))
         .background(MaterialTheme.colorScheme.surfaceVariant)
 ) {
     androidx.compose.material.Icon(
@@ -376,7 +564,7 @@ private fun placeholder() = Box(
 private fun errorPlaceholder() = Box(
     Modifier
         .fillMaxSize()
-        .clip(RoundedCornerShape(12.dp))
+        .clip(RoundedCornerShape(16.dp))
         .background(MaterialTheme.colorScheme.errorContainer)
 ) {
     Column(

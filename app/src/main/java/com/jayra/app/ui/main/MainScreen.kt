@@ -175,9 +175,24 @@ class MainViewModel(
             icon = Icons.Rounded.MusicNote
         ),
         NavItem(
+            route = ROUTE_ANIME_HOME,
+            label = "Anime",
+            icon = Icons.Rounded.Movie
+        ),
+        NavItem(
             route = ROUTE_DRAMA_HOME,
-            icon = Icons.Rounded.PlayArrow,
-            label = "VidHub"
+            label = "Drama",
+            icon = Icons.Rounded.Tv
+        ),
+        NavItem(
+            route = ROUTE_KOMIK_HOME,
+            label = "Komik",
+            icon = Icons.Rounded.MenuBook
+        ),
+        NavItem(
+            route = ROUTE_NEKO_HOME,
+            label = "Neko",
+            icon = Icons.Rounded.Pets
         ),
         NavItem(
             route = ROUTE_SETTINGS,
@@ -217,6 +232,10 @@ class MainViewModel(
         const val ROUTE_CALLS = "calls"
         const val ROUTE_MUSIC_HOME = "music_home"
     const val ROUTE_DRAMA_HOME = "drama_home"
+    const val ROUTE_ANIME_HOME = "anime_home"
+    const val ROUTE_KOMIK_HOME = "komik_home"
+    const val ROUTE_NEKO_HOME = "neko_home"
+    const val ROUTE_NEKO_DETAIL = "neko_detail?url={url}"
     const val ROUTE_DRAMA_DETAIL = "drama_detail?url={url}"
     const val ROUTE_KOMIK_DETAIL = "komik_detail?slug={slug}"
     const val ROUTE_KOMIK_READER = "komik_reader?slug={slug}"
@@ -229,7 +248,10 @@ class MainViewModel(
             ROUTE_CHAT_LIST,
             ROUTE_CALLS,
             ROUTE_MUSIC_HOME,
+            ROUTE_ANIME_HOME,
             ROUTE_DRAMA_HOME,
+            ROUTE_KOMIK_HOME,
+            ROUTE_NEKO_HOME,
             ROUTE_SETTINGS
         )
     }
@@ -718,638 +740,37 @@ private fun MainNavigationGraph(
             )
         }
 
-        composable(MainViewModel.ROUTE_DRAMA_HOME) {
-            com.jayra.app.ui.VidHubScreen(
+        composable("anime_home") {
+            com.jayra.app.ui.anime.AnimeHomeScreen(
+                onAnimeClick = { anime ->
+                    navController.navigate("anime_detail/${anime.id ?: anime.link ?: anime.title ?: ""}")
+                }
+            )
+        }
+
+        composable("drama_home") {
+            com.jayra.app.ui.drama.DramaScreen(
                 onDramaClick = { url ->
                     val encoded = java.net.URLEncoder.encode(url, "UTF-8")
                     navController.navigate("drama_detail?url=$encoded")
-                },
-                onAnimeClick = { anime ->
-                    navController.navigate("anime_detail/${anime.id ?: anime.link ?: anime.title ?: ""}")
-                },
+                }
+            )
+        }
+
+        composable("komik_home") {
+            com.jayra.app.ui.komik.KomikHomeScreen(
                 onKomikClick = { komik ->
                     navController.navigate("komik_detail/${komik.slug}")
                 }
             )
         }
 
-        composable(
-            route = "anime_detail/{animeId}",
-            arguments = listOf(androidx.navigation.navArgument("animeId") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val animeId = backStackEntry.arguments?.getString("animeId") ?: ""
-            com.jayra.app.ui.anime.AnimeDetailScreen(
-                animeId = animeId,
-                onPlayEpisode = { episode ->
-                    val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-                    val state by vm.uiState.collectAsState()
-                    vm.loadStream(episode.episodeUrl ?: "")
-                    val streamUrl = state.streamUrl
-                    if (streamUrl != null) {
-                        navController.navigate("anime_player") {
-                            // Pass streamUrl via ViewModel state
-                        }
-                    }
+        composable("neko_home") {
+            com.jayra.app.ui.neko.NekoHomeScreen(
+                onNekoClick = { neko ->
+                    navController.navigate("neko_detail/${neko.link ?: neko.title ?: ""}")
                 }
             )
         }
 
-        composable(
-            route = "anime_player"
-        ) { backStackEntry ->
-            val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-            val state by vm.uiState.collectAsState()
-            val streamUrl = state.streamUrl
-            val detail = state.detail
-            val episodes = state.episodes
-            
-            // Find current episode from episodes (simplified: first episode with streamUrl)
-            val currentEpisode = episodes.find { it.episodeUrl?.isNotBlank() == true }
-            
-            com.jayra.app.ui.anime.AnimePlayerScreen(
-                streamUrl = streamUrl,
-                animeTitle = detail?.title,
-                episodeTitle = currentEpisode?.title,
-                onBack = { navController.popBackStack() },
-                onNextEpisode = { /* TODO: implement next episode */ }
-            )
-        }
-
-        composable(
-            route = MainViewModel.ROUTE_DRAMA_DETAIL,
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            com.jayra.app.ui.drama.DramaDetailScreen(dramaUrl = java.net.URLDecoder.decode(url, "UTF-8"))
-        }
-
-        
-        composable(
-            route = MainViewModel.ROUTE_KOMIK_DETAIL,
-            arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val slug = backStackEntry.arguments?.getString("slug") ?: ""
-            com.jayra.app.ui.komik.KomikDetailScreen(
-                slug = slug,
-                onChapterClick = { chapterSlug ->
-                    navController.navigate("komik_reader?slug=$chapterSlug")
-                }
-            )
-        }
-
-        composable(
-            route = MainViewModel.ROUTE_KOMIK_READER,
-            arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val slug = backStackEntry.arguments?.getString("slug") ?: ""
-            com.jayra.app.ui.komik.KomikReaderScreen(slug = slug)
-        }
-
-        composable("archived_chats") {
-            com.jayra.app.ui.chatlist.ArchivedChatsScreen(
-                onBack = { navController.popBackStack() },
-                onChatClick = { cid -> navController.navigate("chat/$cid") }
-            )
-        }
-
-        composable("creategroup") {
-            com.jayra.app.ui.creategroup.CreateGroupScreen(
-                onBack = { navController.popBackStack() },
-                onGroupCreated = { groupId ->
-                    if (groupId.isNotBlank()) {
-                        navController.navigate("chat/$groupId") {
-                            popUpTo("creategroup") { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            )
-        }
-
-        composable("newbroadcast") {
-            com.jayra.app.ui.settings.PlaceholderScreen(
-                title = "New Broadcast",
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("starred") {
-            com.jayra.app.ui.settings.PlaceholderScreen(
-                title = "Starred Messages",
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(MainViewModel.ROUTE_SETTINGS) {
-            SettingsScreen(
-                onBack = { navigateBackToChatsTab() },
-                onProfileClick = { navController.navigate("my_profile") },
-                onPrivacyClick = { navController.navigate("privacy") },
-                onNotificationsClick = { navController.navigate("notifications") },
-                onStorageClick = { navController.navigate("data_storage") },
-                onAssistantClick = { navController.navigate("assistant") },
-                onThemeClick = { navController.navigate("theme") },
-                onLanguageClick = { navController.navigate("language") },
-                onStickersClick = { navController.navigate("stickers") },
-                onHelpClick = { navController.navigate("help") },
-                onPrivacyPolicyClick = { navController.navigate("privacy_policy") },
-                onAboutClick = { navController.navigate("about") },
-                onSavedMessagesClick = { navController.navigate("saved_messages") },
-                onCommunitiesClick = { navController.navigate(MainViewModel.ROUTE_COMMUNITIES) },
-                onStoriesClick = { navController.navigate(MainViewModel.ROUTE_STORY_ALBUMS) }
-            )
-        }
-
-        composable(MainViewModel.ROUTE_COMMUNITIES) {
-            CommunitiesScreen(
-                onBackClick = { navController.popBackStack() },
-                onGroupClick = { groupId ->
-                    navController.navigate("chat/$groupId")
-                }
-            )
-        }
-
-        composable(MainViewModel.ROUTE_STORY_ALBUMS) {
-            StoryAlbumsScreen(
-                onBackClick = { navController.popBackStack() },
-                onStoryClick = { storyId ->
-                    navController.navigate("story_viewer/$storyId")
-                }
-            )
-        }
-
-        composable(
-            route = "story_viewer/{initialStoryId}",
-            arguments = listOf(navArgument("initialStoryId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val initialStoryId = backStackEntry.arguments?.getString("initialStoryId") ?: ""
-            StoryViewerScreen(
-                initialStoryId = initialStoryId,
-                onClose = { navController.popBackStack() }
-            )
-        }
-
-        composable(MainViewModel.ROUTE_GLOBAL_SEARCH) {
-            val storageCategories = setOf("photo", "video", "document", "music", "other")
-            GlobalSearchScreen(
-                onBackClick = { navController.popBackStack() },
-                onResultClick = { type, targetId ->
-                    when (type) {
-                        SearchResultType.CHANNEL -> navController.navigate("channel/$targetId")
-                        SearchResultType.GROUP -> navController.navigate("group/$targetId")
-                        SearchResultType.CONTACT -> navController.navigate("contact/$targetId")
-                        SearchResultType.CHAT,
-                        SearchResultType.MESSAGE -> navController.navigate("chat/$targetId")
-                        SearchResultType.FILE -> {
-                            if (targetId in storageCategories) {
-                                navController.navigate("storage_detail/$targetId")
-                            } else {
-                                navController.navigate("chat/$targetId")
-                            }
-                        }
-                    }
-                }
-            )
-        }
-
-        composable("search") {
-            val storageCategories = setOf("photo", "video", "document", "music", "other")
-            SearchScreen(
-                onBack = { navController.popBackStack() },
-                onNavigateToResult = { result ->
-                    when (result.type) {
-                        SearchResultType.CHANNEL -> navController.navigate("channel/${result.targetId}")
-                        SearchResultType.GROUP -> navController.navigate("group/${result.targetId}")
-                        SearchResultType.CONTACT -> navController.navigate("contact/${result.targetId}")
-                        SearchResultType.CHAT, SearchResultType.MESSAGE -> navController.navigate("chat/${result.targetId}")
-                        SearchResultType.FILE -> {
-                            if (result.targetId in storageCategories) {
-                                navController.navigate("storage_detail/${result.targetId}")
-                            } else {
-                                navController.navigate("chat/${result.targetId}")
-                            }
-                        }
-                    }
-                }
-            )
-        }
-
-        composable("contacts") {
-            ContactsScreen(
-                onBackClick = { navController.popBackStack() },
-                onContactClick = { targetId ->
-                    navController.navigate("chat/$targetId")
-                }
-            )
-        }
-
-        composable(
-            route = "chat/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            ChatRoomScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() },
-                onContactInfoClick = { cId -> navigateToInfo(cId) },
-                onNavigateToCreatePoll = { cId -> navController.navigate("create_poll/$cId") },
-                onNavigateToCreateChecklist = { cId -> navController.navigate("create_checklist/$cId") },
-                onNavigateToVoiceTrimmer = { cId -> navController.navigate("voice_trimmer/$cId") },
-                onNavigateToLocation = { cId -> navController.navigate("location_sharing/$cId") },
-                onNavigateToContact = { cId -> navController.navigate("contact_sharing/$cId") },
-                onForwardMessage = { srcChatId, msgId ->
-                    navController.navigate("forward/$srcChatId/$msgId")
-                }
-            )
-        }
-
-        composable(
-            route = "contact/{contactId}",
-            arguments = listOf(navArgument("contactId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val contactId = backStackEntry.arguments?.getString("contactId") ?: "chat_1"
-            ContactInfoScreen(
-                contactId = contactId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "group/{groupId}",
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId") ?: "chat_2"
-            GroupInfoScreen(
-                groupId = groupId,
-                onBack = { navController.popBackStack() },
-                onMembersClick = { gId -> navController.navigate("group_members/$gId") }
-            )
-        }
-
-        composable(
-            route = "group_members/{groupId}",
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId") ?: "chat_2"
-            GroupMembersScreen(
-                groupId = groupId,
-                onBack = { navController.popBackStack() },
-                onMemberClick = { memberId -> navController.navigate("chat/$memberId") },
-                onAddMemberClick = { gId -> navController.navigate("add_member/$gId") }
-            )
-        }
-
-        composable(
-            route = "add_member/{groupId}",
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId") ?: "chat_2"
-            AddMemberScreen(
-                groupId = groupId,
-                onBack = { navController.popBackStack() },
-                onMemberAdded = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "channel/{channelId}",
-            arguments = listOf(navArgument("channelId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val channelId = backStackEntry.arguments?.getString("channelId") ?: "chat_4"
-            ChannelInfoScreen(
-                channelId = channelId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("advanced_settings") {
-            AdvancedSettingsScreen(
-                onBack = { navController.popBackStack() },
-                onProxyClick = { navController.navigate("proxy") }
-            )
-        }
-
-        composable("data_storage") {
-            DataStorageScreen(
-                onBack = { navController.popBackStack() },
-                onCategoryClick = { category -> navController.navigate("storage_detail/$category") }
-            )
-        }
-
-        composable("proxy") {
-            ProxyScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(
-            route = "storage_detail/{category}",
-            arguments = listOf(navArgument("category") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val category = backStackEntry.arguments?.getString("category") ?: "photo"
-            StorageDetailScreen(
-                category = category,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("assistant") {
-            AssistantScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable("my_profile") {
-            MyProfileScreen(
-                onBack = { navController.popBackStack() },
-                onEditProfileClick = { navController.navigate("edit_profile") },
-                onPrivacyClick = { navController.navigate("privacy") }
-            )
-        }
-
-        composable("edit_profile") {
-            EditProfileScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable("privacy") {
-            PrivacyScreen(
-                onBack = { navController.popBackStack() },
-                onTwoStepClick = { navController.navigate("two_step_verification") },
-                onActiveDevicesClick = { navController.navigate("active_sessions") },
-                onPasscodeClick = { navController.navigate("passcode") }
-            )
-        }
-
-        composable("two_step_verification") {
-            TwoStepVerificationScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable("active_sessions") {
-            ActiveSessionsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable("passcode") {
-            PasscodeScreen(
-                onBack = { navController.popBackStack() },
-                onSuccessUnlock = { navController.popBackStack() }
-            )
-        }
-
-        composable("notifications") {
-            NotificationsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(
-            route = "call/{participantId}/{type}",
-            arguments = listOf(
-                navArgument("participantId") { type = NavType.StringType },
-                navArgument("type") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val participantId = backStackEntry.arguments?.getString("participantId") ?: ""
-            val type = backStackEntry.arguments?.getString("type") ?: "voice"
-            CallScreen(
-                participantId = participantId,
-                isVideo = (type == "video"),
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("call_history") {
-            CallHistoryScreen(
-                onBack = { navController.popBackStack() },
-                onCallClick = { participantId, type ->
-                    navController.navigate("call/$participantId/$type")
-                }
-            )
-        }
-
-        composable("help") {
-            HelpScreen(
-                onBack = { navController.popBackStack() },
-                onPrivacyClick = { navController.navigate("privacy_policy") }
-            )
-        }
-
-        composable("privacy_policy") {
-            PrivacyPolicyScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable("about") {
-            AboutScreen(
-                onBack = { navController.popBackStack() },
-                onPrivacyClick = { navController.navigate("privacy_policy") }
-            )
-        }
-
-        composable("stickers") {
-            StickersScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable("theme") {
-            ThemeScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable("language") {
-            LanguageScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(
-            route = "create_poll/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            CreatePollScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "create_checklist/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            CreateChecklistScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "voice_trimmer/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            VoiceTrimmerScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "location_sharing/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            LocationSharingScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = "contact_sharing/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: "chat_1"
-            ContactSharingScreen(
-                chatId = chatId,
-                onBack = { navController.popBackStack() }
-            )
-        }
-
-        composable("saved_messages") {
-            SavedMessagesScreen(
-                onBack = { navController.popBackStack() },
-                onForwardMessage = { srcChatId, msgId ->
-                    navController.navigate("forward/$srcChatId/$msgId")
-                },
-                onNavigateToCreatePoll = { cId -> navController.navigate("create_poll/$cId") },
-                onNavigateToCreateChecklist = { cId -> navController.navigate("create_checklist/$cId") },
-                onNavigateToVoiceTrimmer = { cId -> navController.navigate("voice_trimmer/$cId") },
-                onNavigateToLocation = { cId -> navController.navigate("location_sharing/$cId") },
-                onNavigateToContact = { cId -> navController.navigate("contact_sharing/$cId") }
-            )
-        }
-
-        composable(
-            route = "forward/{sourceChatId}/{messageId}",
-            arguments = listOf(
-                navArgument("sourceChatId") { type = NavType.StringType },
-                navArgument("messageId") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val sourceChatId = backStackEntry.arguments?.getString("sourceChatId") ?: "chat_1"
-            val messageId = backStackEntry.arguments?.getString("messageId") ?: ""
-            ForwardScreen(
-                sourceChatId = sourceChatId,
-                messageId = messageId,
-                onBack = { navController.popBackStack() },
-                onForwardCompleted = { singleTargetChatId ->
-                    val currentUid = currentUser?.uid ?: AppModule.chatRepository.currentUserId
-                    when {
-                        singleTargetChatId == null -> {
-                            navController.popBackStack()
-                        }
-                        singleTargetChatId == currentUid -> {
-                            navController.navigate("saved_messages") {
-                                popUpTo("forward/{sourceChatId}/{messageId}") { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                        else -> {
-                            navController.navigate("chat/$singleTargetChatId") {
-                                popUpTo("forward/{sourceChatId}/{messageId}") { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun MainScreenPreviewContent(
-    selectedRoute: String,
-    unreadCount: Int
-) {
-    val isDark = isSystemInDarkTheme()
-    val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
-    val textColor = if (isDark) Color(0xFFFFFFFF) else Color(0xFF000000)
-    val previewTabs = listOf(
-        NavItem("chat_list", "Chat", Icons.Rounded.Chat, badgeCount = unreadCount),
-        NavItem("calls", "Panggilan", Icons.Rounded.Call),
-        NavItem("music_home", "Musik", Icons.Rounded.MusicNote),
-        NavItem("settings", "Pengaturan", Icons.Rounded.Settings)
-    )
-
-    Scaffold(
-        containerColor = screenBg,
-        bottomBar = {
-            JayraBottomNavigationBar(
-                items = previewTabs,
-                currentRoute = selectedRoute,
-                onItemClick = {}
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(screenBg)
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Jayra",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = textColor
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Tab aktif: $selectedRoute",
-                fontSize = 14.sp,
-                color = JayraSubtext
-            )
-        }
-    }
-}
-
-@Preview(name = "Main Screen BottomNav Light", showBackground = true)
-@Composable
-private fun MainScreenLightPreview() {
-    JayraTheme(darkTheme = false) {
-        Surface {
-            MainScreenPreviewContent(
-                selectedRoute = "chat_list",
-                unreadCount = 3
-            )
-        }
-    }
-}
-
-@Preview(name = "Main Screen BottomNav Dark", showBackground = true)
-@Composable
-private fun MainScreenDarkPreview() {
-    JayraTheme(darkTheme = true) {
-        Surface {
-            MainScreenPreviewContent(
-                selectedRoute = "music_home",
-                unreadCount = 12
-            )
-        }
-    }
-}
-
-@Composable
-fun LiquidNavBarRow(
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, bottom = 18.dp)
-            .navigationBarsPadding(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        com.jayra.app.ui.component.LiquidNavBar(
-            modifier = Modifier.weight(1f),
-            selectedIndex = selectedIndex,
-            onSelect = onSelect,
-            isFolded = false
-        )
-    }
-}
+        // Old VidHubScreen route removed - replaced with separate feature routes

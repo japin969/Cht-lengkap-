@@ -1,8 +1,5 @@
 package com.jayra.app.data
 
-import com.squareup.moshi.JsonClass
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -10,6 +7,9 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
+import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.util.concurrent.TimeUnit
 
 /**
@@ -33,11 +33,13 @@ interface TvmazeApi {
 
     companion object {
         private const val BASE_URL = "https://api.tvmaze.com/"
+        private const val REFERRER = "https://www.tvmaze.com/"
 
         fun create(): TvmazeApi {
             val client = OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
+                .addInterceptor(ImageReferrerInterceptor(REFERRER))
                 .build()
             val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
             return Retrofit.Builder()
@@ -92,3 +94,38 @@ data class TvmazeEpisode(
     val season: Int? = null,
     val number: Int? = null
 )
+
+/**
+ * Extension functions to convert TVMaze models to Drama domain models
+ */
+fun TvmazeShow.toDramaItem(): DramaItem = DramaItem(
+    id = id?.toString(),
+    title = name,
+    cover = image?.original ?: image?.medium,
+    intro = summary?.let { stripHtml(it) },
+    chapterCount = embedded?.episodes?.size,
+    url = id?.toString()
+)
+
+fun TvmazeShow.toDramaDetail(): DramaDetailResponse = DramaDetailResponse(
+    ok = true,
+    book = toDramaItem(),
+    episodes = embedded?.episodes?.map { ep ->
+        DramaEpisode(
+            index = ep.number,
+            name = ep.name,
+            unlock = false,
+            mp4 = null,
+            videoUrl = null
+        )
+    } ?: emptyList()
+)
+
+private fun stripHtml(html: String): String = html
+    .replace(Regex("<[^>]*>"), "")
+    .replace("&nbsp;", " ")
+    .replace("&", "&")
+    .replace("<", "<")
+    .replace(">", ">")
+    .replace("\"", "\\\"")
+    .trim()

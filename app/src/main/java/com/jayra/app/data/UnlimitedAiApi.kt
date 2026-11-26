@@ -4,6 +4,8 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -107,13 +109,13 @@ class UnlimitedAiApi private constructor(
 
                 // Stream NDJSON line by line
                 val source = body.source()
-                val bufferedSource = source.buffer()
+                val bufferedSource: okio.BufferedSource = source.buffer()
                 
                 var fullText = ""
                 
                 try {
                     while (true) {
-                        val line = bufferedSource.readUtf8LineOrNull()
+                        val line: String? = bufferedSource.readUtf8Line()
                         if (line == null) break // End of stream
                         
                         val trimmed = line.trim()
@@ -155,7 +157,7 @@ class UnlimitedAiApi private constructor(
             .headers(headers)
             .build()
 
-        return withContext(okhttp3.Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             val call = client.newCall(request)
             val response = call.execute()
             
@@ -176,12 +178,12 @@ class UnlimitedAiApi private constructor(
                 }
 
                 val source = body.source()
-                val bufferedSource = source.buffer()
+                val bufferedSource: okio.BufferedSource = source.buffer()
                 
                 var fullText = ""
                 
                 while (true) {
-                    val line = bufferedSource.readUtf8LineOrNull()
+                    val line: String? = bufferedSource.readUtf8Line()
                     if (line == null) break
                     
                     val trimmed = line.trim()
@@ -206,7 +208,7 @@ class UnlimitedAiApi private constructor(
         }
     }
 
-    // ═══════════════════════════════════════════
+    // ══════════════════════════════════════════
     // BUILDERS
     // ════════════════════════════════════════════
 
@@ -262,9 +264,9 @@ class UnlimitedAiApi private constructor(
         return json
     }
 
-    // ═══════════════════════════════════════════
+    // ══════════════════════════════════════════
     // DATA CLASSES
-    // ════════════════════════════════════════════
+    // ═══════════════════════════════════════════
 
     @JsonClass(generateAdapter = true)
     data class UnlimitedAiRequest(
