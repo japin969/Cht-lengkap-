@@ -55,6 +55,7 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             var hadError: String? = null
+            // Sumber utama: nexadev (animasu)
             val popular = runCatching {
                 api.popular(page = 1).body()?.data?.animeList.orEmpty()
             }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
@@ -65,13 +66,27 @@ class AnimeViewModel : ViewModel() {
                 api.completed(page = 1).body()?.data?.animeList.orEmpty()
             }.onFailure { hadError = it.localizedMessage }.getOrDefault(emptyList())
 
-            val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
+            // Fallback: kalau nexadev kosong/gagal, pakai sankavollerei (/anime/*)
+            var hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()
+            var fPopular = popular
+            var fOngoing = ongoing
+            var fCompleted = completed
+            if (!hasData) {
+                val sOngoing = runCatching { sanka.ongoing().body()?.data?.animeList.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList())
+                val sComplete = runCatching { sanka.complete().body()?.data?.animeList.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList())
+                val sHome = runCatching { sanka.home().body()?.data }.getOrNull()
+                fOngoing = sOngoing.ifEmpty { sHome?.ongoing?.animeList?.map { it.toSearch() }.orEmpty() }
+                fCompleted = sComplete.ifEmpty { sHome?.complete?.animeList?.map { it.toSearch() }.orEmpty() }
+                fPopular = fOngoing
+                hasData = fPopular.isNotEmpty() || fOngoing.isNotEmpty() || fCompleted.isNotEmpty()
+            }
+
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                popular = popular,
-                ongoing = ongoing,
-                completed = completed,
-                error = if (hasData) null else (hadError?.let { "Gagal memuat daftar anime" } ?: null)
+                popular = fPopular,
+                ongoing = fOngoing,
+                completed = fCompleted,
+                error = if (hasData) null else (hadError?.let { "Gagal memuat daftar anime" } ?: "Gagal memuat daftar anime")
             )
         }
     }
