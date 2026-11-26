@@ -1,119 +1,224 @@
 package com.jayra.app.ui.anime
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.os.Message
-import android.view.ViewGroup
-import androidx.compose.ui.viewinterop.AndroidView
+import com.jayra.app.data.AnimeEpisode
+import com.jayra.app.data.MediaEntry
+import com.jayra.app.data.MediaStore
+import com.jayra.app.ui.media.MediaColors
+import com.jayra.app.ui.media.MediaDimens
+import com.jayra.app.ui.media.MediaStateView
+import com.jayra.app.ui.theme.SFProFontFamily
+import kotlinx.coroutines.launch
 
+/**
+ * AnimeDetail — pola aplikasi anime terkenal (Crunchyroll):
+ * hero backdrop + judul + rating + tombol Play + My List + bookmark,
+ * tab swipe: "Episode" / "Info".
+ */
 @Composable
 fun AnimeDetailScreen(
     animeUrl: String,
-    viewModel: AnimeViewModel = viewModel(),
-    onPlayEpisode: (String) -> Unit
+    onBack: () -> Unit,
+    onPlayEpisode: (String) -> Unit,
+    viewModel: AnimeViewModel = viewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var bookmarked by remember { mutableStateOf(MediaStore.isBookmarked(context, "anime", animeUrl)) }
 
     LaunchedEffect(animeUrl) { viewModel.loadDetail(animeUrl) }
 
-    if (state.isLoading) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-    } else if (state.error != null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Error: ${state.error}") }
-    } else {
-        LazyColumn(Modifier.fillMaxSize()) {
-            item {
-                Row(Modifier.padding(16.dp)) {
-                    AsyncImage(
-                        model = state.detail?.image,
-                        contentDescription = null,
-                        modifier = Modifier.width(120.dp).height(180.dp).clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Column {
-                        Text(state.detail?.title ?: "", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Rating: ${state.detail?.rating ?: "-"}", style = MaterialTheme.typography.bodySmall)
-                        Text("Total: ${state.detail?.totalEpisodes ?: 0} Episode", style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(8.dp))
-                        Text(state.detail?.synopsis ?: "", style = MaterialTheme.typography.bodySmall, maxLines = 6)
+    Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
+        DetailTopBar(onBack, bookmarked) {
+            state.detail?.let { d ->
+                MediaStore.toggleBookmark(context, "anime", MediaEntry(id = animeUrl, title = d.title ?: "Anime", cover = d.image ?: ""))
+                bookmarked = MediaStore.isBookmarked(context, "anime", animeUrl)
+            }
+        }
+
+        MediaStateView(
+            isLoading = state.isLoading && state.detail == null,
+            isEmpty = state.detail == null,
+            error = state.error,
+            onRetry = { viewModel.retryDetail(animeUrl) },
+            accent = MediaColors.Anime,
+            emptyTitle = "Anime tidak ditemukan",
+            emptySubtitle = "Coba buka anime lain."
+        ) {
+            val detail = state.detail ?: return@MediaStateView
+            val pagerState = rememberPagerState(pageCount = { 2 })
+            val scope = rememberCoroutineScope()
+
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                item {
+                    Box(Modifier.fillMaxWidth().height(260.dp)) {
+                        AsyncImage(model = detail.image, contentDescription = detail.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, MediaColors.Bg))))
                     }
                 }
-            }
-            item { Text("Daftar Episode", Modifier.padding(16.dp), fontWeight = FontWeight.Bold) }
-            items(state.episodes) { ep ->
-                ListItem(
-                    headlineContent = { Text(ep.title ?: "Episode ${ep.episode}") },
-                    leadingContent = { Icon(Icons.Rounded.PlayArrow, null) },
-                    modifier = Modifier.clickable {
-                        ep.episodeUrl?.let { onPlayEpisode(it) }
+                item {
+                    Column(Modifier.padding(horizontal = MediaDimens.ScreenPadding)) {
+                        Text(detail.title ?: "Tanpa Judul", fontFamily = SFProFontFamily, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = MediaColors.TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            detail.rating?.let { RatingPill(it) }
+                            Spacer(Modifier.width(8.dp))
+                            Text("${detail.totalEpisodes ?: 0} Episode", fontFamily = SFProFontFamily, fontSize = 13.sp, color = MediaColors.TextSecondary)
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            AnimePlayButton(MediaColors.Anime) { state.episodes.firstOrNull()?.episodeUrl?.let(onPlayEpisode) }
+                            Box(
+                                Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
+                                    .background(if (bookmarked) MediaColors.Anime else MediaColors.SurfaceElevated)
+                                    .clickable {
+                                        state.detail?.let { d ->
+                                            MediaStore.toggleBookmark(context, "anime", MediaEntry(id = animeUrl, title = d.title ?: "Anime", cover = d.image ?: ""))
+                                            bookmarked = MediaStore.isBookmarked(context, "anime", animeUrl)
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "My List", tint = if (bookmarked) Color.Black else MediaColors.TextPrimary)
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
                     }
-                )
-                Divider()
+                }
+                item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = MediaDimens.ScreenPadding)) {
+                        listOf("Episode", "Info").forEachIndexed { index, title ->
+                            val selected = pagerState.currentPage == index
+                            Column(
+                                Modifier.weight(1f).clickable { scope.launch { pagerState.animateScrollToPage(index) } }.padding(vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(title, fontFamily = SFProFontFamily, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, fontSize = 15.sp, color = if (selected) MediaColors.Anime else MediaColors.TextTertiary)
+                                Spacer(Modifier.height(6.dp))
+                                Box(Modifier.width(28.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(if (selected) MediaColors.Anime else Color.Transparent))
+                            }
+                        }
+                    }
+                }
+                item {
+                    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().height(520.dp)) { page ->
+                        when (page) {
+                            0 -> LazyColumn(Modifier.fillMaxSize()) {
+                                items(state.episodes) { ep -> EpisodeRow(ep) { onPlayEpisode(ep.episodeUrl ?: animeUrl) } }
+                            }
+                            1 -> Column(Modifier.fillMaxSize().padding(MediaDimens.ScreenPadding)) {
+                                Text("Synopsis", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MediaColors.TextPrimary)
+                                Spacer(Modifier.height(8.dp))
+                                Text(detail.synopsis ?: "Belum ada deskripsi.", fontFamily = SFProFontFamily, fontSize = 14.sp, color = MediaColors.TextSecondary)
+                                detail.info?.let { info ->
+                                    if (info.isNotEmpty()) {
+                                        Spacer(Modifier.height(16.dp))
+                                        Text("Informasi", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MediaColors.TextPrimary)
+                                        Spacer(Modifier.height(8.dp))
+                                        info.forEach { (k, v) ->
+                                            Row(Modifier.padding(vertical = 3.dp)) {
+                                                Text("$k: ", fontFamily = SFProFontFamily, fontWeight = FontWeight.Medium, fontSize = 13.sp, color = MediaColors.TextSecondary)
+                                                Text(v, fontFamily = SFProFontFamily, fontSize = 13.sp, color = MediaColors.TextPrimary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun AnimePlayerScreen(videoUrl: String) {
-    var webViewRef by remember { mutableStateOf<WebView?>(null) }
-    
-    AndroidView(
-        factory = { ctx ->
-            WebView(ctx).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-                
-                // Blokir popup window baru
-                webChromeClient = object : WebChromeClient() {
-                    override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message?): Boolean {
-                        return false // Blokir popup
-                    }
-                }
-                
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        // Inject adblocker JS setelah halaman selesai dimuat
-                        val js = """
-                            var ads = document.querySelectorAll('[class*="ads"], [id*="ads"], [class*="banner"], [class*="popup"], .overlay, .ad-container, iframe[src*="ads"]');
-                            ads.forEach(function(el) { el.style.display = 'none'; });
-                            document.querySelectorAll('a').forEach(function(a) {
-                                if (a.href.includes('ads') || a.href.includes('click')) {
-                                    a.style.display = 'none';
-                                }
-                            });
-                        """.trimIndent()
-                        view?.evaluateJavascript(js, null)
-                    }
-                }
-                loadUrl(videoUrl)
-                webViewRef = this
-            }
-        },
-        modifier = Modifier.fillMaxSize()
-    )
+private fun DetailTopBar(onBack: () -> Unit, bookmarked: Boolean, onBookmark: () -> Unit) {
+    Row(Modifier.fillMaxWidth().background(MediaColors.Bg).statusBarsPadding().height(56.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).clickable { onBack() }, contentAlignment = Alignment.Center) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali", tint = MediaColors.TextPrimary)
+        }
+        Text("Detail", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = MediaColors.TextPrimary, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).clickable { onBookmark() }, contentAlignment = Alignment.Center) {
+            Icon(if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "My List", tint = if (bookmarked) MediaColors.Anime else MediaColors.TextPrimary)
+        }
+    }
+}
+
+@Composable
+private fun RatingPill(rating: Double) {
+    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(MediaColors.Anime.copy(alpha = 0.16f)).padding(horizontal = 8.dp, vertical = 3.dp)) {
+        Text("★ ${"%.1f".format(rating)}", fontFamily = SFProFontFamily, fontWeight = FontWeight.Medium, fontSize = 11.sp, color = MediaColors.Anime)
+    }
+}
+
+@Composable
+private fun AnimePlayButton(accent: Color, onClick: () -> Unit) {
+    Row(Modifier.clip(RoundedCornerShape(12.dp)).background(accent).clickable { onClick() }.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Play", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = Color.Black)
+    }
+}
+
+@Composable
+private fun EpisodeRow(ep: AnimeEpisode, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = MediaDimens.ScreenPadding, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(MediaColors.Anime.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.PlayArrow, null, tint = MediaColors.Anime, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(ep.title ?: "Episode ${ep.episode}", fontFamily = SFProFontFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = MediaColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Episode ${ep.episode ?: ""}", fontFamily = SFProFontFamily, fontSize = 12.sp, color = MediaColors.TextTertiary)
+        }
+    }
+    Box(Modifier.fillMaxWidth().height(0.5.dp).background(MediaColors.Border))
 }

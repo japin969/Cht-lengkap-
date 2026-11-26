@@ -2,113 +2,118 @@ package com.jayra.app.ui.anime
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.jayra.app.data.AnimeSearchItem
+import com.jayra.app.ui.media.MediaColors
+import com.jayra.app.ui.media.MediaDimens
+import com.jayra.app.ui.media.MediaStateView
+import com.jayra.app.ui.media.SectionHeader
+import com.jayra.app.ui.theme.SFProFontFamily
 
+/**
+ * AnimeHome — pola aplikasi anime terkenal (Crunchyroll/Netflix):
+ * TopBar "Anime" + search, hero banner anime unggulan, lalu baris
+ * "Sedang Tayang", "Populer", "Selesai".
+ */
 @Composable
 fun AnimeHomeScreen(
-    viewModel: AnimeViewModel = viewModel(),
-    onAnimeClick: (String) -> Unit
+    onAnimeClick: (String) -> Unit,
+    onSearchClick: () -> Unit,
+    onSeeAll: () -> Unit,
+    viewModel: AnimeViewModel = viewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        when {
-            state.isLoading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+    Column(Modifier.fillMaxSize().background(MediaColors.Bg)) {
+        Row(
+            Modifier.fillMaxWidth().statusBarsPadding().height(56.dp).padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Anime",
+                fontFamily = SFProFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                color = MediaColors.TextPrimary,
+                modifier = Modifier.weight(1f).padding(start = 4.dp)
+            )
+            Box(
+                Modifier.width(40.dp).height(40.dp).clip(RoundedCornerShape(12.dp))
+                    .background(MediaColors.SurfaceElevated).clickable { onSearchClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.Search, "Cari", tint = MediaColors.Anime, modifier = Modifier.width(22.dp))
             }
+        }
 
-            state.error != null && state.popular.isEmpty() && state.ongoing.isEmpty() && state.completed.isEmpty() -> {
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Gagal memuat anime",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = state.error ?: "Koneksi bermasalah",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Button(onClick = { viewModel.retry() }) { Text("Coba Lagi") }
-                }
-            }
+        MediaStateView(
+            isLoading = state.isLoading && state.popular.isEmpty(),
+            isEmpty = state.popular.isEmpty() && state.ongoing.isEmpty() && state.completed.isEmpty(),
+            error = state.error,
+            onRetry = { viewModel.retryHome() },
+            accent = MediaColors.Anime,
+            emptyTitle = "Belum ada anime",
+            emptySubtitle = "Daftar anime sedang kosong. Coba muat ulang."
+        ) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                val hero = state.ongoing.firstOrNull() ?: state.popular.firstOrNull()
+                if (hero != null) item { AnimeHeroBanner(hero) { onAnimeClick(it) } }
 
-            state.popular.isEmpty() && state.ongoing.isEmpty() && state.completed.isEmpty() -> {
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("Belum ada anime", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "Daftar anime sedang kosong. Coba muat ulang.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Button(onClick = { viewModel.retry() }) { Text("Coba Lagi") }
-                }
-            }
-
-            else -> {
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
-                    if (state.ongoing.isNotEmpty()) item {
-                        Text("Sedang Tayang", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(state.ongoing) { anime ->
-                                AnimePosterCard(anime) { onAnimeClick(it) }
-                            }
+                if (state.ongoing.isNotEmpty()) {
+                    item { SectionHeader("Sedang Tayang", MediaColors.Anime, onSeeAll = onSeeAll) }
+                    item {
+                        LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
+                            items(state.ongoing) { AnimePosterCard(it) { onAnimeClick(it) } }
                         }
                     }
-                    if (state.popular.isNotEmpty()) item {
-                        Text("Populer", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(state.popular) { anime ->
-                                AnimePosterCard(anime) { onAnimeClick(it) }
-                            }
+                }
+                if (state.popular.isNotEmpty()) {
+                    item { SectionHeader("Populer", MediaColors.Anime, onSeeAll = onSeeAll) }
+                    item {
+                        LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
+                            items(state.popular) { AnimePosterCard(it) { onAnimeClick(it) } }
                         }
                     }
-                    if (state.completed.isNotEmpty()) item {
-                        Text("Selesai", Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(state.completed) { anime ->
-                                AnimePosterCard(anime) { onAnimeClick(it) }
-                            }
+                }
+                if (state.completed.isNotEmpty()) {
+                    item { SectionHeader("Selesai", MediaColors.Anime, onSeeAll = onSeeAll) }
+                    item {
+                        LazyRow(contentPadding = PaddingValues(horizontal = MediaDimens.ScreenPadding), horizontalArrangement = Arrangement.spacedBy(MediaDimens.RowSpacing)) {
+                            items(state.completed) { AnimePosterCard(it) { onAnimeClick(it) } }
                         }
                     }
                 }
@@ -118,16 +123,17 @@ fun AnimeHomeScreen(
 }
 
 @Composable
-fun AnimePosterCard(anime: AnimeSearchItem, onClick: (String) -> Unit) {
-    Column(Modifier.width(120.dp).clickable { onClick(anime.link ?: "") }) {
-        AsyncImage(
-            model = anime.image,
-            contentDescription = anime.title,
-            modifier = Modifier.width(120.dp).height(180.dp).clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(anime.title ?: "Unknown", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 2)
-        Text(anime.latestEpisode ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun AnimeHeroBanner(item: AnimeSearchItem, onClick: (String) -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().padding(horizontal = MediaDimens.ScreenPadding).height(230.dp)
+            .clip(RoundedCornerShape(16.dp)).clickable { onClick(item.link ?: "") }
+    ) {
+        AsyncImage(model = item.image, contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.92f)))))
+        Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+            Text(item.title ?: "Anime Pilihan", fontFamily = SFProFontFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(6.dp))
+            Text("Tonton sekarang", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = MediaColors.Anime)
+        }
     }
 }
