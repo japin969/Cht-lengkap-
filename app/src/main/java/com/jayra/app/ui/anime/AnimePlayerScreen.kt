@@ -6,18 +6,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jayra.app.ui.media.MediaColors
-import com.jayra.app.ui.media.MediaVideoPlayer
+import com.jayra.app.ui.media.NativeVideoPlayer
 
 /**
- * AnimePlayer — resolve URL stream dari animekuindo (sankavollerei) via loadStream.
- * Kalau stream kosong/gagal → demo CC BY 3.0 (legal), tidak hitam.
- * Poster tidak disentuh.
+ * AnimePlayer — 100% NATIVE (ExoPlayer via NativeVideoPlayer). TANPA WebView.
+ * Player diambil dari VideoPlayerManager (singleton), tidak dibuat di Composable.
  */
 @Composable
 fun AnimePlayerScreen(
@@ -36,18 +34,9 @@ fun AnimePlayerScreen(
             CircularProgressIndicator(color = MediaColors.Anime)
         }
     } else {
-        val servers = remember(stream) {
-            listOf(
-                "Server 1 (Utama)" to stream,
-                "Server 2 (Demo CC)" to AnimeViewModel.SAMPLE_STREAM
-            )
-        }
-        MediaVideoPlayer(
+        NativeVideoPlayer(
             videoUrl = stream,
-            accent = MediaColors.Anime,
-            title = title,
-            onBack = onBack,
-            servers = servers
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

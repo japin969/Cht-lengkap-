@@ -1,8 +1,5 @@
 package com.jayra.app.ui.donghua
 
-import android.annotation.SuppressLint
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,17 +34,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jayra.app.ui.media.MediaColors
+import com.jayra.app.ui.media.NativeVideoPlayer
 import com.jayra.app.ui.theme.SFProFontFamily
 
 /**
- * DonghuaPlayer — server embed (ok.ru/rumble/dst) dibuka via WebView; mp4 langsung via ExoPlayer.
- * Loading jelas, error + retry + ganti server. Tidak hitam.
+ * DonghuaPlayer — 100% NATIVE (ExoPlayer via NativeVideoPlayer). TANPA WebView.
+ * Server embed (ok.ru/rumble) tidak bisa diputar native -> tampilkan error jelas
+ * + Retry + Ganti Server (bukan hitam, bukan WebView).
  */
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun DonghuaPlayerScreen(
     videoUrl: String,
@@ -57,88 +54,39 @@ fun DonghuaPlayerScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var currentUrl by remember(videoUrl) { mutableStateOf(videoUrl) }
-    var isLoading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
 
     LaunchedEffect(videoUrl) { viewModel.loadStream(videoUrl) }
-    // Sinkronkan currentUrl ke streamUrl hasil resolve (slug -> URL embed/mp4)
     LaunchedEffect(state.streamUrl) { state.streamUrl?.let { currentUrl = it } }
 
-    // Server dari state (jika ada), else pakai videoUrl.
     val servers = state.servers.ifEmpty { listOf("Server 1" to videoUrl) }
-    val activeUrl = currentUrl
-    val isEmbed = activeUrl.contains("ok.ru") || activeUrl.contains("rumble") ||
-        activeUrl.contains("d.tube") || activeUrl.contains("odysee") || activeUrl.contains("embed")
+    val isDirect = currentUrl.startsWith("http") &&
+        (currentUrl.contains(".mp4") || currentUrl.contains(".m3u8") ||
+            currentUrl.contains("googlevideo") || currentUrl.contains("commondatastorage"))
 
-    LaunchedEffect(activeUrl) { isLoading = true; failed = false }
+    LaunchedEffect(currentUrl) { failed = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        if (state.isLoading && state.streamUrl == null && !videoUrl.startsWith("http")) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MediaColors.Strem)
-            }
-        } else if (isEmbed) {
-            AndroidView(
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        setBackgroundColor(android.graphics.Color.BLACK)
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.mediaPlaybackRequiresUserGesture = false
-                        settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                isLoading = false
-                            }
-                            override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
-                                if (request?.isForMainFrame == true) { isLoading = false; failed = true }
-                            }
-                        }
-                        loadUrl(activeUrl)
-                    }
-                },
-                update = { it.loadUrl(activeUrl) },
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            // mp4 langsung → ExoPlayer
-            com.jayra.app.ui.media.MediaVideoPlayer(
-                videoUrl = activeUrl,
-                accent = MediaColors.Strem,
-                title = title,
-                onBack = onBack,
-                servers = servers
-            )
-        }
-
-        if (isLoading) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MediaColors.Strem)
-            }
-        }
-
-        if (failed) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.85f)), contentAlignment = Alignment.Center) {
-                Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Refresh, null, tint = MediaColors.Strem, modifier = Modifier.size(40.dp))
-                    Spacer(Modifier.height(12.dp))
-                    Text("Tidak bisa memutar", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color.White)
-                    Spacer(Modifier.height(20.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(MediaColors.Strem).clickable { failed = false; isLoading = true; currentUrl = activeUrl }.padding(horizontal = 20.dp, vertical = 10.dp)) {
-                            Text("Retry", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, color = Color.Black, fontSize = 14.sp)
-                        }
-                    }
-                    if (servers.size > 1) {
-                        Spacer(Modifier.height(14.dp))
-                        servers.forEach { (label, url) ->
-                            Text(label, fontFamily = SFProFontFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = MediaColors.Strem,
-                                modifier = Modifier.padding(vertical = 4.dp).clickable { currentUrl = url; failed = false; isLoading = true })
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text("Kembali", fontFamily = SFProFontFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color.White, modifier = Modifier.clickable { onBack() })
+        when {
+            state.isLoading && state.streamUrl == null && !videoUrl.startsWith("http") -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MediaColors.Strem)
                 }
+            }
+            isDirect -> {
+                NativeVideoPlayer(
+                    videoUrl = currentUrl,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            else -> {
+                NativeError(
+                    message = "Sumber embed tidak dapat diputar native. Pilih server lain (mp4/m3u8).",
+                    servers = servers,
+                    onRetry = { failed = false; currentUrl = videoUrl },
+                    onPick = { currentUrl = it },
+                    onBack = onBack
+                )
             }
         }
 
@@ -149,6 +97,42 @@ fun DonghuaPlayerScreen(
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Kembali", tint = Color.White, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+@Composable
+private fun NativeError(
+    message: String,
+    servers: List<Pair<String, String>>,
+    onRetry: () -> Unit,
+    onPick: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f)), contentAlignment = Alignment.Center) {
+        Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.Refresh, null, tint = MediaColors.Strem, modifier = Modifier.size(40.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("Tidak bisa memutar", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp, color = Color.White)
+            Spacer(Modifier.height(6.dp))
+            Text(message, fontFamily = SFProFontFamily, fontSize = 13.sp, color = Color(0xFFB0B0B8),
+                textAlign = TextAlign.Center)
+            Spacer(Modifier.height(18.dp))
+            Box(Modifier.clip(RoundedCornerShape(20.dp)).background(MediaColors.Strem).clickable { onRetry() }
+                .padding(horizontal = 20.dp, vertical = 10.dp)) {
+                Text("Retry", fontFamily = SFProFontFamily, fontWeight = FontWeight.SemiBold, color = Color.Black, fontSize = 14.sp)
+            }
+            if (servers.size > 1) {
+                Spacer(Modifier.height(14.dp))
+                servers.forEach { (label, url) ->
+                    Text(label, fontFamily = SFProFontFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp,
+                        color = MediaColors.Strem, modifier = Modifier.padding(vertical = 4.dp).clickable { onPick(url) })
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("Kembali", fontFamily = SFProFontFamily, fontWeight = FontWeight.Medium, fontSize = 14.sp,
+                color = Color.White, modifier = Modifier.clickable { onBack() })
         }
     }
 }
