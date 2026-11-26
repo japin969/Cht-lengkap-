@@ -61,17 +61,23 @@ fun DonghuaPlayerScreen(
     var failed by remember { mutableStateOf(false) }
 
     LaunchedEffect(videoUrl) { viewModel.loadStream(videoUrl) }
+    // Sinkronkan currentUrl ke streamUrl hasil resolve (slug -> URL embed/mp4)
+    LaunchedEffect(state.streamUrl) { state.streamUrl?.let { currentUrl = it } }
 
-    // Prioritas server dari state (jika ada), else pakai videoUrl.
+    // Server dari state (jika ada), else pakai videoUrl.
     val servers = state.servers.ifEmpty { listOf("Server 1" to videoUrl) }
-    val activeUrl = if (state.streamUrl != null) currentUrl else videoUrl
+    val activeUrl = currentUrl
     val isEmbed = activeUrl.contains("ok.ru") || activeUrl.contains("rumble") ||
         activeUrl.contains("d.tube") || activeUrl.contains("odysee") || activeUrl.contains("embed")
 
     LaunchedEffect(activeUrl) { isLoading = true; failed = false }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        if (isEmbed) {
+        if (state.isLoading && state.streamUrl == null && !videoUrl.startsWith("http")) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MediaColors.Strem)
+            }
+        } else if (isEmbed) {
             AndroidView(
                 factory = { ctx ->
                     WebView(ctx).apply {
