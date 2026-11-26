@@ -234,6 +234,7 @@ class MainViewModel(
         const val ROUTE_ANIME = "anime"
         const val ROUTE_COMIC = "comic"
         const val ROUTE_STREM = "strem"
+        const val ROUTE_NEKO = "neko"
     }
 }
 
@@ -726,6 +727,7 @@ private fun MainNavigationGraph(
                 onAnimeClick = { navController.navigate(MainViewModel.ROUTE_ANIME) },
                 onComicClick = { navController.navigate(MainViewModel.ROUTE_COMIC) },
                 onStremClick = { navController.navigate(MainViewModel.ROUTE_STREM) },
+                onNekoClick = { navController.navigate(MainViewModel.ROUTE_NEKO) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -748,6 +750,27 @@ private fun MainNavigationGraph(
         composable(MainViewModel.ROUTE_STREM) {
             com.jayra.app.ui.donghua.DonghuaFeature(
                 onExit = { navController.popBackStack() }
+            )
+        }
+
+        // ── FITUR NEKO (standalone, route sendiri) ──
+        composable(MainViewModel.ROUTE_NEKO) {
+            com.jayra.app.ui.neko.NekoScreen(
+                onBack = { navController.popBackStack() },
+                onNekoClick = { slug ->
+                    // buka detail nekopoi via WebView-free: route ke neko detail
+                    navController.navigate("neko_detail/$slug")
+                }
+            )
+        }
+        composable(
+            route = "neko_detail/{slug}",
+            arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType })
+        ) { entry ->
+            val slug = entry.arguments?.getString("slug") ?: ""
+            com.jayra.app.ui.neko.NekoDetailScreen(
+                slug = slug,
+                onBack = { navController.popBackStack() }
             )
         }
 

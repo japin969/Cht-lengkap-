@@ -99,7 +99,6 @@ fun AnimeNavGraph(
                 onSearchClick = { navController.navigate("anime_search") },
                 onSeeAll = { navController.navigate("anime_list/Semua Anime") },
                 onScheduleClick = { navController.navigate("anime_schedule") },
-                onNekoClick = { navController.navigate("anime_nekopoi") },
             )
         }
         composable("anime_search") {
@@ -170,12 +169,7 @@ fun AnimeNavGraph(
             )
         }
 
-        composable("anime_nekopoi") {
-            AnimeNekopoiScreen(
-                onBack = { navController.popBackStack() },
-                onNekoClick = { slug -> navController.navigate("anime_detail/$slug") }
-            )
-        }
+
 
     }
 }

@@ -46,6 +46,7 @@ fun HubScreen(
     onAnimeClick: () -> Unit,
     onComicClick: () -> Unit,
     onStremClick: () -> Unit,
+    onNekoClick: () -> Unit = {},
     onBack: () -> Unit
 ) {
     Column(
@@ -105,6 +106,13 @@ fun HubScreen(
                 icon = Icons.Rounded.Movie,
                 accent = MediaColors.Strem,
                 onClick = onStremClick
+            )
+            Spacer(Modifier.height(18.dp))
+            HubCard(
+                label = "neko",
+                icon = Icons.Rounded.AutoStories,
+                accent = MediaColors.Anime,
+                onClick = onNekoClick
             )
         }
     }

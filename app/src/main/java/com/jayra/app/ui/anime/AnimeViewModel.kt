@@ -10,8 +10,6 @@ import com.jayra.app.data.AnimeSearchItem
 import com.jayra.app.data.KuindoDay
 import com.jayra.app.data.KuindoGenre
 import com.jayra.app.data.KuindoItem
-import com.jayra.app.data.NekopoiApi
-import com.jayra.app.data.NkItem
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,9 +28,6 @@ data class AnimeUiState(
     val schedule: List<KuindoDay> = emptyList(),
     val genres: List<KuindoGenre> = emptyList(),
     val seasons: List<KuindoGenre> = emptyList(),
-    // nekopoi (card sendiri)
-    val nekoLatest: List<AnimeSearchItem> = emptyList(),
-    val nekoRecommended: List<AnimeSearchItem> = emptyList(),
     // list/search/detail/player
     val results: List<AnimeSearchItem> = emptyList(),
     val isLoadingMore: Boolean = false,
@@ -50,13 +45,11 @@ data class AnimeUiState(
  * AnimeViewModel — SEMUA sumber PARELAL (async), tidak ada fallback/hapus:
  *  - NexaDev (animasu)      -> ongoing/popular/completed
  *  - Animekuindo (sankavollerei) -> hero/latest/movie/schedule/genres/seasons
- *  - Nekopoi (sankavollerei)     -> nekoLatest/nekoRecommended (card sendiri)
  */
 class AnimeViewModel : ViewModel() {
 
     private val nexa = AnimeApi.create()
     private val kuindo = AnimeKuindoApi.create()
-    private val neko = NekopoiApi.create()
 
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
@@ -79,20 +72,15 @@ class AnimeViewModel : ViewModel() {
             val movieD = async { runCatching { kuindo.movie().body()?.data.orEmpty().map { it.toSearch() } }.getOrDefault(emptyList()) }
             val homeD = async { runCatching { kuindo.home().body()?.data }.getOrNull() }
 
-            val nekoHomeD = async { runCatching { neko.home().body()?.data }.getOrNull() }
-
             val popular = popularD.await()
             val ongoing = ongoingD.await()
             val completed = completedD.await()
             val latest = latestD.await()
             val movie = movieD.await()
             val hero = homeD.await()?.hero?.toSearch()
-            val nekoHome = nekoHomeD.await()
-            val nekoLatest = nekoHome?.latest.orEmpty().map { it.toSearch() }
-            val nekoRecommended = nekoHome?.recommended.orEmpty().map { it.toSearch() }
 
             val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty() ||
-                latest.isNotEmpty() || movie.isNotEmpty() || nekoLatest.isNotEmpty()
+                latest.isNotEmpty() || movie.isNotEmpty()
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 popular = popular,
@@ -101,8 +89,6 @@ class AnimeViewModel : ViewModel() {
                 latest = latest,
                 movie = movie,
                 hero = hero,
-                nekoLatest = nekoLatest,
-                nekoRecommended = nekoRecommended,
                 error = if (hasData) null else "Gagal memuat daftar anime"
             )
         }
@@ -236,25 +222,10 @@ class AnimeViewModel : ViewModel() {
         }
     }
 
-    // ── NEKO (card sendiri) ──
-    fun loadNeko() {
-        viewModelScope.launch {
-            val home = async { runCatching { neko.home().body()?.data }.getOrNull() }
-            val latest = async { runCatching { neko.latestHentai().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-            val h = home.await()
-            _uiState.value = _uiState.value.copy(
-                nekoLatest = latest.await().map { it.toSearch() },
-                nekoRecommended = h?.recommended.orEmpty().map { it.toSearch() }
-            )
-        }
-    }
 
     private fun KuindoItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
         title = title, link = slug, image = poster,
         latestEpisode = episode ?: status, type = type
-    )
-    private fun NkItem.toSearch(): AnimeSearchItem = AnimeSearchItem(
-        title = title, link = slug, image = thumbnail, latestEpisode = null, type = "Nekopoi"
     )
 
     companion object {
