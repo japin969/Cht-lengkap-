@@ -95,7 +95,7 @@ fun NekoScreen(
 }
 
 @Composable
-private fun NekoCard(item: AnimeSearchItem, onClick: (String) -> Unit) {
+fun NekoCard(item: AnimeSearchItem, onClick: (String) -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MediaColors.SurfaceElevated)
             .clickable { onClick(item.link ?: "") }.padding(10.dp),
