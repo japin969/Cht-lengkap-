@@ -2,10 +2,11 @@ package com.jayra.app.ui.donghua
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jayra.app.data.DhEpisodeLink
+import com.jayra.app.data.DhItem
+import com.jayra.app.data.DonghuaApi
 import com.jayra.app.data.DramaEpisode
 import com.jayra.app.data.DramaItem
-import com.jayra.app.data.TvmazeApi
-import com.jayra.app.data.TvmazeShow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -24,16 +25,17 @@ data class DonghuaUiState(
     val detail: DramaItem? = null,
     val episodes: List<DramaEpisode> = emptyList(),
     val streamUrl: String? = null,
+    val servers: List<Pair<String, String>> = emptyList(),
     val error: String? = null
 )
 
 /**
- * DonghuaViewModel — metadata TVMaze (SSL valid). Player memakai sample publik
- * agar donghua/drama selalu bisa diputar (tidak hitam).
+ * DonghuaViewModel — sumber resmi: https://www.sankavollerei.web.id (donghua).
+ * Player memakai embed server (ok.ru/rumble/dst) via WebView.
  */
 class DonghuaViewModel : ViewModel() {
 
-    private val api = TvmazeApi.create()
+    private val api = DonghuaApi.create()
     private val _uiState = MutableStateFlow(DonghuaUiState())
     val uiState: StateFlow<DonghuaUiState> = _uiState
 
@@ -43,10 +45,7 @@ class DonghuaViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val shows = api.shows(page = 0).body().orEmpty()
-                val items = shows
-                    .filter { !it.image?.original.isNullOrBlank() || !it.image?.medium.isNullOrBlank() }
-                    .map { it.toItem() }
+                val items = api.latest().body()?.latest_donghua.orEmpty().map { it.toItem() }
                 val third = (items.size / 3).coerceAtLeast(1)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -67,12 +66,11 @@ class DonghuaViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(isLoading = true, error = null, activeGenre = genre)
         viewModelScope.launch {
             try {
+                // Genre donghua → search teks (sumber tidak punya endpoint genre khusus).
                 val items: List<DramaItem> = if (genre != null) {
-                    api.search(genre).body().orEmpty().mapNotNull { it.show?.toItem() }
+                    api.search(genre).body()?.data.orEmpty().map { it.toItem() }
                 } else {
-                    api.shows(page = 0).body().orEmpty()
-                        .filter { !it.image?.original.isNullOrBlank() || !it.image?.medium.isNullOrBlank() }
-                        .map { it.toItem() }
+                    api.latest().body()?.latest_donghua.orEmpty().map { it.toItem() }
                 }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -94,7 +92,7 @@ class DonghuaViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val items = api.search(query).body().orEmpty().mapNotNull { it.show?.toItem() }
+                val items = api.search(query).body()?.data.orEmpty().map { it.toItem() }
                 _uiState.value = _uiState.value.copy(isLoading = false, results = items, error = if (items.isEmpty()) "Tidak ada hasil" else null)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = friendlyError(e))
@@ -104,24 +102,22 @@ class DonghuaViewModel : ViewModel() {
 
     fun retrySearch() = search(_uiState.value.query)
 
-    fun loadDetail(url: String) {
-        val id = url.toLongOrNull()
-        if (id == null) {
+    fun loadDetail(slug: String) {
+        if (slug.isBlank()) {
             _uiState.value = _uiState.value.copy(error = "Donghua tidak ditemukan")
             return
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val res = api.detail(id)
-                val show = res.body()
-                if (res.isSuccessful && show != null) {
+                val res = api.detail(slug)
+                val d = res.body()
+                if (res.isSuccessful && d != null && (d.title != null || d.poster != null)) {
+                    val eps = d.episodes_list.orEmpty().map { it.toEpisode() }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        detail = show.toItem(),
-                        episodes = show.embedded?.episodes.orEmpty().map { ep ->
-                            DramaEpisode(index = ep.number, name = ep.name, unlock = true, mp4 = null, videoUrl = id.toString())
-                        },
+                        detail = d.toItem(),
+                        episodes = eps,
                         error = null
                     )
                 } else {
@@ -133,37 +129,67 @@ class DonghuaViewModel : ViewModel() {
         }
     }
 
-    fun retryDetail(url: String) = loadDetail(url)
+    fun retryDetail(slug: String) = loadDetail(slug)
 
-    fun loadStream(episodeUrl: String?) {
-        val url = episodeUrl?.takeIf { it.startsWith("http") } ?: SAMPLE_STREAM
-        _uiState.value = _uiState.value.copy(streamUrl = url)
+    /**
+     * Ambil daftar server embed dari episode. URL embed (ok.ru/rumble) dibuka via WebView.
+     */
+    fun loadStream(episodeSlug: String?) {
+        if (episodeSlug.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(streamUrl = null, servers = emptyList())
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val res = api.episode(episodeSlug)
+                val ep = res.body()
+                val servers = buildList {
+                    ep?.streaming?.main_url?.let { add((it.name ?: "Server 1") to (it.url ?: "")) }
+                    ep?.streaming?.servers?.forEach { add((it.name ?: "Server") to (it.url ?: "")) }
+                }.filter { it.second.isNotBlank() }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    servers = servers,
+                    streamUrl = servers.firstOrNull()?.second,
+                    error = if (servers.isEmpty()) "Server streaming tidak tersedia" else null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = friendlyError(e))
+            }
+        }
     }
 
-    private fun TvmazeShow.toItem(): DramaItem = DramaItem(
-        id = id?.toString(),
-        title = name,
-        cover = image?.original ?: image?.medium,
-        intro = summary?.let { stripHtml(it) },
-        chapterCount = embedded?.episodes?.size,
-        url = id?.toString()
+    private fun DhItem.toItem(): DramaItem = DramaItem(
+        id = slug,
+        title = title,
+        cover = poster,
+        intro = null,
+        chapterCount = null,
+        url = slug
     )
 
-    private fun stripHtml(raw: String): String =
-        raw.replace(Regex("<[^>]*>"), "")
-            .replace("&nbsp;", " ").replace("&amp;", "&").replace("&quot;", "\"").trim()
+    private fun com.jayra.app.data.DonghuaDetailResponse.toItem(): DramaItem = DramaItem(
+        id = null,
+        title = title,
+        cover = poster,
+        intro = synopsis,
+        chapterCount = episodes_count?.toIntOrNull(),
+        url = null
+    )
 
+    private fun DhEpisodeLink.toEpisode(): DramaEpisode = DramaEpisode(
+        index = episode_number?.toIntOrNull(),
+        name = episode,
+        unlock = true,
+        mp4 = null,
+        videoUrl = slug
+    )
 
-    /** Pesan error koneksi yang jelas (tanpa membocorkan detail teknis / tanpa bypass SSL). */
     private fun friendlyError(e: Exception): String = when (e) {
         is SSLException -> "Koneksi tidak aman (SSL). Periksa tanggal/jam perangkat atau jaringan."
         is CertPathValidatorException -> "Sertifikat server tidak valid. Coba jaringan lain."
         is IOException -> "Tidak ada koneksi ke server. Periksa jaringan Anda."
         else -> e.localizedMessage ?: "Koneksi bermasalah"
-    }
-
-    companion object {
-        const val SAMPLE_STREAM =
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
     }
 }
