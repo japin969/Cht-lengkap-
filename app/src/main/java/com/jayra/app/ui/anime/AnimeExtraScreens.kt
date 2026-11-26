@@ -71,7 +71,9 @@ fun AnimeScheduleScreen(
                         Text(day.day ?: "", fontFamily = SFProFontFamily, fontWeight = FontWeight.Bold,
                             fontSize = 17.sp, color = MediaColors.Anime, modifier = Modifier.padding(vertical = 8.dp))
                     }
-                    items(day.anime_list.orEmpty()) { a -> AnimePosterCard(a) { onAnimeClick(it) } }
+                    items(day.anime_list.orEmpty()) { a ->
+                        AnimePosterCard(a.toSearchItem()) { onAnimeClick(it) }
+                    }
                 }
             }
         }
@@ -128,3 +130,11 @@ private fun AnimeExtraTopBar(title: String, onBack: () -> Unit) {
             color = MediaColors.TextPrimary, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
     }
 }
+private fun com.jayra.app.data.AnimeSankaItem.toSearchItem(): com.jayra.app.data.AnimeSearchItem =
+    com.jayra.app.data.AnimeSearchItem(
+        title = title,
+        link = animeId ?: slug,
+        image = poster,
+        latestEpisode = episodes?.let { "$it eps" },
+        type = null
+    )
