@@ -48,7 +48,8 @@ class DonghuaRepository {
                 }
             }
 
-            val (donghuaResult, donghubResult) = awaitAll(donghuaHome, donghubHome)
+            val donghuaResult = donghuaHome.await()
+            val donghubResult = donghubHome.await()
 
             val result = DonghuaHomeResult(
                 donghuaData = donghuaResult,
@@ -126,7 +127,8 @@ class DonghuaRepository {
                 }
             }
 
-            val (dResult, hResult) = awaitAll(donghuaSchedule, donghubSchedule)
+            val dResult = donghuaSchedule.await()
+            val hResult = donghubSchedule.await()
             val result = DonghuaScheduleResult(
                 donghuaData = dResult,
                 donghubData = hResult
@@ -157,7 +159,7 @@ class DonghuaRepository {
 
     // ═══════════════════════════════════════════
     // SEARCH
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
 
     suspend fun searchDonghua(keyword: String, page: Int = 1): DonghuaSearchResult {
         return try {
@@ -191,9 +193,9 @@ class DonghuaRepository {
         }
     }
 
-    // ════════════════════════════════════════════
+    // ═══════════════════════════════════════════
     // DETAIL & EPISODE
-    // ════════════════════════════════════════════
+    // ══════════════════════════════════════════
 
     suspend fun getDonghuaDetail(slug: String): DonghuaDetailResult {
         return try {
@@ -306,7 +308,8 @@ class DonghuaRepository {
             val donghua = async(Dispatchers.IO) { donghuaCall() }
             val donghub = async(Dispatchers.IO) { donghubCall() }
 
-            val (dResult, hResult) = awaitAll(donghua, donghub)
+            val dResult = donghua.await()
+            val hResult = donghub.await()
 
             val donghuaItems = dResult?.body()?.data?.list?.map { DonghuaCardItem.fromDonghua(it, DonghuaSource.DONGHUA) } ?: emptyList()
             val donghubItems = hResult?.body()?.data?.list?.map { DonghuaCardItem.fromDonghub(it, DonghuaSource.DONGHUB) } ?: emptyList()
