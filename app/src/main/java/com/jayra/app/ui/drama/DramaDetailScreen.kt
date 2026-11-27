@@ -99,7 +99,7 @@ fun DramaDetailScreen(
                 )
             }
             items(state.episodes) { ep ->
-                val isUnlocked = ep.unlock == true && ep.videoUrl != null
+                val isUnlocked = (ep.unlock != false) && (ep.mp4 != null || ep.videoUrl != null)
                 ListItem(
                     headlineContent = { Text(ep.name ?: "Episode ${ep.index}") },
                     supportingContent = { Text(if (isUnlocked) "Tersedia" else "Terkunci") },

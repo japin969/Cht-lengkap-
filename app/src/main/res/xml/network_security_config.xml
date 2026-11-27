@@ -16,6 +16,21 @@
         <domain includeSubdomains="true">api.nexadev.my.id</domain>
         <trust-anchors>
             <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+    <domain-config>
+        <domain includeSubdomains="true">apii.nexadev.my.id</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+    <domain-config>
+        <domain includeSubdomains="true">sankavollerei.web.id</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
         </trust-anchors>
     </domain-config>
 </network-security-config>
