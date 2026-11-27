@@ -1,7 +1,7 @@
 name: Build Jayra APK
 on:
   push:
-    branches: [main]
+    branches: [main, kilo/binary-electron-ghy]
   workflow_dispatch:
 jobs:
   build:
