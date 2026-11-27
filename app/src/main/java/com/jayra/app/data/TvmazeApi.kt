@@ -95,32 +95,6 @@ data class TvmazeEpisode(
     val number: Int? = null
 )
 
-/**
- * Extension functions to convert TVMaze models to Drama domain models
- */
-fun TvmazeShow.toDramaItem(): DramaItem = DramaItem(
-    id = id?.toString(),
-    title = name,
-    cover = image?.original ?: image?.medium,
-    intro = summary?.let { stripHtml(it) },
-    chapterCount = embedded?.episodes?.size,
-    url = id?.toString()
-)
-
-fun TvmazeShow.toDramaDetail(): DramaDetailResponse = DramaDetailResponse(
-    ok = true,
-    book = toDramaItem(),
-    episodes = embedded?.episodes?.map { ep ->
-        DramaEpisode(
-            index = ep.number,
-            name = ep.name,
-            unlock = false,
-            mp4 = null,
-            videoUrl = null
-        )
-    } ?: emptyList()
-)
-
 private fun stripHtml(html: String): String = html
     .replace(Regex("<[^>]*>"), "")
     .replace("&nbsp;", " ")

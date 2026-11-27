@@ -180,8 +180,8 @@ class MainViewModel(
             icon = Icons.Rounded.Movie
         ),
         NavItem(
-            route = ROUTE_DRAMA_HOME,
-            label = "Drama",
+            route = ROUTE_DONGHUA_HOME,
+            label = "Donghua",
             icon = Icons.Rounded.Tv
         ),
         NavItem(
@@ -231,14 +231,14 @@ class MainViewModel(
         const val ROUTE_CHAT_LIST = "chat_list"
         const val ROUTE_CALLS = "calls"
         const val ROUTE_MUSIC_HOME = "music_home"
-    const val ROUTE_DRAMA_HOME = "drama_home"
-    const val ROUTE_ANIME_HOME = "anime_home"
-    const val ROUTE_KOMIK_HOME = "komik_home"
-    const val ROUTE_NEKO_HOME = "neko_home"
-    const val ROUTE_NEKO_DETAIL = "neko_detail?url={url}"
-    const val ROUTE_DRAMA_DETAIL = "drama_detail?url={url}"
-    const val ROUTE_KOMIK_DETAIL = "komik_detail?slug={slug}"
-    const val ROUTE_KOMIK_READER = "komik_reader?slug={slug}"
+        const val ROUTE_ANIME_HOME = "anime_home"
+        const val ROUTE_DONGHUA_HOME = "donghua_home"
+        const val ROUTE_KOMIK_HOME = "komik_home"
+        const val ROUTE_NEKO_HOME = "neko_home"
+        const val ROUTE_NEKO_DETAIL = "neko_detail?url={url}"
+        const val ROUTE_DONGHUA_DETAIL = "donghua_detail?slug={slug}"
+        const val ROUTE_KOMIK_DETAIL = "komik_detail?slug={slug}"
+        const val ROUTE_KOMIK_READER = "komik_reader?slug={slug}"
         const val ROUTE_SETTINGS = "settings"
         const val ROUTE_GLOBAL_SEARCH = "global_search"
         const val ROUTE_COMMUNITIES = "communities"
@@ -249,7 +249,7 @@ class MainViewModel(
             ROUTE_CALLS,
             ROUTE_MUSIC_HOME,
             ROUTE_ANIME_HOME,
-            ROUTE_DRAMA_HOME,
+            ROUTE_DONGHUA_HOME,
             ROUTE_KOMIK_HOME,
             ROUTE_NEKO_HOME,
             ROUTE_SETTINGS
@@ -360,7 +360,7 @@ fun MainScreen(
                             "chat_list" -> 0
                             "calls" -> 1
                             "music_home" -> 2
-                            "drama_home", "vidhub" -> 3
+                            "donghua_home" -> 3
                             "settings" -> 4
                             else -> 0
                         },
@@ -369,7 +369,7 @@ fun MainScreen(
                                 0 -> "chat_list"
                                 1 -> "calls"
                                 2 -> "music_home"
-                                3 -> "drama_home"
+                                3 -> "donghua_home"
                                 4 -> "settings"
                                 else -> "chat_list"
                             }
@@ -748,11 +748,13 @@ private fun MainNavigationGraph(
             )
         }
 
-        composable("drama_home") {
-            com.jayra.app.ui.drama.DramaScreen(
-                onDramaClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("drama_detail?url=$encoded")
+        composable("donghua_home") {
+            com.jayra.app.ui.donghua.DonghuaHomeScreen(
+                onItemClick = { item ->
+                    navController.navigate("donghua_detail/${item.slug}?source=${item.source.name}")
+                },
+                onDetailClick = { slug, source ->
+                    navController.navigate("donghua_detail/$slug?source=${source.name}")
                 }
             )
         }
@@ -773,4 +775,32 @@ private fun MainNavigationGraph(
             )
         }
 
-        // Old VidHubScreen route removed - replaced with separate feature routes
+        composable(
+            route = "donghua_detail/{slug}",
+            arguments = listOf(navArgument("slug") { type = NavType.StringType })
+        ) {
+            val slug = getString("slug") ?: ""
+            val sourceStr = getString("source") ?: "DONGHUA"
+            val source = com.jayra.app.data.DonghuaSource.valueOf(sourceStr)
+            com.jayra.app.ui.donghua.DonghuaDetailScreen(
+                slug = slug,
+                source = source,
+                onPlayEpisode = { epSlug, epSource ->
+                    navController.navigate("donghua_player/${epSlug}?source=${epSource.name}")
+                }
+            )
+        }
+
+        composable(
+            route = "donghua_player/{slug}",
+            arguments = listOf(navArgument("slug") { type = NavType.StringType })
+        ) {
+            val slug = getString("slug") ?: ""
+            val sourceStr = getString("source") ?: "DONGHUA"
+            val source = com.jayra.app.data.DonghuaSource.valueOf(sourceStr)
+            com.jayra.app.ui.donghua.DonghuaPlayerScreen(
+                slug = slug,
+                source = source,
+                onBack = { navController.popBackStack() }
+            )
+        }

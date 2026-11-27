@@ -18,13 +18,6 @@ interface NexadevApi {
     @GET("api/spotify")
     suspend fun getSpotifyByUrl(@Query("url") url: String): Response<SpotifyResponse>
 
-
-    @GET("api/dramabox/home")
-    suspend fun getDramaHome(): Response<DramaHomeResponse>
-
-    @GET("api/dramabox/detail")
-    suspend fun getDramaDetail(@Query("url") url: String): Response<DramaDetailResponse>
-
     companion object {
         private const val BASE_URL = "https://api.nexadev.my.id/"
         private const val REFERRER = "https://nexadev.my.id/"

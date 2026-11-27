@@ -1,0 +1,653 @@
+package com.jayra.app.ui.donghua
+
+import androidx.compose.animation.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.stiffness
+import androidx.compose.animation.core.dampingRatio
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.FullscreenExit
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.Subscriptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.jayra.app.data.DonghuaSource
+import com.jayra.app.data.DonghuaStreamUrl
+import com.jayra.app.ui.video.NativeVideoPlayer
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.ui.theme.JayraBlue
+
+@Composable
+fun DonghuaDetailScreen(
+    slug: String,
+    source: DonghuaSource = DonghuaSource.DONGHUA,
+    viewModel: DonghuaViewModel = viewModel(),
+    onPlayEpisode: (String, DonghuaSource) -> Unit
+) {
+    val state by viewModel.uiState.collectAsState()
+    val glassSpec = remember(GlassEffectPrefs.enabledState.value) {
+        LiquidGlassSpecV2.forTier(GlassEffectPrefs.resolveTier(), isSystemInDarkTheme())
+    }
+
+    var playingEpisode by remember { mutableStateOf<DonghuaEpisodeItem?>(null) }
+    var streamUrl by remember { mutableStateOf<DonghuaStreamUrl?>(null) }
+
+    LaunchedEffect(slug) {
+        viewModel.loadDetail(slug, source)
+    }
+
+    // Fullscreen Video Player Overlay
+    if (playingEpisode != null && streamUrl != null) {
+        val ep = playingEpisode!!
+        val hasStreamUrl = streamUrl.streamUrl?.isNotBlank() == true
+
+        if (hasStreamUrl) {
+            NativeVideoPlayer(
+                videoUrl = streamUrl.streamUrl!!,
+                headers = streamUrl.headers,
+                title = "${state.detail?.title ?: "Donghua"} - ${ep.title ?: "Episode ${ep.episode}"}",
+                autoPlay = true,
+                onError = { error ->
+                    playingEpisode = null
+                    streamUrl = null
+                },
+                onCompletion = {
+                    playingEpisode = null
+                    streamUrl = null
+                }
+            )
+        } else {
+            // No video URL available
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    androidx.compose.material.Icon(
+                        imageVector = Icons.Rounded.ErrorOutlined,
+                        contentDescription = null,
+                        tint = Color.Red,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("Video tidak tersedia", color = Color.White, fontSize = 18.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Episode ini belum memiliki link streaming", color = Color.LightGray, fontSize = 14.sp)
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { playingEpisode = null; streamUrl = null },
+                        colors = ButtonDefaults.buttonColors(containerColor = JayraBlue)
+                    ) {
+                        Text("Tutup", color = Color.White)
+                    }
+                }
+            }
+        }
+    } else {
+        // Detail Screen with Bilibili style
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                // Hero Poster Section
+                item {
+                    HeroPosterSection(
+                        detail = state.detail,
+                        source = source,
+                        glassSpec = glassSpec,
+                        onPlayClick = { ep ->
+                            viewModel.loadStream(ep.slug, source)
+                        }
+                    )
+                }
+
+                // Info Section
+                item {
+                    InfoSection(
+                        detail = state.detail,
+                        glassSpec = glassSpec,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                    )
+                }
+
+                // Episode List
+                item {
+                    EpisodeListSection(
+                        episodes = state.detail?.episodes ?: emptyList(),
+                        onEpisodeClick = { ep ->
+                            playingEpisode = ep
+                            viewModel.loadStream(ep.slug, source)
+                        },
+                        glassSpec = glassSpec,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+
+                // Recommendations
+                state.detail?.recommend?.let { recommends ->
+                    if (recommends.isNotEmpty()) {
+                        item {
+                            RecommendationSection(
+                                items = recommends,
+                                onItemClick = { item ->
+                                    // Navigate to detail
+                                },
+                                glassSpec = glassSpec,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Observe stream URL
+    LaunchedEffect(state.streamUrl) {
+        streamUrl = state.streamUrl
+    }
+}
+
+// ═══════════════════════════════════════════
+// HERO POSTER SECTION
+// ═══════════════════════════════════════════
+
+@Composable
+fun HeroPosterSection(
+    detail: DonghuaDetailResult?,
+    source: DonghuaSource,
+    glassSpec: LiquidGlassSpecV2,
+    onPlayClick: (DonghuaEpisodeItem) -> Unit
+) {
+    val posterUrl = detail?.poster
+    val title = detail?.title ?: ""
+    val score = detail?.score
+    val totalEpisodes = detail?.totalEpisodes
+    val genres = detail?.genres.orEmpty()
+    val episodes = detail?.episodes ?: emptyList()
+    val latestEp = episodes.firstOrNull()?.episode ?: episodes.lastOrNull()?.episode ?: "1"
+    val nextEpNum = (latestEp.toIntOrNull() ?: 0) + 1
+
+    val aspectRatio = 0.666f // 2:3 poster ratio
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1 / aspectRatio)
+    ) {
+        // Poster Image
+        AsyncImage(
+            model = posterUrl,
+            contentDescription = title,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            placeholder = heroPlaceholder(),
+            error = heroErrorPlaceholder()
+        )
+
+        // Gradient Overlay
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomStart
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.4f),
+                                Color.Black.copy(alpha = 0.85f)
+                            )
+                        )
+                    )
+            )
+        }
+
+        // Content Overlay
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.Start
+        ) {
+            // Source Badge
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .background(if (source == DonghuaSource.DONGHUA) JayraBlue else Color.Purple.copy(alpha = 0.9f))
+                    .clip(RoundedCornerShape(16.dp))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = if (source == DonghuaSource.DONGHUA) Icons.Rounded.Tv else Icons.Rounded.Movie,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = if (source == DonghuaSource.DONGHUA) "Donghua" else "Donghub",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
+            // Title
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(8.dp))
+
+            // Meta Info Row
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Rating
+                score?.let { s ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Star,
+                            contentDescription = "Rating",
+                            tint = Color.Yellow,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "%.1f".format(s / 10.0),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Total Episodes
+                totalEpisodes?.let { total ->
+                    Text(
+                        text = "$total Episode",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 14.sp
+                    )
+                }
+
+                // Genres
+                if (genres.isNotEmpty()) {
+                    Text(
+                        text = genres.take(3).joinToString(" • "),
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
+            // Action Buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Play Button
+                val hasEpisodes = episodes.isNotEmpty()
+                val latestEp = episodes.firstOrNull() ?: episodes.lastOrNull()
+
+                Button(
+                    onClick = { latestEp?.let { onPlayClick(it) } },
+                    enabled = hasEpisodes,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = JayraBlue,
+                        disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.PlayArrow,
+                            contentDescription = "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (hasEpisodes) "Tonton Episode $nextEpNum" else "Tidak ada episode",
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
+                        )
+                    }
+                }
+
+                // Add to List Button
+                IconButton(
+                    onClick = { /* TODO: add to list */ },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = "Tambah ke daftar",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Share Button
+                IconButton(
+                    onClick = { /* TODO: share */ },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Share,
+                        contentDescription = "Bagikan",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+// INFO SECTION
+// ═══════════════════════════════════════════
+
+@Composable
+fun InfoSection(
+    detail: DonghuaDetailResult?,
+    glassSpec: LiquidGlassSpecV2,
+    modifier: Modifier = Modifier
+) {
+    val synopsis = detail?.synopsis ?: ""
+
+    GlassCard(
+        glassSpec = glassSpec,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Synopsis
+            if (synopsis.isNotBlank()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Sinopsis", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(synopsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            // Genres Chips
+            detail?.genres?.let { genres ->
+                if (genres.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Genre", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(genres) { genre ->
+                                Chip(
+                                    onClick = { /* filter by genre */ },
+                                    colors = ChipDefaults.chipColors(
+                                        containerColor = JayraBlue.copy(alpha = 0.15f),
+                                        selectedContainerColor = JayraBlue
+                                    )
+                                ) {
+                                    Text(genre, fontSize = 12.sp, color = JayraBlue)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+// EPISODE LIST SECTION
+// ═══════════════════════════════════════════
+
+@Composable
+fun EpisodeListSection(
+    episodes: List<DonghuaEpisodeItem>,
+    onEpisodeClick: (DonghuaEpisodeItem) -> Unit,
+    glassSpec: LiquidGlassSpecV2,
+    modifier: Modifier = Modifier
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Section Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Episode (${episodes.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("Terbaru", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        // Episode List - Reverse order (latest first)
+        val reversedEpisodes = episodes.reversed()
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(reversedEpisodes) { ep ->
+                EpisodeCard(
+                    episode = ep,
+                    onClick = { onEpisodeClick(ep) },
+                    glassSpec = glassSpec
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun EpisodeCard(
+    episode: DonghuaEpisodeItem,
+    onClick: () -> Unit,
+    glassSpec: LiquidGlassSpecV2,
+    modifier: Modifier = Modifier
+) {
+    var pressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.98f else 1f,
+        animationSpec = spring(stiffness = 300, dampingRatio = 20),
+        label = "episode_card_scale"
+    )
+    val elevation by animateFloatAsState(
+        targetValue = if (pressed) 2f else 6f,
+        animationSpec = spring(stiffness = 300, dampingRatio = 20),
+        label = "episode_card_elevation"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .shadow(elevation = elevation.dp, shape = RoundedCornerShape(12.dp), clip = true)
+            .clip(RoundedCornerShape(12.dp))
+            .pointerInput(Unit) {
+                androidx.compose.foundation.gestures.detectTapGestures(
+                    onPress = { pressed = true },
+                    onRelease = { pressed = false; onClick() },
+                    onCancel = { pressed = false }
+                )
+            }
+    ) {
+        GlassCard(
+            glassSpec = glassSpec,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Episode Info
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "Episode ${episode.episode ?: "?"}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    episode.title?.let { title ->
+                        if (title != "Episode ${episode.episode}") {
+                            Text(title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                // Play Indicator
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(JayraBlue)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = "Play",
+                        tint = Color.White,
+                        modifier = Modifier.align(Alignment.Center).size(20.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+// RECOMMENDATION SECTION
+// ═══════════════════════════════════════════
+
+@Composable
+fun RecommendationSection(
+    items: List<DonghuaCardItem>,
+    onItemClick: (DonghuaCardItem) -> Unit,
+    glassSpec: LiquidGlassSpecV2,
+    modifier: Modifier = Modifier
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Rekomendasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
+
+        LazyRow(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(items) { item ->
+                DonghuaCard(
+                    item = item,
+                    onClick = { onItemClick(item) },
+                    glassSpec = glassSpec
+                )
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+// PLACEHOLDERS
+// ═══════════════════════════════════════════
+
+@Composable
+private fun heroPlaceholder() = Box(
+    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant)
+) {
+    androidx.compose.material.Icon(
+        imageVector = Icons.Rounded.Movie,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+        modifier = Modifier.align(Alignment.Center).size(64.dp)
+    )
+}
+
+@Composable
+private fun heroErrorPlaceholder() = Box(
+    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer)
+) {
+    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        androidx.compose.material.Icon(imageVector = Icons.Rounded.BrokenImage, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(48.dp))
+        Spacer(Modifier.height(8.dp))
+        Text("Gagal memuat poster", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+    }
+}
+
+// ═══════════════════════════════════════════
+// GLASS CARD
+// ═══════════════════════════════════════════
+
+@Composable
+fun GlassCard(
+    glassSpec: LiquidGlassSpecV2,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .glassSurfaceV2(glassSpec.surface, solidColor = MaterialTheme.colorScheme.surface, cornerRadius = 16.dp)
+    ) {
+        content()
+    }
+}
+
+import androidx.compose.foundation.Arrangement
+import androidx.compose.foundation.gestures.detectTapGestures
