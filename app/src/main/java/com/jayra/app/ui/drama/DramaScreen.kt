@@ -34,36 +34,13 @@ fun DramaScreen(
     onDramaClick: (slug: String, source: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 Donghua, 1 Donghub
-    val tabs = listOf("Donghua", "Donghub")
+
+    // Satu fitur: gabungan Donghua + Donghub dalam satu feed.
+    val items = remember(state.donghua, state.donghub) {
+        state.donghua + state.donghub
+    }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // Tab bar — glass putih bening
-        Surface(
-            color = Color.White.copy(alpha = 0.92f),
-            shadowElevation = 0.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.primary
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = {
-                            Text(
-                                title,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium
-                            )
-                        }
-                    )
-                }
-            }
-        }
-
         when {
             state.isLoading -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -71,24 +48,19 @@ fun DramaScreen(
                 }
             }
 
-            (state.donghua.isEmpty() && state.donghub.isEmpty()) -> {
+            items.isEmpty() -> {
                 EmptyState(state.error) { viewModel.retry() }
             }
 
             else -> {
-                val items = if (selectedTab == 0) state.donghua else state.donghub
-                if (items.isEmpty()) {
-                    EmptyState("Belum ada data ${tabs[selectedTab]}") { viewModel.retry() }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(items) { drama ->
-                            VideoGridCard(drama) { onDramaClick(drama.slug ?: "", drama.source ?: "donghua") }
-                        }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(items) { drama ->
+                        VideoGridCard(drama) { onDramaClick(drama.slug ?: "", drama.source ?: "donghua") }
                     }
                 }
             }

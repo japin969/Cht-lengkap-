@@ -6,14 +6,13 @@ import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
 /**
- * StreamResolver — mengubah URL embed (ok.ru, dailymotion, dll) menjadi URL
- * media LANGSUNG (.m3u8 / .mp4) yang bisa diputar ExoPlayer/Media3 TANPA WebView.
+ * StreamResolver — mengubah URL embed (ok.ru, dll) menjadi URL media LANGSUNG
+ * (.m3u8 / .mp4) yang bisa diputar ExoPlayer/Media3 TANPA WebView.
  *
- * Saat ini fokus: ok.ru (sumber utama donghua). Resolusi dilakukan dengan
- * mengambil halaman embed ok.ru dan mengambil field hlsManifestUrl / videos[].url.
- *
- * Jika sumber tidak bisa di-resolve, mengembalikan null (UI menampilkan pesan
- * jelas, BUKAN layar hitam).
+ * PENTING: halaman embed ok.ru men-encode kutip sebagai entity HTML
+ * (`&quot;`) dan ampersand sebagai `\u0026`. Karena itu teks di-unescape
+ * DULU sebelum di-regex, kalau tidak field `hlsManifestUrl` tidak akan
+ * pernah cocok (inilah penyebab layar hitam sebelumnya).
  */
 object StreamResolver {
 
@@ -35,14 +34,21 @@ object StreamResolver {
     }
 
     private fun resolveOkru(url: String): String? {
-        val html = httpGet(url) ?: return null
-        // hlsManifestUrl":"https://...video.m3u8?...  (HTML entity &quot; / \u0026)
+        val raw = httpGet(url) ?: return null
+        // Unescape entity HTML dulu: &quot; -> " , \u0026 -> & , \/ -> /
+        val html = raw
+            .replace("&quot;", "\"")
+            .replace("\\u0026", "&")
+            .replace("\\/", "/")
+
+        // 1) HLS manifest (paling ideal untuk ExoPlayer)
         val hls = extractField(html, "hlsManifestUrl")
-        if (!hls.isNullOrBlank() && (hls.contains(".m3u8") || hls.contains("video.m3u8"))) {
+        if (!hls.isNullOrBlank() && hls.contains(".m3u8")) {
             return hls
         }
-        // fallback: videos[].url (mp4 progressive) — ambil yang "full"/"hd"
-        val vids = Pattern.compile("\"name\":\"(full|hd|sd)\",\"url\":\"([^\"]+)\"")
+
+        // 2) fallback: videos[].url (mp4 progressive) — utamakan full/hd
+        val vids = Pattern.compile("\"name\":\"(full|hd|sd|low|lowest|mobile)\",\"url\":\"([^\"]+)\"")
             .matcher(html)
         var fallback: String? = null
         while (vids.find()) {
@@ -55,15 +61,14 @@ object StreamResolver {
     }
 
     private fun resolveGeneric(url: String): String? {
-        val html = httpGet(url) ?: return null
-        // cari m3u8 / mp4 langsung di halaman
+        val raw = httpGet(url) ?: return null
+        val html = raw.replace("&quot;", "\"").replace("\\u0026", "&").replace("\\/", "/")
         val m = Pattern.compile("https?://[^\"'\\\\ ]+\\.(?:m3u8|mp4)[^\"'\\\\ ]*")
             .matcher(html)
         return if (m.find()) m.group(0) else null
     }
 
     private fun extractField(html: String, field: String): String? {
-        // pola: "field":"VALUE"  dengan VALUE bisa mengandung \u0026
         val p = Pattern.compile("\"$field\":\"([^\"]+)\"")
         val m = p.matcher(html)
         if (!m.find()) return null
@@ -79,6 +84,8 @@ object StreamResolver {
                 .url(url)
                 .header("User-Agent", UA)
                 .header("Referer", "https://ok.ru/")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
                 .build()
             client.newCall(req).execute().use { resp ->
                 if (resp.isSuccessful) resp.body?.string() else null
