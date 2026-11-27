@@ -8,7 +8,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
-import retrofit2.http.Query
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.util.concurrent.TimeUnit
@@ -28,7 +27,7 @@ interface DramaApi {
     suspend fun donghubMovie(): Response<DonghubListResponse>
 
     @GET("anime/donghub/schedule")
-    suspend fun donghubSchedule(): Response<DonghubListResponse>
+    suspend fun donghubSchedule(): Response<DonghubScheduleResponse>
 
     @GET("anime/donghub/search/{query}")
     suspend fun donghubSearch(@Path("query") query: String): Response<DonghubListResponse>
@@ -59,10 +58,16 @@ interface DramaApi {
     suspend fun donghuaLatest(): Response<DonghuaListResponse>
 
     @GET("anime/donghua/schedule")
-    suspend fun donghuaSchedule(): Response<DonghuaListResponse>
+    suspend fun donghuaSchedule(): Response<DonghuaScheduleResponse>
+
+    @GET("anime/donghua/az-list/{slug}")
+    suspend fun donghuaAzList(@Path("slug") slug: String): Response<DonghuaListResponse>
 
     @GET("anime/donghua/genres")
     suspend fun donghuaGenres(): Response<DonghuaGenresResponse>
+
+    @GET("anime/donghua/genres/{slug}")
+    suspend fun donghuaGenre(@Path("slug") slug: String): Response<DonghuaListResponse>
 
     @GET("anime/donghua/search/{keyword}")
     suspend fun donghuaSearch(@Path("keyword") keyword: String): Response<DonghuaListResponse>
@@ -92,76 +97,136 @@ interface DramaApi {
     }
 }
 
-// Generic container for lists of items
 @JsonClass(generateAdapter = true)
 data class DramaGenericItem(
     @Json(name = "title") val title: String? = null,
     @Json(name = "slug") val slug: String? = null,
-    @Json(name = "url") val url: String? = null,
     @Json(name = "poster") val poster: String? = null,
-    @Json(name = "image") val image: String? = null,
-    @Json(name = "cover") val cover: String? = null,
-    @Json(name = "thumbnail") val thumbnail: String? = null
+    @Json(name = "status") val status: String? = null,
+    @Json(name = "type") val type: String? = null,
+    @Json(name = "current_episode") val currentEpisode: String? = null,
+    @Json(name = "episode") val episode: String? = null,
+    @Json(name = "sub") val sub: String? = null,
+    @Json(name = "href") val href: String? = null
+)
+
+// Donghub responses
+@JsonClass(generateAdapter = true)
+data class DonghubHomeResponse(
+    @Json(name = "data") val data: DonghubHomeData? = null
 )
 
 @JsonClass(generateAdapter = true)
-data class DonghubHomeResponse(
-    @Json(name = "results") val results: List<DramaGenericItem>? = null,
-    @Json(name = "data") val data: List<DramaGenericItem>? = null
+data class DonghubHomeData(
+    @Json(name = "slider") val slider: List<DramaGenericItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class DonghubListResponse(
-    @Json(name = "results") val results: List<DramaGenericItem>? = null,
     @Json(name = "data") val data: List<DramaGenericItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghubScheduleResponse(
+    @Json(name = "data") val data: Map<String, List<DramaGenericItem>>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class DonghubDetailResponse(
+    @Json(name = "data") val data: DonghubDetailData? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghubDetailData(
     @Json(name = "title") val title: String? = null,
     @Json(name = "poster") val poster: String? = null,
-    @Json(name = "image") val image: String? = null,
     @Json(name = "synopsis") val synopsis: String? = null,
-    @Json(name = "episodes") val episodes: List<DramaGenericItem>? = null
+    @Json(name = "episodes") val episodes: List<DonghubEpisodeItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghubEpisodeItem(
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "slug") val slug: String? = null,
+    @Json(name = "episode") val episode: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class DonghubEpisodeResponse(
-    @Json(name = "videoUrl") val videoUrl: String? = null,
-    @Json(name = "url") val url: String? = null,
-    @Json(name = "stream") val stream: String? = null
+    @Json(name = "data") val data: DonghubEpisodeData? = null
 )
 
 @JsonClass(generateAdapter = true)
+data class DonghubEpisodeData(
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "streams") val streams: List<DonghubStream>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghubStream(
+    @Json(name = "server") val server: String? = null,
+    @Json(name = "url") val url: String? = null
+)
+
+// Donghua responses
+@JsonClass(generateAdapter = true)
 data class DonghuaHomeResponse(
-    @Json(name = "results") val results: List<DramaGenericItem>? = null,
-    @Json(name = "data") val data: List<DramaGenericItem>? = null
+    @Json(name = "latest_release") val latestRelease: List<DramaGenericItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class DonghuaListResponse(
-    @Json(name = "results") val results: List<DramaGenericItem>? = null,
+    @Json(name = "latest_donghua") val latestDonghua: List<DramaGenericItem>? = null,
+    @Json(name = "ongoing_donghua") val ongoingDonghua: List<DramaGenericItem>? = null,
+    @Json(name = "completed_donghua") val completedDonghua: List<DramaGenericItem>? = null,
     @Json(name = "data") val data: List<DramaGenericItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghuaScheduleResponse(
+    @Json(name = "schedule") val schedule: Map<String, List<DramaGenericItem>>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class DonghuaDetailResponse(
     @Json(name = "title") val title: String? = null,
     @Json(name = "poster") val poster: String? = null,
-    @Json(name = "image") val image: String? = null,
+    @Json(name = "cover") val cover: String? = null,
     @Json(name = "synopsis") val synopsis: String? = null,
-    @Json(name = "episodes") val episodes: List<DramaGenericItem>? = null
+    @Json(name = "episodes_list") val episodesList: List<DonghuaEpisodeItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghuaEpisodeItem(
+    @Json(name = "episode") val episode: String? = null,
+    @Json(name = "episode_number") val episodeNumber: String? = null,
+    @Json(name = "slug") val slug: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class DonghuaEpisodeResponse(
-    @Json(name = "videoUrl") val videoUrl: String? = null,
-    @Json(name = "url") val url: String? = null,
-    @Json(name = "stream") val stream: String? = null
+    @Json(name = "streaming") val streaming: DonghuaStreaming? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghuaStreaming(
+    @Json(name = "main_url") val mainUrl: DonghuaStreamUrl? = null,
+    @Json(name = "servers") val servers: List<DonghuaStreamUrl>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghuaStreamUrl(
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "url") val url: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class DonghuaGenresResponse(
-    @Json(name = "results") val results: List<DramaGenericItem>? = null,
-    @Json(name = "data") val data: List<DramaGenericItem>? = null
+    @Json(name = "data") val data: List<DonghuaGenreItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghuaGenreItem(
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "slug") val slug: String? = null
 )

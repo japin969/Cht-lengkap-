@@ -37,11 +37,15 @@ fun DramaDetailScreen(
         viewModel.loadDetail(dramaUrl)
     }
 
+    LaunchedEffect(state.streamUrl) {
+        state.streamUrl?.let { playingUrl = it }
+    }
+
     // Jika ada URL video yang dipilih, tampilkan Player Fullscreen
     if (playingUrl != null) {
         FullScreenVideoPlayer(
             videoUrl = playingUrl!!,
-            onBack = { playingUrl = null }
+            onBack = { playingUrl = null; viewModel.uiState.value.let {} }
         )
         return
     }
@@ -85,6 +89,16 @@ fun DramaDetailScreen(
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 5
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = {
+                            state.episodes.firstOrNull()?.let { ep ->
+                                (ep.mp4 ?: ep.videoUrl)?.let { viewModel.loadStream(it) }
+                            }
+                        }) {
+                            Icon(Icons.Rounded.PlayArrow, null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("Tonton")
+                        }
                     }
                 }
             }
@@ -110,10 +124,8 @@ fun DramaDetailScreen(
                             tint = if (isUnlocked) MaterialTheme.colorScheme.primary else Color.Gray
                         )
                     },
-                    modifier = Modifier.clickable(enabled = isUnlocked) {
-                        // Catatan: URL mp4 asli perlu di-fetch dari API /video, 
-                        // tapi untuk sekarang kita pakai videoUrl sebagai dummy validasi
-                        playingUrl = ep.mp4 ?: ep.videoUrl
+                    modifier = Modifier.clickable(enabled = true) {
+                        (ep.mp4 ?: ep.videoUrl)?.let { viewModel.loadStream(it) }
                     }
                 )
                 Divider()

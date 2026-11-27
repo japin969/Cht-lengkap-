@@ -6,6 +6,8 @@ import com.jayra.app.data.DramaApi
 import com.jayra.app.data.DramaEpisode
 import com.jayra.app.data.DramaItem
 import com.jayra.app.data.DramaGenericItem
+import com.jayra.app.data.DonghuaDetailResponse
+import com.jayra.app.data.DonghubDetailResponse
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +19,8 @@ data class DramaUiState(
     val featured: List<DramaItem> = emptyList(),
     val detail: DramaItem? = null,
     val episodes: List<DramaEpisode> = emptyList(),
+    val streamUrl: String? = null,
+    val isLoadingStream: Boolean = false,
     val error: String? = null
 )
 
@@ -31,10 +35,10 @@ class DramaViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val donghuaHome = async { runCatching { api.donghuaHome().body()?.results ?: api.donghuaHome().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-                val donghubHome = async { runCatching { api.donghubHome().body()?.results ?: api.donghubHome().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-                val donghuaLatest = async { runCatching { api.donghuaLatest().body()?.results ?: api.donghuaLatest().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
-                val donghubLatest = async { runCatching { api.donghubLatest().body()?.results ?: api.donghubLatest().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
+                val donghuaHome = async { runCatching { api.donghuaHome().body()?.latestRelease.orEmpty() }.getOrDefault(emptyList()) }
+                val donghubHome = async { runCatching { api.donghubHome().body()?.data?.slider.orEmpty() }.getOrDefault(emptyList()) }
+                val donghuaLatest = async { runCatching { api.donghuaLatest().body()?.latestDonghua.orEmpty() }.getOrDefault(emptyList()) }
+                val donghubLatest = async { runCatching { api.donghubLatest().body()?.data.orEmpty() }.getOrDefault(emptyList()) }
 
                 val all = awaitAll(donghuaHome, donghubHome, donghuaLatest, donghubLatest).flatten()
                 val items = all.map { it.toDramaItem() }.distinctBy { it.url ?: it.id ?: it.title }
@@ -56,47 +60,50 @@ class DramaViewModel : ViewModel() {
 
     fun loadDetail(url: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, streamUrl = null)
             try {
                 val dh = async { runCatching { api.donghuaDetail(url).body() }.getOrNull() }
                 val db = async { runCatching { api.donghubDetail(url).body() }.getOrNull() }
                 val (d1, d2) = awaitAll(dh, db)
-                val detail = d1 ?: d2
-                if (detail != null) {
-                    val title = when (detail) {
-                        is com.jayra.app.data.DonghuaDetailResponse -> detail.title
-                        is com.jayra.app.data.DonghubDetailResponse -> detail.title
-                        else -> null
-                    }
-                    val poster = when (detail) {
-                        is com.jayra.app.data.DonghuaDetailResponse -> detail.poster ?: detail.image
-                        is com.jayra.app.data.DonghubDetailResponse -> detail.poster ?: detail.image
-                        else -> null
-                    }
-                    val synopsis = when (detail) {
-                        is com.jayra.app.data.DonghuaDetailResponse -> detail.synopsis
-                        is com.jayra.app.data.DonghubDetailResponse -> detail.synopsis
-                        else -> null
-                    }
-                    val episodes = when (detail) {
-                        is com.jayra.app.data.DonghuaDetailResponse -> detail.episodes
-                        is com.jayra.app.data.DonghubDetailResponse -> detail.episodes
-                        else -> null
-                    }
+                if (d1 != null) {
                     val item = DramaItem(
                         id = url,
-                        title = title,
-                        cover = poster,
-                        intro = synopsis,
+                        title = d1.title,
+                        cover = d1.poster ?: d1.cover,
+                        intro = d1.synopsis,
                         url = url
                     )
-                    val eps = episodes.orEmpty().mapIndexed { i, e ->
+                    val eps = d1.episodesList.orEmpty().mapIndexed { i, e ->
+                        DramaEpisode(
+                            index = e.episodeNumber?.toIntOrNull() ?: (i + 1),
+                            name = e.episode,
+                            unlock = true,
+                            mp4 = e.slug,
+                            videoUrl = e.slug
+                        )
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        detail = item,
+                        episodes = eps,
+                        error = null
+                    )
+                } else if (d2 != null) {
+                    val dd = d2.data
+                    val item = DramaItem(
+                        id = url,
+                        title = dd?.title,
+                        cover = dd?.poster,
+                        intro = dd?.synopsis,
+                        url = url
+                    )
+                    val eps = dd?.episodes.orEmpty().mapIndexed { i, e ->
                         DramaEpisode(
                             index = i + 1,
                             name = e.title,
                             unlock = true,
-                            mp4 = e.url ?: e.slug,
-                            videoUrl = e.url ?: e.slug
+                            mp4 = e.slug,
+                            videoUrl = e.slug
                         )
                     }
                     _uiState.value = _uiState.value.copy(
@@ -120,12 +127,35 @@ class DramaViewModel : ViewModel() {
         }
     }
 
+    fun loadStream(slug: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingStream = true, streamUrl = null)
+            try {
+                val dh = async { runCatching { api.donghuaEpisode(slug).body() }.getOrNull() }
+                val db = async { runCatching { api.donghubEpisode(slug).body() }.getOrNull() }
+                val (d1, d2) = awaitAll(dh, db)
+                val url = d1?.streaming?.mainUrl?.url
+                    ?: d1?.streaming?.servers?.firstOrNull()?.url
+                    ?: d2?.data?.streams?.firstOrNull()?.url
+                _uiState.value = _uiState.value.copy(
+                    isLoadingStream = false,
+                    streamUrl = url
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoadingStream = false,
+                    error = e.localizedMessage ?: "Gagal memuat stream"
+                )
+            }
+        }
+    }
+
     private fun DramaGenericItem.toDramaItem(): DramaItem = DramaItem(
-        id = slug ?: url ?: title,
+        id = slug ?: title,
         title = title,
-        cover = poster ?: image ?: cover ?: thumbnail,
+        cover = poster,
         intro = null,
         chapterCount = null,
-        url = slug ?: url
+        url = slug
     )
 }
