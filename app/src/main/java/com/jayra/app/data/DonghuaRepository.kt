@@ -33,36 +33,26 @@ class DonghuaRepository {
             val donghuaHome = async(Dispatchers.IO) {
                 try {
                     val response = api.home(1)
-                    if (response.isSuccessful) {
-                        ApiResult.Success(response.body())
-                    } else {
-                        ApiResult.Failure("Donghua home: HTTP ${response.code()}")
-                    }
+                    response.body()
                 } catch (e: Exception) {
-                    ApiResult.Failure("Donghua home: ${e.message}")
+                    null
                 }
             }
 
             val donghubHome = async(Dispatchers.IO) {
                 try {
                     val response = api.donghubHome()
-                    if (response.isSuccessful) {
-                        ApiResult.Success(response.body())
-                    } else {
-                        ApiResult.Failure("Donghub home: HTTP ${response.code()}")
-                    }
+                    response.body()
                 } catch (e: Exception) {
-                    ApiResult.Failure("Donghub home: ${e.message}")
+                    null
                 }
             }
 
             val (donghuaResult, donghubResult) = awaitAll(donghuaHome, donghubHome)
 
             val result = DonghuaHomeResult(
-                donghuaData = donghuaResult.getOrNull(),
-                donghubData = donghubResult.getOrNull(),
-                donghuaError = donghuaResult.exceptionOrNull()?.message,
-                donghubError = donghubResult.exceptionOrNull()?.message
+                donghuaData = donghuaResult,
+                donghubData = donghubResult
             )
 
             putCache(cacheKey, result)
@@ -86,7 +76,7 @@ class DonghuaRepository {
         return fetchSection(
             cacheKey = "donghua_completed_$page",
             donghuaCall = { api.completed(page) },
-            donghubCall = { Result.Success(null) }
+            donghubCall = { null }
         )
     }
 
@@ -101,7 +91,7 @@ class DonghuaRepository {
     suspend fun getPopular(page: Int = 1): DonghuaSectionResult {
         return fetchSection(
             cacheKey = "donghua_popular_$page",
-            donghuaCall = { Result.Success(null) },
+            donghuaCall = { null },
             donghubCall = { api.donghubPopular() }
         )
     }
@@ -109,7 +99,7 @@ class DonghuaRepository {
     suspend fun getMovies(page: Int = 1): DonghuaSectionResult {
         return fetchSection(
             cacheKey = "donghua_movies_$page",
-            donghuaCall = { Result.Success(null) },
+            donghuaCall = { null },
             donghubCall = { api.donghubMovie() }
         )
     }
@@ -122,34 +112,24 @@ class DonghuaRepository {
         return coroutineScope {
             val donghuaSchedule = async(Dispatchers.IO) {
                 try {
-                    val response = api.schedule()
-                    if (response.isSuccessful) {
-                        ApiResult.Success(response.body())
-                    } else {
-                        ApiResult.Failure("Donghua schedule: HTTP ${response.code()}")
-                    }
+                    api.schedule().body()
                 } catch (e: Exception) {
-                    ApiResult.Failure("Donghua schedule: ${e.message}")
+                    null
                 }
             }
 
             val donghubSchedule = async(Dispatchers.IO) {
                 try {
-                    val response = api.donghubSchedule()
-                    if (response.isSuccessful) {
-                        ApiResult.Success(response.body())
-                    } else {
-                        ApiResult.Failure("Donghub schedule: HTTP ${response.code()}")
-                    }
+                    api.donghubSchedule().body()
                 } catch (e: Exception) {
-                    ApiResult.Failure("Donghub schedule: ${e.message}")
+                    null
                 }
             }
 
             val (dResult, hResult) = awaitAll(donghuaSchedule, donghubSchedule)
             val result = DonghuaScheduleResult(
-                donghuaData = dResult.getOrNull(),
-                donghubData = hResult.getOrNull()
+                donghuaData = dResult,
+                donghubData = hResult
             )
             putCache(cacheKey, result)
             result
@@ -333,9 +313,7 @@ class DonghuaRepository {
 
             val result = DonghuaSectionResult(
                 donghuaItems = donghuaItems,
-                donghubItems = donghubItems,
-                donghuaError = if (dResult.getOrNull()?.isSuccessful != true) dResult.getOrNull()?.let { "HTTP ${it.code()}" } ?: "Unknown error" else null,
-                donghubError = if (hResult.getOrNull()?.isSuccessful != true) hResult.getOrNull()?.let { "HTTP ${it.code()}" } ?: "Unknown error" else null
+                donghubItems = donghubItems
             )
 
             putCache(cacheKey, result)
@@ -359,23 +337,12 @@ class DonghuaRepository {
 }
 
 // ═══════════════════════════════════════════
-// API RESULT
-// ═══════════════════════════════════════════
-
-sealed class ApiResult<out T> {
-    data class Success<out T>(val value: T?) : ApiResult<T>()
-    data class Failure(val error: String) : ApiResult<Nothing>()
-}
-
-// ═══════════════════════════════════════════
 // RESULT CLASSES
 // ═══════════════════════════════════════════
 
 data class DonghuaHomeResult(
     val donghuaData: DonghuaHomeResponse?,
-    val donghubData: DonghubHomeResponse?,
-    val donghuaError: String? = null,
-    val donghubError: String? = null
+    val donghubData: DonghubHomeResponse?
 ) {
     val hasAnyData: Boolean
         get() = (donghuaData?.data?.ongoing?.isNotEmpty() == true) ||
@@ -385,9 +352,7 @@ data class DonghuaHomeResult(
 
 data class DonghuaSectionResult(
     val donghuaItems: List<DonghuaCardItem> = emptyList(),
-    val donghubItems: List<DonghuaCardItem> = emptyList(),
-    val donghuaError: String? = null,
-    val donghubError: String? = null
+    val donghubItems: List<DonghuaCardItem> = emptyList()
 ) {
     val allItems: List<DonghuaCardItem>
         get() = donghuaItems + donghubItems
