@@ -7,15 +7,19 @@ import androidx.compose.ui.Modifier
 import com.jayra.app.ui.drama.DramaScreen
 import com.jayra.app.ui.anime.AnimeHomeScreen
 import com.jayra.app.ui.komik.KomikHomeScreen
+import com.jayra.app.ui.anime.DonghuaHomeScreen
+import com.jayra.app.ui.anime.DonghubHomeScreen
 
 @Composable
 fun VidHubScreen(
     onDramaClick: (String) -> Unit,
     onAnimeClick: (String) -> Unit,
-    onKomikClick: (String) -> Unit
+    onKomikClick: (String) -> Unit,
+    onDonghuaClick: (String) -> Unit = {},
+    onDonghubClick: (String) -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Drama", "Anime", "Komik")
+    val tabs = listOf("Drama", "Anime", "Komik", "Donghua", "Donghub")
 
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTab) {
@@ -32,6 +36,8 @@ fun VidHubScreen(
             0 -> DramaScreen(onDramaClick = onDramaClick)
             1 -> AnimeHomeScreen(onAnimeClick = onAnimeClick)
             2 -> KomikHomeScreen(onKomikClick = onKomikClick)
+            3 -> DonghuaHomeScreen(onDonghuaClick = onDonghuaClick)
+            4 -> DonghubHomeScreen(onDonghubClick = onDonghubClick)
         }
     }
 }
