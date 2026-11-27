@@ -62,18 +62,21 @@ class DramaViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, streamUrl = null)
             try {
-                val dh = async { runCatching { api.donghuaDetail(url).body() }.getOrNull() }
-                val db = async { runCatching { api.donghubDetail(url).body() }.getOrNull() }
-                val (d1, d2) = awaitAll(dh, db)
+                val d1 = async { runCatching { api.donghuaDetail(url).body() }.getOrNull() }.await()
+                val d2 = async { runCatching { api.donghubDetail(url).body() }.getOrNull() }.await()
                 if (d1 != null) {
+                    val title = d1.title
+                    val cover = d1.poster ?: d1.cover
+                    val synopsis = d1.synopsis
+                    val epsList = d1.episodesList
                     val item = DramaItem(
                         id = url,
-                        title = d1.title,
-                        cover = d1.poster ?: d1.cover,
-                        intro = d1.synopsis,
+                        title = title,
+                        cover = cover,
+                        intro = synopsis,
                         url = url
                     )
-                    val eps = d1.episodesList.orEmpty().mapIndexed { i, e ->
+                    val eps = epsList.orEmpty().mapIndexed { i, e ->
                         DramaEpisode(
                             index = e.episodeNumber?.toIntOrNull() ?: (i + 1),
                             name = e.episode,
@@ -131,9 +134,8 @@ class DramaViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingStream = true, streamUrl = null)
             try {
-                val dh = async { runCatching { api.donghuaEpisode(slug).body() }.getOrNull() }
-                val db = async { runCatching { api.donghubEpisode(slug).body() }.getOrNull() }
-                val (d1, d2) = awaitAll(dh, db)
+                val d1 = async { runCatching { api.donghuaEpisode(slug).body() }.getOrNull() }.await()
+                val d2 = async { runCatching { api.donghubEpisode(slug).body() }.getOrNull() }.await()
                 val url = d1?.streaming?.mainUrl?.url
                     ?: d1?.streaming?.servers?.firstOrNull()?.url
                     ?: d2?.data?.streams?.firstOrNull()?.url
