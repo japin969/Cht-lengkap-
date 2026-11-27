@@ -128,7 +128,7 @@ object VideoPlayerManager {
 
         val trackSelector = DefaultTrackSelector(context)
         val loadControl = DefaultLoadControl.Builder()
-            .setAllocator(DefaultAllocator(true, BUFFER_SEGMENT_SIZE))
+            .setAllocator(DefaultAllocator(true, BUFFER_SEGMENT_SIZE.toLong()))
             .setBufferDurationsMs(MIN_BUFFER_MS, MAX_BUFFER_MS, BUFFER_DURATION_MS, BUFFER_DURATION_MS)
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
@@ -137,7 +137,7 @@ object VideoPlayerManager {
             .setTrackSelector(trackSelector)
             .setLoadControl(loadControl)
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(dataSourceFactory!!)
+                DefaultMediaSourceFactory(dataSourceFactory())
             )
             .build()
 

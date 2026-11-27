@@ -8,18 +8,29 @@ import androidx.compose.animation.core.dampingRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focus.LocalFocusManager
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.ImeAction
+import androidx.compose.foundation.text.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.ErrorOutlined
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -151,7 +162,7 @@ fun AnimeHomeScreen(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // TOP SEARCH BAR (DeepSeek/ChatGPT Style)
 // ═════════════════════════════════════════════════════════════════
 
@@ -234,7 +245,7 @@ fun TopSearchBar(
     }
 }
 
-// ════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
 // GENRE FILTER CHIPS
 // ════════════════════════════════════════════════════════════════
 
@@ -300,9 +311,9 @@ fun GenreChip(
     }
 }
 
-// ════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
 // CONTENT SECTION (Spring Animated Cards)
-// ════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════
 
 @Composable
 fun ContentSection(
@@ -427,7 +438,7 @@ fun SpringAnimeCard(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // ERROR & EMPTY STATES (Glass Style)
 // ═════════════════════════════════════════════════════════════════
 
@@ -457,7 +468,7 @@ fun ErrorState(
                     verticalArrangement = Arrangement.Center
                 ) {
                     androidx.compose.material.Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Rounded.ErrorOutlined,
+                        imageVector = Icons.Rounded.ErrorOutlined,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(48.dp)
@@ -541,7 +552,7 @@ fun GlassCard(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // PLACEHOLDERS
 // ═════════════════════════════════════════════════════════════════
 
@@ -553,7 +564,7 @@ private fun placeholder() = Box(
         .background(MaterialTheme.colorScheme.surfaceVariant)
 ) {
     androidx.compose.material.Icon(
-        imageVector = androidx.compose.material.icons.Icons.Rounded.Image,
+        imageVector = Icons.Rounded.Image,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
         modifier = Modifier.align(Alignment.Center)
@@ -573,7 +584,7 @@ private fun errorPlaceholder() = Box(
         verticalArrangement = Arrangement.Center
     ) {
         androidx.compose.material.Icon(
-            imageVector = androidx.compose.material.icons.Icons.Rounded.BrokenImage,
+            imageVector = Icons.Rounded.BrokenImage,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onErrorContainer
         )
@@ -584,3 +595,33 @@ private fun errorPlaceholder() = Box(
 
 import androidx.compose.foundation.Arrangement
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.focus.LocalFocusManager
+import androidx.compose.foundation.text.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.TextFieldDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ErrorOutlined
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.jayra.app.data.AnimeSearchItem
+import com.jayra.app.util.glassSurfaceV2
+import com.jayra.app.ui.theme.LiquidGlassSpecV2
+import com.jayra.app.util.GlassEffectPrefs

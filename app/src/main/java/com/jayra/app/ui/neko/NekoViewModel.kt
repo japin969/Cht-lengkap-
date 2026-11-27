@@ -6,10 +6,10 @@ import com.jayra.app.data.NekoApi
 import com.jayra.app.data.NekoDetailData
 import com.jayra.app.data.NekoEpisode
 import com.jayra.app.data.NekoItem
-import com.jayra.app.data.NekoSearchItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.coroutines.runCatching
 
 data class NekoUiState(
     val isLoading: Boolean = false,
@@ -37,13 +37,13 @@ class NekoViewModel : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val popular = runCatching {
-                    api.popular(on = 1, page = 1).body()?.data?.animeList.orEmpty()
+                    api.popular(page = 1).body()?.data?.animeList.orEmpty()
                 }.getOrDefault(emptyList())
                 val ongoing = runCatching {
-                    api.ongoing(on = 1, page = 1).body()?.data?.animeList.orEmpty()
+                    api.ongoing(page = 1).body()?.data?.animeList.orEmpty()
                 }.getOrDefault(emptyList())
                 val completed = runCatching {
-                    api.completed(on = 1, page = 1).body()?.data?.animeList.orEmpty()
+                    api.completed(page = 1).body()?.data?.animeList.orEmpty()
                 }.getOrDefault(emptyList())
 
                 val hasData = popular.isNotEmpty() || ongoing.isNotEmpty() || completed.isNotEmpty()

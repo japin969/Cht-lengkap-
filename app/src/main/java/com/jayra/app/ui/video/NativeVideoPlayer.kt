@@ -2,13 +2,13 @@ package com.jayra.app.ui.video
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +26,9 @@ import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +55,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.jayra.app.data.VideoPlayerManager
 import com.jayra.app.ui.theme.JayraBlue
@@ -61,24 +66,6 @@ import kotlinx.coroutines.launch
 
 /**
  * NativeVideoPlayer - Compose wrapper around ExoPlayer (via VideoPlayerManager).
- *
- * Features:
- * 1. Uses singleton VideoPlayerManager (no new ExoPlayer per instance)
- * 2. Custom controller overlay (Compose-based, no PlayerView default controller)
- * 3. Hardware accelerated playback
- * 4. Proper lifecycle handling (pause on background, release on dispose)
- * 5. Error handling with retry
- * 6. Fullscreen support
- * 7. Prefetch support
- *
- * Usage:
- * NativeVideoPlayer(
- *     videoUrl = "https://example.com/video.m3u8",
- *     headers = mapOf("Referer" to "https://example.com/"),
- *     title = "Episode 1",
- *     onError = { message -> /* show error */ },
- *     onCompletion = { /* next episode */ }
- * )
  */
 @Composable
 fun NativeVideoPlayer(
@@ -138,7 +125,7 @@ fun NativeVideoPlayer(
                 // UI updates via state observation
             }
 
-            override fun onPlayerError(error: com.google.android.exoplayer2.PlaybackException) {
+            override fun onPlayerError(error: ExoPlaybackException) {
                 isError = true
                 errorMessage = error.message ?: "Playback error"
                 isBuffering = false
@@ -209,7 +196,7 @@ fun NativeVideoPlayer(
                 PlayerView(ctx).apply {
                     player = exoPlayer
                     useController = false // We use custom Compose controller
-                    resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                 }
             },
             update = { view ->
@@ -224,7 +211,7 @@ fun NativeVideoPlayer(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                androidx.compose.material3.CircularProgressIndicator(
+                CircularProgressIndicator(
                     color = JayraBlue,
                     modifier = Modifier.size(48.dp)
                 )
@@ -239,17 +226,21 @@ fun NativeVideoPlayer(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    androidx.compose.material.icons.rounded.ErrorOutlined
-                        .icon(androidx.compose.material3.Icon, contentDescription = null, tint = Color.Red, modifier = Modifier.size(48.dp))
-                    androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.foundation.layout.padding(16.dp))
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Rounded.ErrorOutlined,
+                        contentDescription = null,
+                        tint = Color.Red,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    androidx.compose.foundation.layout.Spacer(modifier = padding(16.dp))
                     Text(
                         text = "Gagal memutar video",
                         color = Color.White,
                         fontSize = 18.sp
                     )
-                    androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.foundation.layout.padding(8.dp))
+                    androidx.compose.foundation.layout.Spacer(modifier = padding(8.dp))
                     Text(
                         text = errorMessage,
                         color = Color.LightGray,
@@ -257,7 +248,7 @@ fun NativeVideoPlayer(
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
-                    androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.foundation.layout.padding(16.dp))
+                    androidx.compose.foundation.layout.Spacer(modifier = padding(16.dp))
                     androidx.compose.material3.Button(
                         onClick = {
                             isError = false
@@ -341,7 +332,7 @@ fun VideoControls(
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Bottom
+            verticalArrangement = Arrangement.Bottom
         ) {
             // Title
             title?.let { t ->
@@ -358,8 +349,9 @@ fun VideoControls(
 
             // Progress Bar
             if (duration > 0) {
-                androidx.compose.material3.Slider(
-                    value = (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f),
+                val progress = (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                Slider(
+                    value = progress,
                     onValueChange = { fraction ->
                         onSeek((fraction * duration).toLong())
                     },
@@ -379,7 +371,7 @@ fun VideoControls(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, bottom = 8.dp),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(formatTime(currentPosition), color = Color.White, fontSize = 12.sp)
                     Text(formatTime(duration), color = Color.White, fontSize = 12.sp)
@@ -392,12 +384,12 @@ fun VideoControls(
                     .fillMaxWidth()
                     .padding(16.dp)
                     .height(56.dp),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Left: Close / Back
                 IconButton(onClick = onClose) {
-                    androidx.compose.material.Icon(
+                    Icon(
                         imageVector = Icons.Rounded.Close,
                         contentDescription = "Tutup",
                         tint = Color.White,
@@ -407,11 +399,11 @@ fun VideoControls(
 
                 // Center: Playback controls
                 Row(
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onRewind10) {
-                        androidx.compose.material.Icon(
+                        Icon(
                             imageVector = Icons.Rounded.Replay10,
                             contentDescription = "Mundur 10 detik",
                             tint = Color.White,
@@ -420,7 +412,7 @@ fun VideoControls(
                     }
 
                     IconButton(onClick = { if (isPlaying) onPause() else onPlayPause() }) {
-                        androidx.compose.material.Icon(
+                        Icon(
                             imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                             contentDescription = if (isPlaying) "Jeda" : "Putar",
                             tint = Color.White,
@@ -429,7 +421,7 @@ fun VideoControls(
                     }
 
                     IconButton(onClick = onForward10) {
-                        androidx.compose.material.Icon(
+                        Icon(
                             imageVector = Icons.Rounded.Forward10,
                             contentDescription = "Maju 10 detik",
                             tint = Color.White,
@@ -440,7 +432,7 @@ fun VideoControls(
 
                 // Right: Fullscreen
                 IconButton(onClick = onFullscreenToggle) {
-                    androidx.compose.material.Icon(
+                    Icon(
                         imageVector = if (isFullscreen) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
                         contentDescription = if (isFullscreen) "Keluar fullscreen" : "Fullscreen",
                         tint = Color.White,
@@ -479,7 +471,7 @@ class ComposePlayerView @JvmOverloads constructor(
 
     init {
         useController = false
-        resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

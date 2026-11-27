@@ -6,8 +6,19 @@ import androidx.compose.animation.core.stiffness
 import androidx.compose.animation.core.dampingRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,6 +31,10 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Subscriptions
+import androidx.compose.material.icons.rounded.Tv
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.ErrorOutlined
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -91,7 +106,7 @@ fun DonghuaDetailScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    androidx.compose.material.Icon(
+                    Icon(
                         imageVector = Icons.Rounded.ErrorOutlined,
                         contentDescription = null,
                         tint = Color.Red,
@@ -247,7 +262,7 @@ fun HeroPosterSection(
             Box(
                 modifier = Modifier
                     .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .background(if (source == DonghuaSource.DONGHUA) JayraBlue else Color.Purple.copy(alpha = 0.9f))
+                    .background(if (source == DonghuaSource.DONGHUA) JayraBlue else MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f))
                     .clip(RoundedCornerShape(16.dp))
             ) {
                 Row(
@@ -379,7 +394,7 @@ fun HeroPosterSection(
                         contentDescription = "Tambah ke daftar",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
-                    )
+                    }
                 }
 
                 // Share Button
