@@ -57,45 +57,7 @@ import com.jayra.app.data.DonghuaSource
 import com.jayra.app.util.glassSurfaceV2
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.util.GlassEffectPrefs
-import com.jayra.app.ui.theme.JayraBlue
-import androidx.compose.foundation.Arrangement
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.ImeAction
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.TextFieldDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.ErrorOutlined
-import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.LiveTv
-import androidx.compose.material.icons.rounded.Movie
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Tv
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import com.jayra.app.data.DonghuaCardItem
-import com.jayra.app.data.DonghuaSource
-import com.jayra.app.util.glassSurfaceV2
-import com.jayra.app.ui.theme.LiquidGlassSpecV2
-import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassCard
 import com.jayra.app.ui.theme.JayraBlue
 
 @Composable
@@ -1068,16 +1030,3 @@ fun ErrorState(
     }
 }
 
-@Composable
-fun GlassCard(
-    glassSpec: LiquidGlassSpecV2,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .glassSurfaceV2(glassSpec.surface, solidColor = MaterialTheme.colorScheme.surface, cornerRadius = 16.dp)
-    ) {
-        content()
-    }
-}

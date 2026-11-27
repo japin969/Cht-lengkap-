@@ -32,6 +32,7 @@ import com.jayra.app.ui.video.NativeVideoPlayer
 import com.jayra.app.util.glassSurfaceV2
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassCard
 
 @Composable
 fun NekoDetailScreen(
@@ -548,20 +549,3 @@ private fun heroErrorPlaceholder() = Box(
 // GLASS CARD
 // ════════════════════════════════════════════════════════════════
 
-@Composable
-fun GlassCard(
-    glassSpec: LiquidGlassSpecV2,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .glassSurfaceV2(glassSpec.surface, solidColor = MaterialTheme.colorScheme.surface, cornerRadius = 16.dp)
-    ) {
-        content()
-    }
-}
-
-import androidx.compose.foundation.Arrangement
-import androidx.compose.foundation.gestures.detectTapGestures

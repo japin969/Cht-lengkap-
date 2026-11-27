@@ -6,6 +6,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import retrofit2.Response
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -63,7 +64,7 @@ class DonghuaRepository {
 
     // ═══════════════════════════════════════════
     // SECTION LISTS - Parallel fetch
-    // ════════════════════════════════════════════
+    // ═══════════════════════════════════════════
 
     suspend fun getOngoing(page: Int = 1): DonghuaSectionResult {
         return fetchSection(
@@ -77,7 +78,7 @@ class DonghuaRepository {
         return fetchSection(
             cacheKey = "donghua_completed_$page",
             donghuaCall = { api.completed(page) },
-            donghubCall = { null }
+            donghubCall = { Response.success(null) }
         )
     }
 
@@ -92,7 +93,7 @@ class DonghuaRepository {
     suspend fun getPopular(page: Int = 1): DonghuaSectionResult {
         return fetchSection(
             cacheKey = "donghua_popular_$page",
-            donghuaCall = { null },
+            donghuaCall = { Response.success(null) },
             donghubCall = { api.donghubPopular() }
         )
     }
@@ -100,7 +101,7 @@ class DonghuaRepository {
     suspend fun getMovies(page: Int = 1): DonghuaSectionResult {
         return fetchSection(
             cacheKey = "donghua_movies_$page",
-            donghuaCall = { null },
+            donghuaCall = { Response.success(null) },
             donghubCall = { api.donghubMovie() }
         )
     }
@@ -195,7 +196,7 @@ class DonghuaRepository {
 
     // ═══════════════════════════════════════════
     // DETAIL & EPISODE
-    // ═════════════════════════════════════════════
+    // ═══════════════════════════════════════════
 
     suspend fun getDonghuaDetail(slug: String): DonghuaDetailResult {
         return try {
@@ -208,7 +209,7 @@ class DonghuaRepository {
                     synopsis = data?.synopsis,
                     score = data?.score,
                     totalEpisode = data?.totalEpisode,
-                    genres = data?.genres?.map { it.name }.orEmpty(),
+                    genres = data?.genres?.map { it.name }.filterNotNull().toList(),
                     episodes = data?.episodes?.map { ep ->
                         DonghuaEpisodeItem(
                             id = ep.id?.toString() ?: ep.slug ?: "",
@@ -239,7 +240,7 @@ class DonghuaRepository {
                     synopsis = data?.synopsis,
                     score = data?.score,
                     totalEpisode = data?.totalEpisode,
-                    genres = data?.genres?.map { it.name }.orEmpty(),
+                    genres = data?.genres?.map { it.name }.filterNotNull().toList(),
                     episodes = data?.episodes?.map { ep ->
                         DonghuaEpisodeItem(
                             id = ep.id?.toString() ?: ep.slug ?: "",
@@ -294,12 +295,12 @@ class DonghuaRepository {
 
     // ══════════════════════════════════════════
     // PRIVATE HELPERS
-    // ════════════════════════════════════════════
+    // ══════════════════════════════════════════
 
     private suspend fun fetchSection(
         cacheKey: String,
-        donghuaCall: suspend () -> retrofit2.Response<DonghuaListResponse?>,
-        donghubCall: suspend () -> retrofit2.Response<DonghubListResponse?>
+        donghuaCall: suspend () -> Response<DonghuaListResponse?>,
+        donghubCall: suspend () -> Response<DonghubListResponse?>
     ): DonghuaSectionResult {
         val cached = getCached<DonghuaSectionResult>(cacheKey)
         if (cached != null) return cached
@@ -324,7 +325,8 @@ class DonghuaRepository {
         }
     }
 
-    private fun getCached<T>(key: String): T? {
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> getCached(key: String): T? {
         val entry = cache[key]
         if (entry != null && (System.currentTimeMillis() - entry.timestamp < CACHE_TTL_MS)) {
             return entry.data as T

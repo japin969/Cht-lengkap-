@@ -28,6 +28,7 @@ import com.jayra.app.data.KomikItem
 import com.jayra.app.util.glassSurfaceV2
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.util.GlassEffectPrefs
+import com.jayra.app.util.GlassCard
 
 @Composable
 fun KomikHomeScreen(
@@ -313,21 +314,7 @@ fun EmptyState(
     }
 }
 
-@Composable
-fun GlassCard(
-    glassSpec: LiquidGlassSpecV2,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(24.dp)
-            .glassSurfaceV2(glassSpec.surface, solidColor = MaterialTheme.colorScheme.surface, cornerRadius = 20.dp)
-    ) {
-        content()
-    }
-}
+
 
 // ═══════════════════════════════════════════
 // PLACEHOLDERS

@@ -55,7 +55,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.exoplayer.PlaybackException
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.jayra.app.data.VideoPlayerManager
@@ -125,7 +125,7 @@ fun NativeVideoPlayer(
                 // UI updates via state observation
             }
 
-            override fun onPlayerError(error: ExoPlaybackException) {
+            override fun onPlayerError(error: PlaybackException) {
                 isError = true
                 errorMessage = error.message ?: "Playback error"
                 isBuffering = false

@@ -17,9 +17,8 @@ import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultTrackSelector
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.exoplayer.PlaybackException
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +39,7 @@ object VideoPlayerManager {
     private const val MIN_BUFFER_MS = 5_000
     private const val MAX_BUFFER_MS = 60_000
     private const val PRELOAD_DURATION_MS = 3_000
-    private const val BUFFER_SEGMENT_SIZE = 64 * 1024
+    private const val BUFFER_SEGMENT_SIZE = 64 * 1024L
 
     @Volatile
     private var _exoPlayer: ExoPlayer? = null
@@ -128,7 +127,7 @@ object VideoPlayerManager {
 
         val trackSelector = DefaultTrackSelector(context)
         val loadControl = DefaultLoadControl.Builder()
-            .setAllocator(DefaultAllocator(true, BUFFER_SEGMENT_SIZE.toLong()))
+            .setAllocator(DefaultAllocator(true, BUFFER_SEGMENT_SIZE))
             .setBufferDurationsMs(MIN_BUFFER_MS, MAX_BUFFER_MS, BUFFER_DURATION_MS, BUFFER_DURATION_MS)
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
@@ -142,7 +141,7 @@ object VideoPlayerManager {
             .build()
 
         _exoPlayer!!.addListener(object : Player.Listener {
-            override fun onPlayerError(error: ExoPlaybackException) {
+            override fun onPlayerError(error: PlaybackException) {
                 Log.e(TAG, "ExoPlayer Error: ${error.errorCode} - ${error.message}", error.cause)
             }
         })
@@ -222,8 +221,8 @@ object VideoPlayerManager {
             try {
                 val mediaItem = buildMediaItem(url, headers)
                 val dataSource = dataSourceFactory().createDataSource()
-                val dataSpec = DataSpec.Builder()
-                    .setUri(Uri.parse(url))
+                val dataSpec = DataSpec(Uri.parse(url))
+                    .buildUpon()
                     .setHttpRequestHeaders(headers.toMutableMap())
                     .build()
                 dataSource.open(dataSpec)
