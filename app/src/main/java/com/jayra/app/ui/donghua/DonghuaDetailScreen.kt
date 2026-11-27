@@ -56,6 +56,8 @@ import com.jayra.app.util.glassSurfaceV2
 import com.jayra.app.ui.theme.LiquidGlassSpecV2
 import com.jayra.app.util.GlassEffectPrefs
 import com.jayra.app.ui.theme.JayraBlue
+import androidx.compose.foundation.Arrangement
+import androidx.compose.foundation.gestures.detectTapGestures
 
 @Composable
 fun DonghuaDetailScreen(
@@ -394,7 +396,7 @@ fun HeroPosterSection(
                         contentDescription = "Tambah ke daftar",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
-                    }
+                    )
                 }
 
                 // Share Button
@@ -620,7 +622,7 @@ fun RecommendationSection(
 
 // ═══════════════════════════════════════════
 // PLACEHOLDERS
-// ═══════════════════════════════════════════
+// ══════════════════════════════════════════
 
 @Composable
 private fun heroPlaceholder() = Box(
@@ -663,6 +665,3 @@ fun GlassCard(
         content()
     }
 }
-
-import androidx.compose.foundation.Arrangement
-import androidx.compose.foundation.gestures.detectTapGestures

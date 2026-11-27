@@ -62,7 +62,7 @@ class DonghuaRepository {
 
     // ═══════════════════════════════════════════
     // SECTION LISTS - Parallel fetch
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
 
     suspend fun getOngoing(page: Int = 1): DonghuaSectionResult {
         return fetchSection(
@@ -191,9 +191,9 @@ class DonghuaRepository {
         }
     }
 
-    // ═══════════════════════════════════════════
+    // ══════════════════════════════════════════
     // DETAIL & EPISODE
-    // ═══════════════════════════════════════════
+    // ══════════════════════════════════════════
 
     suspend fun getDonghuaDetail(slug: String): DonghuaDetailResult {
         return try {
@@ -290,9 +290,9 @@ class DonghuaRepository {
         }
     }
 
-    // ═══════════════════════════════════════════
+    // ═════════════════════════════════════════
     // PRIVATE HELPERS
-    // ═══════════════════════════════════════════
+    // ══════════════════════════════════════════
 
     private suspend fun fetchSection(
         cacheKey: String,
@@ -308,8 +308,8 @@ class DonghuaRepository {
 
             val (dResult, hResult) = awaitAll(donghua, donghub)
 
-            val donghuaItems = dResult.getOrNull()?.body()?.data?.list?.map { DonghuaCardItem.fromDonghua(it, DonghuaSource.DONGHUA) } ?: emptyList()
-            val donghubItems = hResult.getOrNull()?.body()?.data?.list?.map { DonghuaCardItem.fromDonghub(it, DonghuaSource.DONGHUB) } ?: emptyList()
+            val donghuaItems = dResult?.body()?.data?.list?.map { DonghuaCardItem.fromDonghua(it, DonghuaSource.DONGHUA) } ?: emptyList()
+            val donghubItems = hResult?.body()?.data?.list?.map { DonghuaCardItem.fromDonghub(it, DonghuaSource.DONGHUB) } ?: emptyList()
 
             val result = DonghuaSectionResult(
                 donghuaItems = donghuaItems,
@@ -336,9 +336,9 @@ class DonghuaRepository {
     private data class CacheEntry<T>(val data: T, val timestamp: Long)
 }
 
-// ═══════════════════════════════════════════
+// ══════════════════════════════════════════
 // RESULT CLASSES
-// ═══════════════════════════════════════════
+// ══════════════════════════════════════════
 
 data class DonghuaHomeResult(
     val donghuaData: DonghuaHomeResponse?,

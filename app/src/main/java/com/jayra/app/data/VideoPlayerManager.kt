@@ -222,9 +222,10 @@ object VideoPlayerManager {
             try {
                 val mediaItem = buildMediaItem(url, headers)
                 val dataSource = dataSourceFactory().createDataSource()
-                val dataSpec = DataSpec(Uri.parse(url)).apply {
-                    headers.forEach { (k, v) -> httpRequestHeaders.set(k, v) }
-                }
+                val dataSpec = DataSpec.Builder()
+                    .setUri(Uri.parse(url))
+                    .setHttpRequestHeaders(headers.toMutableMap())
+                    .build()
                 dataSource.open(dataSpec)
                 var totalRead = 0L
                 val buffer = ByteArray(64 * 1024)

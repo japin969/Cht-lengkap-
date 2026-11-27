@@ -245,7 +245,7 @@ fun TopSearchBar(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // GENRE FILTER CHIPS
 // ════════════════════════════════════════════════════════════════
 
@@ -311,9 +311,9 @@ fun GenreChip(
     }
 }
 
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 // CONTENT SECTION (Spring Animated Cards)
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 
 @Composable
 fun ContentSection(
@@ -438,9 +438,9 @@ fun SpringAnimeCard(
     }
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // ERROR & EMPTY STATES (Glass Style)
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 
 @Composable
 fun ErrorState(
@@ -467,7 +467,7 @@ fun ErrorState(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    androidx.compose.material.Icon(
+                    Icon(
                         imageVector = Icons.Rounded.ErrorOutlined,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
@@ -536,6 +536,10 @@ fun EmptyState(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// GLASS CARD
+// ══════════════════════════════════════════════════════════════════
+
 @Composable
 fun GlassCard(
     glassSpec: LiquidGlassSpecV2,
@@ -554,7 +558,7 @@ fun GlassCard(
 
 // ══════════════════════════════════════════════════════════════════
 // PLACEHOLDERS
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 
 @Composable
 private fun placeholder() = Box(
@@ -563,7 +567,7 @@ private fun placeholder() = Box(
         .clip(RoundedCornerShape(16.dp))
         .background(MaterialTheme.colorScheme.surfaceVariant)
 ) {
-    androidx.compose.material.Icon(
+    Icon(
         imageVector = Icons.Rounded.Image,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
@@ -583,7 +587,7 @@ private fun errorPlaceholder() = Box(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        androidx.compose.material.Icon(
+        Icon(
             imageVector = Icons.Rounded.BrokenImage,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onErrorContainer
@@ -592,36 +596,3 @@ private fun errorPlaceholder() = Box(
         Text("Gagal muat", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onErrorContainer)
     }
 }
-
-import androidx.compose.foundation.Arrangement
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.focus.LocalFocusManager
-import androidx.compose.foundation.text.ImeAction
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.TextFieldDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ErrorOutlined
-import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import com.jayra.app.data.AnimeSearchItem
-import com.jayra.app.util.glassSurfaceV2
-import com.jayra.app.ui.theme.LiquidGlassSpecV2
-import com.jayra.app.util.GlassEffectPrefs
