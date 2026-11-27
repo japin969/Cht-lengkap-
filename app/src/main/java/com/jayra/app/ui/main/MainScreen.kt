@@ -217,7 +217,7 @@ class MainViewModel(
         const val ROUTE_CALLS = "calls"
         const val ROUTE_MUSIC_HOME = "music_home"
     const val ROUTE_DRAMA_HOME = "drama_home"
-    const val ROUTE_DRAMA_DETAIL = "drama_detail?url={url}"
+    const val ROUTE_DRAMA_DETAIL = "drama_detail?slug={slug}&source={source}"
     const val ROUTE_KOMIK_DETAIL = "komik_detail?slug={slug}"
     const val ROUTE_KOMIK_READER = "komik_reader?slug={slug}"
         const val ROUTE_SETTINGS = "settings"
@@ -720,9 +720,10 @@ private fun MainNavigationGraph(
 
         composable(MainViewModel.ROUTE_DRAMA_HOME) {
             com.jayra.app.ui.VidHubScreen(
-                onDramaClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("drama_detail?url=$encoded")
+                onDramaClick = { slug, source ->
+                    val eSlug = java.net.URLEncoder.encode(slug, "UTF-8")
+                    val eSrc = java.net.URLEncoder.encode(source, "UTF-8")
+                    navController.navigate("drama_detail?slug=$eSlug&source=$eSrc")
                 },
                 onAnimeClick = { url ->
                     val encoded = java.net.URLEncoder.encode(url, "UTF-8")
@@ -770,10 +771,17 @@ private fun MainNavigationGraph(
 
         composable(
             route = MainViewModel.ROUTE_DRAMA_DETAIL,
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+            arguments = listOf(
+                androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" },
+                androidx.navigation.navArgument("source") { type = androidx.navigation.NavType.StringType; defaultValue = "donghua" }
+            )
         ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            com.jayra.app.ui.drama.DramaDetailScreen(dramaUrl = java.net.URLDecoder.decode(url, "UTF-8"))
+            val slug = backStackEntry.arguments?.getString("slug") ?: ""
+            val source = backStackEntry.arguments?.getString("source") ?: "donghua"
+            com.jayra.app.ui.drama.DramaDetailScreen(
+                slug = java.net.URLDecoder.decode(slug, "UTF-8"),
+                source = java.net.URLDecoder.decode(source, "UTF-8")
+            )
         }
 
         

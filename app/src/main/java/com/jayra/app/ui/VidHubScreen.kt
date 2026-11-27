@@ -10,7 +10,7 @@ import com.jayra.app.ui.komik.KomikHomeScreen
 
 @Composable
 fun VidHubScreen(
-    onDramaClick: (String) -> Unit,
+    onDramaClick: (slug: String, source: String) -> Unit,
     onAnimeClick: (String) -> Unit,
     onKomikClick: (String) -> Unit
 ) {
