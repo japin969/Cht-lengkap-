@@ -63,14 +63,34 @@ class DramaViewModel : ViewModel() {
                 val (d1, d2) = awaitAll(dh, db)
                 val detail = d1 ?: d2
                 if (detail != null) {
+                    val title = when (detail) {
+                        is com.jayra.app.data.DonghuaDetailResponse -> detail.title
+                        is com.jayra.app.data.DonghubDetailResponse -> detail.title
+                        else -> null
+                    }
+                    val poster = when (detail) {
+                        is com.jayra.app.data.DonghuaDetailResponse -> detail.poster ?: detail.image
+                        is com.jayra.app.data.DonghubDetailResponse -> detail.poster ?: detail.image
+                        else -> null
+                    }
+                    val synopsis = when (detail) {
+                        is com.jayra.app.data.DonghuaDetailResponse -> detail.synopsis
+                        is com.jayra.app.data.DonghubDetailResponse -> detail.synopsis
+                        else -> null
+                    }
+                    val episodes = when (detail) {
+                        is com.jayra.app.data.DonghuaDetailResponse -> detail.episodes
+                        is com.jayra.app.data.DonghubDetailResponse -> detail.episodes
+                        else -> null
+                    }
                     val item = DramaItem(
                         id = url,
-                        title = detail.title,
-                        cover = detail.poster ?: detail.image,
-                        intro = detail.synopsis,
+                        title = title,
+                        cover = poster,
+                        intro = synopsis,
                         url = url
                     )
-                    val eps = detail.episodes.orEmpty().mapIndexed { i, e ->
+                    val eps = episodes.orEmpty().mapIndexed { i, e ->
                         DramaEpisode(
                             index = i + 1,
                             name = e.title,
