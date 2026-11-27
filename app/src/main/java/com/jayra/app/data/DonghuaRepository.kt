@@ -191,9 +191,9 @@ class DonghuaRepository {
         }
     }
 
-    // ══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // DETAIL & EPISODE
-    // ══════════════════════════════════════════
+    // ════════════════════════════════════════════
 
     suspend fun getDonghuaDetail(slug: String): DonghuaDetailResult {
         return try {
@@ -290,9 +290,9 @@ class DonghuaRepository {
         }
     }
 
-    // ═════════════════════════════════════════
+    // ═══════════════════════════════════════════
     // PRIVATE HELPERS
-    // ══════════════════════════════════════════
+    // ════════════════════════════════════════════
 
     private suspend fun fetchSection(
         cacheKey: String,
@@ -336,9 +336,9 @@ class DonghuaRepository {
     private data class CacheEntry<T>(val data: T, val timestamp: Long)
 }
 
-// ══════════════════════════════════════════
+// ═══════════════════════════════════════════
 // RESULT CLASSES
-// ══════════════════════════════════════════
+// ════════════════════════════════════════════
 
 data class DonghuaHomeResult(
     val donghuaData: DonghuaHomeResponse?,

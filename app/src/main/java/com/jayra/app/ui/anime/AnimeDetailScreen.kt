@@ -7,6 +7,7 @@ import androidx.compose.animation.core.stiffness
 import androidx.compose.animation.core.dampingRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -162,9 +163,9 @@ fun AnimeDetailScreen(
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 // HERO POSTER SECTION
-// ═════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
 
 @Composable
 fun HeroPosterSection(
@@ -343,9 +344,9 @@ fun HeroPosterSection(
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 // INFO SECTION
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 
 @Composable
 fun InfoSection(
@@ -405,9 +406,9 @@ fun InfoRow(label: String, value: String) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════
 // EPISODE LIST SECTION
-// ═════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 
 @Composable
 fun EpisodeListSection(
@@ -537,9 +538,9 @@ fun EpisodeCard(
     }
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 // PLACEHOLDERS
-// ═════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 
 @Composable
 private fun heroPlaceholder() = Box(
@@ -564,9 +565,9 @@ private fun heroErrorPlaceholder() = Box(
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 // GLASS CARD
-// ══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 
 @Composable
 fun GlassCard(
