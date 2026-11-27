@@ -15,10 +15,10 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.DefaultTrackSelector
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.PlaybackException
+import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +39,7 @@ object VideoPlayerManager {
     private const val MIN_BUFFER_MS = 5_000
     private const val MAX_BUFFER_MS = 60_000
     private const val PRELOAD_DURATION_MS = 3_000
-    private const val BUFFER_SEGMENT_SIZE = 64 * 1024L
+    private const val BUFFER_SEGMENT_SIZE = 64 * 1024
 
     @Volatile
     private var _exoPlayer: ExoPlayer? = null
@@ -108,7 +108,7 @@ object VideoPlayerManager {
         val defaultFactory = DefaultHttpDataSource.Factory()
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(30_000)
-            .setDefaultRequestHeaders(mapOf(
+            .setRequestHeaders(mapOf(
                 "User-Agent" to "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
                 "Accept" to "*/*"
             ))
@@ -141,7 +141,7 @@ object VideoPlayerManager {
             .build()
 
         _exoPlayer!!.addListener(object : Player.Listener {
-            override fun onPlayerError(error: PlaybackException) {
+            override fun onPlayerError(error: ExoPlaybackException) {
                 Log.e(TAG, "ExoPlayer Error: ${error.errorCode} - ${error.message}", error.cause)
             }
         })
@@ -219,7 +219,6 @@ object VideoPlayerManager {
     fun prefetch(url: String, headers: Map<String, String> = emptyMap()): Job {
         return CoroutineScope(Dispatchers.IO).launch {
             try {
-                val mediaItem = buildMediaItem(url, headers)
                 val dataSource = dataSourceFactory().createDataSource()
                 val dataSpec = DataSpec(Uri.parse(url))
                     .buildUpon()

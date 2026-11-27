@@ -158,9 +158,9 @@ class DonghuaRepository {
         }
     }
 
-    // ═══════════════════════════════════════════
+    // ══════════════════════════════════════════
     // SEARCH
-    // ════════════════════════════════════════════
+    // ═══════════════════════════════════════════
 
     suspend fun searchDonghua(keyword: String, page: Int = 1): DonghuaSearchResult {
         return try {
@@ -194,9 +194,9 @@ class DonghuaRepository {
         }
     }
 
-    // ═══════════════════════════════════════════
+    // ══════════════════════════════════════════
     // DETAIL & EPISODE
-    // ═══════════════════════════════════════════
+    // ══════════════════════════════════════════
 
     suspend fun getDonghuaDetail(slug: String): DonghuaDetailResult {
         return try {
@@ -299,8 +299,8 @@ class DonghuaRepository {
 
     private suspend fun fetchSection(
         cacheKey: String,
-        donghuaCall: suspend () -> Response<DonghuaListResponse?>,
-        donghubCall: suspend () -> Response<DonghubListResponse?>
+        donghuaCall: suspend () -> Response<DonghuaListResponse>,
+        donghubCall: suspend () -> Response<DonghubListResponse>
     ): DonghuaSectionResult {
         val cached = getCached<DonghuaSectionResult>(cacheKey)
         if (cached != null) return cached
