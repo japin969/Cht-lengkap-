@@ -101,7 +101,7 @@ data class DonghuaHome(
 // ============================================================
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaItem(
+ data class DtoDonghuaItem(
     @Json(name = "title") val title: String? = null,
     @Json(name = "slug") val slug: String? = null,
     @Json(name = "poster") val poster: String? = null,
@@ -114,13 +114,13 @@ internal data class DtoDonghuaItem(
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaGenre(
+ data class DtoDonghuaGenre(
     @Json(name = "name") val name: String? = null,
     @Json(name = "slug") val slug: String? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaEpisode(
+ data class DtoDonghuaEpisode(
     @Json(name = "episode") val episode: String? = null,
     @Json(name = "episode_number") val episodeNumber: String? = null,
     @Json(name = "title") val title: String? = null,
@@ -131,7 +131,7 @@ internal data class DtoDonghuaEpisode(
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoPagination(
+ data class DtoPagination(
     @Json(name = "current_page") val currentPage: Int? = null,
     @Json(name = "total_pages") val totalPages: Int? = null,
     @Json(name = "has_next_page") val hasNextPage: Boolean? = null,
@@ -142,36 +142,36 @@ internal data class DtoPagination(
 // ---------- Donghua (anichin) ----------
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaHome(
+ data class DtoDonghuaHome(
     @Json(name = "latest_release") val latestRelease: List<DtoDonghuaItem>? = null,
     @Json(name = "completed_donghua") val completedDonghua: List<DtoDonghuaItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaList(
+ data class DtoDonghuaList(
     @Json(name = "ongoing_donghua") val ongoingDonghua: List<DtoDonghuaItem>? = null,
     @Json(name = "latest_donghua") val latestDonghua: List<DtoDonghuaItem>? = null,
     @Json(name = "completed_donghua") val completedDonghua: List<DtoDonghuaItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaAz(
+ data class DtoDonghuaAz(
     @Json(name = "pagination") val pagination: DtoPagination? = null,
     @Json(name = "donghua_list") val donghuaList: List<DtoDonghuaItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaData(
+ data class DtoDonghuaData(
     @Json(name = "data") val data: List<DtoDonghuaItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaGenreData(
+ data class DtoDonghuaGenreData(
     @Json(name = "data") val data: List<DtoDonghuaGenre>? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaDetail(
+ data class DtoDonghuaDetail(
     @Json(name = "title") val title: String? = null,
     @Json(name = "poster") val poster: String? = null,
     @Json(name = "cover") val cover: String? = null,
@@ -190,24 +190,24 @@ internal data class DtoDonghuaDetail(
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaServer(
+ data class DtoDonghuaServer(
     @Json(name = "name") val name: String? = null,
     @Json(name = "url") val url: String? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaStreaming(
+ data class DtoDonghuaStreaming(
     @Json(name = "servers") val servers: List<DtoDonghuaServer>? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaNav(
+ data class DtoDonghuaNav(
     @Json(name = "previous_episode") val previous: DtoDonghuaEpisode? = null,
     @Json(name = "next_episode") val next: DtoDonghuaEpisode? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghuaEpisodeData(
+ data class DtoDonghuaEpisodeData(
     @Json(name = "episode") val episode: String? = null,
     @Json(name = "streaming") val streaming: DtoDonghuaStreaming? = null,
     @Json(name = "navigation") val navigation: DtoDonghuaNav? = null
@@ -216,25 +216,25 @@ internal data class DtoDonghuaEpisodeData(
 // ---------- Donghub (donghive) ----------
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubHomeData(
+ data class DtoDonghubHomeData(
     @Json(name = "slider") val slider: List<DtoDonghuaItem>? = null,
     @Json(name = "popular") val popular: List<DtoDonghuaItem>? = null,
     @Json(name = "latest") val latest: List<DtoDonghuaItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubHome(
+ data class DtoDonghubHome(
     @Json(name = "data") val data: DtoDonghubHomeData? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubList(
+ data class DtoDonghubList(
     @Json(name = "data") val data: List<DtoDonghuaItem>? = null,
     @Json(name = "pagination") val pagination: DtoPagination? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubInfo(
+ data class DtoDonghubInfo(
     @Json(name = "status") val status: String? = null,
     @Json(name = "type") val type: String? = null,
     @Json(name = "studio") val studio: String? = null,
@@ -243,7 +243,7 @@ internal data class DtoDonghubInfo(
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubDetailData(
+ data class DtoDonghubDetailData(
     @Json(name = "title") val title: String? = null,
     @Json(name = "poster") val poster: String? = null,
     @Json(name = "rating") val rating: String? = null,
@@ -255,31 +255,31 @@ internal data class DtoDonghubDetailData(
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubDetail(
+ data class DtoDonghubDetail(
     @Json(name = "data") val data: DtoDonghubDetailData? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubStream(
+ data class DtoDonghubStream(
     @Json(name = "server") val server: String? = null,
     @Json(name = "url") val url: String? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubNav(
+ data class DtoDonghubNav(
     @Json(name = "prev_slug") val prevSlug: String? = null,
     @Json(name = "next_slug") val nextSlug: String? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubEpisodeData(
+ data class DtoDonghubEpisodeData(
     @Json(name = "title") val title: String? = null,
     @Json(name = "streams") val streams: List<DtoDonghubStream>? = null,
     @Json(name = "navigation") val navigation: DtoDonghubNav? = null
 )
 
 @JsonClass(generateAdapter = true)
-internal data class DtoDonghubEpisode(
+ data class DtoDonghubEpisode(
     @Json(name = "data") val data: DtoDonghubEpisodeData? = null
 )
 
@@ -315,7 +315,7 @@ internal fun DtoDonghuaGenre.toModel(): DonghuaGenre? {
 
 internal fun DtoDonghuaEpisode.toModel(source: DonghuaSource): DonghuaEpisodeItem? {
     val s = slug?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-    val t = cleanDonghuaTitle(title) ?: cleanDonghuaTitle(episode) ?: "Episode ${number ?: ""}"
+    val t = cleanDonghuaTitle(title) ?: cleanDonghuaTitle(episode) ?: "Episode ${episodeNumber ?: ""}"
     return DonghuaEpisodeItem(
         title = t,
         slug = s,

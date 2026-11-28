@@ -498,14 +498,13 @@ private fun DonghuaNativePlayer(url: String) {
 @Composable
 private fun DonghuaUnsupportedStreams(episode: DonghuaEpisode) {
     Column(Modifier.padding(16.dp)) {
-        Row(
+        Box(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            contentAlignment = Alignment.Center
         ) {
             Column(
                 Modifier.padding(20.dp),

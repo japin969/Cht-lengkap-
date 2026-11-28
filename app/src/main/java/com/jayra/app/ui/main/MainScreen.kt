@@ -724,9 +724,9 @@ private fun MainNavigationGraph(
                     val encoded = java.net.URLEncoder.encode(url, "UTF-8")
                     navController.navigate("drama_detail?url=$encoded")
                 },
-                onAnimeClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("anime_detail?url=$encoded")
+                onDonghuaClick = { source, slug ->
+                    val encoded = java.net.URLEncoder.encode(slug, "UTF-8")
+                    navController.navigate("donghua_detail?source=$source&slug=$encoded")
                 },
                 onKomikClick = { slug ->
                     navController.navigate("komik_detail?slug=$slug")
@@ -766,6 +766,50 @@ private fun MainNavigationGraph(
             } else {
                 com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream ?: "")
             }
+        }
+
+        composable(
+            route = "donghua_detail?source={source}&slug={slug}",
+            arguments = listOf(
+                androidx.navigation.navArgument("source") { type = androidx.navigation.NavType.StringType; defaultValue = "DONGHUA" },
+                androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            val source = backStackEntry.arguments?.getString("source") ?: "DONGHUA"
+            val slug = backStackEntry.arguments?.getString("slug") ?: ""
+            val decoded = java.net.URLDecoder.decode(slug, "UTF-8")
+            val enumSource = com.jayra.app.data.DonghuaSource.valueOf(source)
+            com.jayra.app.ui.anime.DonghuaDetailScreen(
+                source = enumSource,
+                slug = decoded,
+                onBack = { navController.popBackStack() },
+                onEpisodeClick = { s, epSlug ->
+                    val epEncoded = java.net.URLEncoder.encode(epSlug, "UTF-8")
+                    navController.navigate("donghua_player?source=${s.name}&slug=$epEncoded")
+                }
+            )
+        }
+
+        composable(
+            route = "donghua_player?source={source}&slug={slug}",
+            arguments = listOf(
+                androidx.navigation.navArgument("source") { type = androidx.navigation.NavType.StringType; defaultValue = "DONGHUA" },
+                androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            val source = backStackEntry.arguments?.getString("source") ?: "DONGHUA"
+            val slug = backStackEntry.arguments?.getString("slug") ?: ""
+            val decoded = java.net.URLDecoder.decode(slug, "UTF-8")
+            val enumSource = com.jayra.app.data.DonghuaSource.valueOf(source)
+            com.jayra.app.ui.anime.DonghuaPlayerScreen(
+                source = enumSource,
+                slug = decoded,
+                onBack = { navController.popBackStack() },
+                onNavigateEpisode = { s, epSlug ->
+                    val epEncoded = java.net.URLEncoder.encode(epSlug, "UTF-8")
+                    navController.navigate("donghua_player?source=${s.name}&slug=$epEncoded")
+                }
+            )
         }
 
         composable(
