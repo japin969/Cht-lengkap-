@@ -11,15 +11,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.Add
@@ -39,9 +47,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.MediaItem
-import androidx.media3.exoplayer.Player
 import com.jayra.app.data.AnimeKompiEpisodeData
 import com.jayra.app.data.AnimeKompiMirror
 import com.jayra.app.data.AnimeKompiSettingsData
@@ -91,21 +99,21 @@ fun AnimePlayerScreen(
     val scope = rememberCoroutineScope()
 
     // Player state
-    val isControllerVisible by remember { mutableStateOf(true) }
+    var isControllerVisible by remember { mutableStateOf(true) }
     val isBuffering by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableStateOf(0L) }
     var duration by remember { mutableStateOf(0L) }
-    val playbackSpeed by remember { mutableStateOf(1.0f) }
-    val selectedQuality by remember { mutableStateOf("Auto") }
-    val selectedAudio by remember { mutableStateOf(0) }
-    val selectedSubtitle by remember { mutableStateOf(-1) }
-    val showSettings by remember { mutableStateOf(false) }
-    val showQuality by remember { mutableStateOf(false) }
-    val showSpeed by remember { mutableStateOf(false) }
-    val showAudioSubs by remember { mutableStateOf(false) }
-    val showMirrorSheet by remember { mutableStateOf(false) }
+    var playbackSpeed by remember { mutableStateOf(1.0f) }
+    var selectedQuality by remember { mutableStateOf("Auto") }
+    var selectedAudio by remember { mutableStateOf(0) }
+    var selectedSubtitle by remember { mutableStateOf(-1) }
+    var showSettings by remember { mutableStateOf(false) }
+    var showQuality by remember { mutableStateOf(false) }
+    var showSpeed by remember { mutableStateOf(false) }
+    var showAudioSubs by remember { mutableStateOf(false) }
+    var showMirrorSheet by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    val showNextEpisodeCard by remember { mutableStateOf(false) }
+    var showNextEpisodeCard by remember { mutableStateOf(false) }
     val nextEpisodeCountdown by remember { mutableStateOf(5) }
 
     // Initialize player
@@ -130,10 +138,10 @@ fun AnimePlayerScreen(
     }
 
     // Auto-hide controls after 3 seconds
-    val hideControlsJob = remember { Job() }
+    var hideControlsJob by remember { mutableStateOf<Job?>(null) }
     LaunchedEffect(isControllerVisible) {
         if (isControllerVisible) {
-            hideControlsJob.cancel()
+            hideControlsJob?.cancel()
             hideControlsJob = scope.launch {
                 delay(3000)
                 if (!showSettings && !showQuality && !showSpeed && !showAudioSubs && !showMirrorSheet) {
@@ -147,7 +155,7 @@ fun AnimePlayerScreen(
     androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose {
             playerJob?.cancel()
-            hideControlsJob.cancel()
+            hideControlsJob?.cancel()
             player.release()
         }
     }
@@ -227,15 +235,15 @@ fun AnimePlayerScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, "Back", NetflixWhite, Modifier.size(24.dp).padding(8.dp))
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = NetflixWhite, modifier = Modifier.size(24.dp).padding(8.dp))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Text(episodeData.title ?: "Episode", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
                             Text("Ep ${episodeData.episode}", fontSize = 14.sp, color = NetflixTextSecondary)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            IconButton(onClick = { showMirrorSheet = true }) { Icon(Icons.Default.Cast, "Mirrors", NetflixWhite, Modifier.size(24.dp).padding(8.dp)) }
-                            IconButton(onClick = { showSettings = true }) { Icon(Icons.Default.Settings, "Settings", NetflixWhite, Modifier.size(24.dp).padding(8.dp)) }
+                            IconButton(onClick = { showMirrorSheet = true }) { Icon(Icons.Default.Cast, contentDescription = "Mirrors", tint = NetflixWhite, modifier = Modifier.size(24.dp).padding(8.dp)) }
+                            IconButton(onClick = { showSettings = true }) { Icon(Icons.Default.Settings, contentDescription = "Settings", tint = NetflixWhite, modifier = Modifier.size(24.dp).padding(8.dp)) }
                         }
                     }
                 }
@@ -288,21 +296,21 @@ fun AnimePlayerScreen(
                         ) {
                             // Left: Prev, Rewind, Play/Pause, Forward, Next
                             Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { onPrevEpisode(episodeData.prevEpisodeSlug ?: "") }) { Icon(Icons.Default.SkipPrevious, "Previous", NetflixWhite, Modifier.size(32.dp)) }
-                                IconButton(onClick = { player.seekTo((currentPosition - 10000).coerceAtLeast(0)) }) { Icon(Icons.Default.FastRewind, "Rewind 10s", NetflixWhite, Modifier.size(32.dp)) }
+                                IconButton(onClick = { onPrevEpisode(episodeData.prevEpisode?.slug ?: "") }) { Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = NetflixWhite, modifier = Modifier.size(32.dp)) }
+                                IconButton(onClick = { player.seekTo((currentPosition - 10000).coerceAtLeast(0)) }) { Icon(Icons.Default.FastRewind, contentDescription = "Rewind 10s", tint = NetflixWhite, modifier = Modifier.size(32.dp)) }
                                 Button(onClick = { if (player.isPlaying) player.pause() else player.playWhenReady = true }, colors = ButtonDefaults.buttonColors(NetflixRed, NetflixWhite), shape = RoundedCornerShape(28.dp)) {
-                                    Icon(if (player.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, NetflixWhite, Modifier.size(24.dp).padding(8.dp))
+                                    Icon(if (player.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(24.dp).padding(8.dp))
                                 }
-                                IconButton(onClick = { player.seekTo((currentPosition + 10000).coerceAtMost(duration)) }) { Icon(Icons.Default.FastForward, "Forward 10s", NetflixWhite, Modifier.size(32.dp)) }
-                                IconButton(onClick = { onNextEpisode(episodeData.nextEpisodeSlug ?: "") }) { Icon(Icons.Default.SkipNext, "Next", NetflixWhite, Modifier.size(32.dp)) }
+                                IconButton(onClick = { player.seekTo((currentPosition + 10000).coerceAtMost(duration)) }) { Icon(Icons.Default.FastForward, contentDescription = "Forward 10s", tint = NetflixWhite, modifier = Modifier.size(32.dp)) }
+                                IconButton(onClick = { onNextEpisode(episodeData.nextEpisode?.slug ?: "") }) { Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = NetflixWhite, modifier = Modifier.size(32.dp)) }
                             }
 
                             // Right: Speed, Quality, Audio, Subs, Fullscreen
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { showSpeed = !showSpeed }) { Icon(Icons.Default.Speed, "Speed", NetflixWhite, Modifier.size(24.dp).padding(8.dp)) }
+                                IconButton(onClick = { showSpeed = !showSpeed }) { Icon(Icons.Default.Speed, contentDescription = "Speed", tint = NetflixWhite, modifier = Modifier.size(24.dp).padding(8.dp)) }
                                 IconButton(onClick = { showQuality = !showQuality }) { Text("${selectedQuality}p", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, modifier = Modifier.padding(8.dp).background(NetflixButtonSecondaryBg, RoundedCornerShape(4.dp))) }
-                                IconButton(onClick = { showAudioSubs = !showAudioSubs }) { Icon(Icons.Default.Subtitles, "Audio/Subs", NetflixWhite, Modifier.size(24.dp).padding(8.dp)) }
-                                IconButton(onClick = { /* Fullscreen */ }) { Icon(Icons.Default.Fullscreen, "Fullscreen", NetflixWhite, Modifier.size(24.dp).padding(8.dp)) }
+                                IconButton(onClick = { showAudioSubs = !showAudioSubs }) { Icon(Icons.Default.Subtitles, contentDescription = "Audio/Subs", tint = NetflixWhite, modifier = Modifier.size(24.dp).padding(8.dp)) }
+                                IconButton(onClick = { /* Fullscreen */ }) { Icon(Icons.Default.Fullscreen, contentDescription = "Fullscreen", tint = NetflixWhite, modifier = Modifier.size(24.dp).padding(8.dp)) }
                             }
                         }
                     }
@@ -351,13 +359,13 @@ fun AnimePlayerScreen(
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Pilih Mirror", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
-                        IconButton(onClick = { showMirrorSheet = false }) { Icon(Icons.Default.Close, "Close", NetflixWhite, Modifier.size(24.dp)) }
+                        IconButton(onClick = { showMirrorSheet = false }) { Icon(Icons.Default.Close, contentDescription = "Close", tint = NetflixWhite, modifier = Modifier.size(24.dp)) }
                     }
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(mirrors) { mirror ->
-                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).background(NetflixCardGray, RoundedCornerShape(8.dp)).clickable { onMirrorChange(mirror.url) }, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Text(mirror.name, fontSize = 16.sp, color = NetflixWhite, modifier = Modifier.padding(16.dp).weight(1f))
-                                Text(mirror.type, fontSize = 12.sp, color = NetflixTextSecondary, modifier = Modifier.padding(end = 16.dp))
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).background(NetflixCardGray, RoundedCornerShape(8.dp)).clickable { onMirrorChange(mirror.url ?: "") }, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Text(mirror.name ?: "", fontSize = 16.sp, color = NetflixWhite, modifier = Modifier.padding(16.dp).weight(1f))
+                                Text(mirror.type ?: "", fontSize = 12.sp, color = NetflixTextSecondary, modifier = Modifier.padding(end = 16.dp))
                             }
                         }
                     }
@@ -405,8 +413,8 @@ fun AnimePlayerScreen(
                     Text("Subtitles", fontSize = 14.sp, color = NetflixTextSecondary, modifier = Modifier.padding(bottom = 8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(text = "Off", fontSize = 14.sp, fontWeight = if (selectedSubtitle == -1) FontWeight.Bold else FontWeight.Normal, color = if (selectedSubtitle == -1) NetflixRed else NetflixWhite, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp).background(if (selectedSubtitle == -1) NetflixRed.copy(alpha = 0.1f) else NetflixCardGray, RoundedCornerShape(20.dp)).clickable { selectedSubtitle = -1; showAudioSubs = false })
-                        danmaku.forEach { sub ->
-                            Text(text = sub.lang ?: "Unknown", fontSize = 14.sp, color = NetflixWhite, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp).background(NetflixCardGray, RoundedCornerShape(20.dp)).clickable { selectedSubtitle = danmaku.indexOf(sub); showAudioSubs = false })
+                        (episodeData.subtitles ?: emptyList<com.jayra.app.data.AnimeKompiSubtitle>()).forEachIndexed { idx, sub ->
+                            Text(text = sub.label ?: sub.lang ?: "Unknown", fontSize = 14.sp, color = NetflixWhite, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp).background(NetflixCardGray, RoundedCornerShape(20.dp)).clickable { selectedSubtitle = idx; showAudioSubs = false })
                         }
                     }
                 }
@@ -426,7 +434,7 @@ fun AnimePlayerScreen(
                     Spacer(Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Button(onClick = { showNextEpisodeCard = false }, colors = ButtonDefaults.buttonColors(NetflixButtonSecondaryBg, NetflixWhite), shape = RoundedCornerShape(8.dp)) { Text("Batal", fontSize = 14.sp) }
-                        Button(onClick = { episodeData.nextEpisodeSlug?.let { onNextEpisode(it); showNextEpisodeCard = false } }, colors = ButtonDefaults.buttonColors(NetflixRed, NetflixWhite), shape = RoundedCornerShape(8.dp)) { Text("Tonton Sekarang", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                        Button(onClick = { episodeData.nextEpisode?.slug?.let { onNextEpisode(it); showNextEpisodeCard = false } }, colors = ButtonDefaults.buttonColors(NetflixRed, NetflixWhite), shape = RoundedCornerShape(8.dp)) { Text("Tonton Sekarang", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
                     }
                 }
             }

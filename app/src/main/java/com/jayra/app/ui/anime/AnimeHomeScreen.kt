@@ -1,8 +1,10 @@
 package com.jayra.app.ui.anime
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,13 +16,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -35,9 +40,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.jayra.app.data.AnimeKompiItem
+import com.jayra.app.data.AnimeKompiScheduleData
+import com.jayra.app.data.AnimeKompiScheduleItem
 import com.jayra.app.ui.theme.JayraTheme
 
 // ============================================================================
@@ -56,6 +64,7 @@ private val NetflixTextMetadata = Color(0xFF8C8C8C)
 private val NetflixTextHint = Color(0xFF808080)
 private val NetflixRed = Color(0xFFE50914)
 private val NetflixGreen = Color(0xFF46D369)
+private val NetflixOrange = Color(0xFFFF9800)
 private val NetflixProgressTrack = Color(0xFF4D4D4D)
 private val NetflixDivider = Color(0xFF262626)
 private val NetflixButtonSecondaryBg = Color(0xFF2A2A2A)
@@ -114,12 +123,12 @@ fun AnimeHomeScreen(
                 if (top10.isNotEmpty()) Top10Row("Top 10 Anime Today", top10, onAnimeClick)
                 if (state.terbaruItems.isNotEmpty()) AnimeRow("New Releases", items = state.terbaruItems, onItemClick = onAnimeClick, showMetadata = true, badgeType = "new")
                 if (state.popularItems.isNotEmpty()) AnimeRow("Popular on Anime", items = state.popularItems, onItemClick = onAnimeClick, showMetadata = true, badgeType = "popular")
-                if (state.batchItems.isNotEmpty()) AnimeRow("Batch Anime", "Lengkap Sekaligus", state.batchItems, onAnimeClick, { onCategoryClick("batch", "", "Batch Anime") }, true, "batch")
-                if (state.movieItems.isNotEmpty()) AnimeRow("Anime Movie", items = state.movieItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("movie", "", "Anime Movie") }, true, "movie")
-                if (state.liveActionItems.isNotEmpty()) AnimeRow("Live-Action", items = state.liveActionItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("live-action", "", "Live-Action") }, true, "live_action")
-                if (state.donghuaItems.isNotEmpty()) AnimeRow("Donghua", items = state.donghuaItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("donghua", "", "Donghua") }, true, "donghua")
-                if (state.tokusatsuItems.isNotEmpty()) AnimeRow("Tokusatsu", items = state.tokusatsuItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("tokusatsu", "", "Tokusatsu") }, true, "tokusatsu")
-                if (state.upcomingItems.isNotEmpty()) AnimeRow("Upcoming Anime", items = state.upcomingItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("upcoming", "", "Upcoming Anime") }, true, "upcoming")
+                if (state.batchItems.isNotEmpty()) AnimeRow(title = "Batch Anime", subtitle = "Lengkap Sekaligus", items = state.batchItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("batch", "", "Batch Anime") }, showMetadata = true, badgeType = "batch")
+                if (state.movieItems.isNotEmpty()) AnimeRow(title = "Anime Movie", items = state.movieItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("movie", "", "Anime Movie") }, showMetadata = true, badgeType = "movie")
+                if (state.liveActionItems.isNotEmpty()) AnimeRow(title = "Live-Action", items = state.liveActionItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("live-action", "", "Live-Action") }, showMetadata = true, badgeType = "live_action")
+                if (state.donghuaItems.isNotEmpty()) AnimeRow(title = "Donghua", items = state.donghuaItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("donghua", "", "Donghua") }, showMetadata = true, badgeType = "donghua")
+                if (state.tokusatsuItems.isNotEmpty()) AnimeRow(title = "Tokusatsu", items = state.tokusatsuItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("tokusatsu", "", "Tokusatsu") }, showMetadata = true, badgeType = "tokusatsu")
+                if (state.upcomingItems.isNotEmpty()) AnimeRow(title = "Upcoming Anime", items = state.upcomingItems, onItemClick = onAnimeClick, onSeeAllClick = { onCategoryClick("upcoming", "", "Upcoming Anime") }, showMetadata = true, badgeType = "upcoming")
                 if (state.scheduleData != null) ScheduleSection(state.scheduleData!!, onAnimeClick)
                 if (state.ongoingItems.isNotEmpty()) AnimeRow("Ongoing Series", items = state.ongoingItems, onItemClick = onAnimeClick, showMetadata = true, badgeType = "ongoing")
                 if (state.completedItems.isNotEmpty()) AnimeRow("Completed Series", items = state.completedItems, onItemClick = onAnimeClick, showMetadata = true, badgeType = "completed")
@@ -140,12 +149,12 @@ fun AnimeHeader(onBackClick: () -> Unit, onSearchClick: () -> Unit, onFilterClic
     Surface(color = NetflixBlack, modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)) {
         Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Back", NetflixWhite, Modifier.size(24.dp).padding(8.dp)) }
+                IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = NetflixWhite, modifier = Modifier.size(24.dp).padding(8.dp)) }
                 Text("ANIME", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = NetflixWhite, letterSpacing = (-0.3).sp)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                IconButton(onClick = onSearchClick) { Icon(Icons.Default.Search, "Search", NetflixWhite, Modifier.size(24.dp)) }
-                IconButton(onClick = onFilterClick) { Icon(Icons.Default.FilterList, "Filter", NetflixWhite, Modifier.size(24.dp)) }
+                IconButton(onClick = onSearchClick) { Icon(Icons.Default.Search, contentDescription = "Search", tint = NetflixWhite, modifier = Modifier.size(24.dp)) }
+                IconButton(onClick = onFilterClick) { Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = NetflixWhite, modifier = Modifier.size(24.dp)) }
             }
         }
     }
@@ -181,17 +190,16 @@ fun HeroBanner(items: List<AnimeKompiItem>, onPlayClick: (String) -> Unit, onInf
         Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, NetflixBlack.copy(alpha = 0.3f), NetflixBlack.copy(alpha = 0.7f), NetflixBlack))))
         Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.Start) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (item.isNew == true) Box(modifier = Modifier.padding(bottom = 4.dp), contentAlignment = Alignment.Center) { Text("NEW", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }.background(NetflixRed).padding(horizontal = 6.dp, vertical = 4.dp).clip(RoundedCornerShape(2.dp))
+                if (item.isNew == true) Box(modifier = Modifier.padding(bottom = 4.dp).clip(RoundedCornerShape(2.dp)).background(NetflixRed).padding(horizontal = 6.dp, vertical = 4.dp), contentAlignment = Alignment.Center) { Text("NEW", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }
                 Text("Trending Now", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
             }
             Text(item.title ?: "Unknown", fontSize = 32.sp, fontWeight = FontWeight.Black, color = NetflixWhite, lineHeight = 34.sp, letterSpacing = (-0.5).sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 8.dp)) { buildList { item.year?.let { add(it) }; item.totalEpisode?.let { add("$it Episodes") }; item.rating?.let { add(it) }; item.sub?.let { add("$it") }; item.dub?.let { add("Dub") } }.joinToString(" \u2022 ").let { Text(it, fontSize = 12.sp, color = NetflixTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 8.dp)) { buildList { item.year?.let { add(it) }; item.totalEpisode?.let { add("$it Episodes") }; item.score?.let { add("★ $it") }; item.type?.let { add(it) } }.joinToString(" \u2022 ").let { Text(it, fontSize = 12.sp, color = NetflixTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
             if (item.genres?.isNotEmpty() == true) Text(item.genres!!.take(3).joinToString(" \u2022 "), fontSize = 12.sp, color = NetflixTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-            if (item.synopsis?.isNotBlank() == true) Text(item.synopsis!!, fontSize = 13.sp, color = NetflixWhite, lineHeight = 18.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 12.dp)) {
-                Button(onClick = { item.slug?.let(onPlayClick) }, modifier = Modifier.width(160.dp).height(44.dp), colors = ButtonDefaults.buttonColors(NetflixWhite, NetflixBlack), shape = RoundedCornerShape(4.dp)) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(Icons.Default.PlayArrow, null, NetflixBlack, Modifier.size(20.dp)); Text("Play", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = NetflixBlack) } }
-                Button(onClick = { item.slug?.let(onMyListClick) }, modifier = Modifier.size(44.dp), colors = ButtonDefaults.buttonColors(NetflixButtonSecondaryBg, NetflixWhite), shape = RoundedCornerShape(4.dp)) { Icon(Icons.Default.Add, "My List", NetflixWhite, Modifier.size(20.dp)) }
-                Button(onClick = { item.slug?.let(onInfoClick) }, modifier = Modifier.size(44.dp), colors = ButtonDefaults.buttonColors(Color.Transparent, NetflixWhite), shape = RoundedCornerShape(4.dp), border = BorderStroke(1.dp, NetflixWhite.copy(alpha = 0.5f))) { Icon(Icons.Default.Info, "Info", NetflixWhite, Modifier.size(20.dp)) }
+                Button(onClick = { item.slug?.let(onPlayClick) }, modifier = Modifier.width(160.dp).height(44.dp), colors = ButtonDefaults.buttonColors(NetflixWhite, NetflixBlack), shape = RoundedCornerShape(4.dp)) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = NetflixBlack, modifier = Modifier.size(20.dp)); Text("Play", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = NetflixBlack) } }
+                Button(onClick = { item.slug?.let(onMyListClick) }, modifier = Modifier.size(44.dp), colors = ButtonDefaults.buttonColors(NetflixButtonSecondaryBg, NetflixWhite), shape = RoundedCornerShape(4.dp)) { Icon(Icons.Default.Add, contentDescription = "My List", tint = NetflixWhite, modifier = Modifier.size(20.dp)) }
+                Button(onClick = { item.slug?.let(onInfoClick) }, modifier = Modifier.size(44.dp), colors = ButtonDefaults.buttonColors(Color.Transparent, NetflixWhite), shape = RoundedCornerShape(4.dp), border = BorderStroke(1.dp, NetflixWhite.copy(alpha = 0.5f))) { Icon(Icons.Default.Info, contentDescription = "Info", tint = NetflixWhite, modifier = Modifier.size(20.dp)) }
             }
         }
         if (items.size > 1) Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp, end = 16.dp), horizontalArrangement = Arrangement.End) { LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) { items(items.size) { index -> val isActive = currentIndex.value == index; AnimatedVisibility(visible = true) { Box(modifier = Modifier.width(if (isActive) 16.dp else 4.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(if (isActive) NetflixWhite else NetflixWhite.copy(alpha = 0.4f)).animateContentSize(tween(300)).fillMaxHeight()) } } } }
@@ -209,7 +217,7 @@ fun AnimeRow(title: String, subtitle: String? = null, items: List<AnimeKompiItem
             Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
             onSeeAllClick?.let { Text("See All >", fontSize = 12.sp, color = NetflixTextSecondary, modifier = Modifier.fillMaxWidth().padding(end = 16.dp).clickable { it() }) }
         }
-        subtitle?.let { Text(it, fontSize = 12.sp, color = NetflixTextMetadata, modifier = Modifier.padding(horizontal = 16.dp, top = 4.dp)) }
+        subtitle?.let { Text(it, fontSize = 12.sp, color = NetflixTextMetadata, modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp)) }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 16.dp)) { items(items) { AnimePosterCard(it, { it.slug?.let(onItemClick) }, badgeType, showMetadata) } }
     }
 }
@@ -245,20 +253,20 @@ fun AnimePosterCard(item: AnimeKompiItem, onClick: () -> Unit, badgeType: String
         Box(modifier = Modifier.width(120.dp).height(180.dp).clip(RoundedCornerShape(6.dp))) {
             AsyncImage(model = item.poster, contentDescription = item.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             when (badgeType) {
-                "new", "trending" -> if (item.isNew == true) Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) { Text("NEW", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }.background(NetflixRed).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
-                "movie" -> Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) { Text("Movie", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }.background(NetflixRed).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
-                "batch" -> Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) { Text("Batch", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }.background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
-                "live_action" -> Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) { Text("Live-Action", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }.background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
+                "new", "trending" -> if (item.isNew == true) Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(2.dp)).background(NetflixRed).padding(horizontal = 6.dp, vertical = 2.dp)) { Text("NEW", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }
+                "movie" -> Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(2.dp)).background(NetflixRed).padding(horizontal = 6.dp, vertical = 2.dp)) { Text("Movie", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }
+                "batch" -> Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(2.dp)).background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp)) { Text("Batch", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }
+                "live_action" -> Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(2.dp)).background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp)) { Text("Live-Action", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, letterSpacing = 0.5.sp) }
                 "upcoming" -> Box(modifier = Modifier.fillMaxSize().background(NetflixBlack.copy(alpha = 0.4f)).clip(RoundedCornerShape(6.dp))) { Text("Coming Soon", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) }
-                "ongoing" -> Box(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) { Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { Box(Modifier.size(8.dp).background(NetflixGreen).clip(RoundedCornerShape(4.dp))); Text("Ongoing", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixGreen) } }.background(NetflixBlack.copy(alpha = 0.7f)).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
-                "completed" -> Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp)) { Text("Completed", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixTextMetadata) }.background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
-                "donghua" -> item.episode?.let { ep -> Box(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) { Text(ep, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite) }.background(NetflixBlack.copy(alpha = 0.7f)).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp)) }
+                "ongoing" -> Box(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).clip(RoundedCornerShape(2.dp)).background(NetflixBlack.copy(alpha = 0.7f)).padding(horizontal = 6.dp, vertical = 2.dp)) { Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { Box(Modifier.size(8.dp).background(NetflixGreen).clip(RoundedCornerShape(4.dp))); Text("Ongoing", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixGreen) } }
+                "completed" -> Box(modifier = Modifier.align(Alignment.TopStart).padding(8.dp).clip(RoundedCornerShape(2.dp)).background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp)) { Text("Completed", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixTextMetadata) }
+                "donghua" -> item.episode?.let { ep -> Box(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).clip(RoundedCornerShape(2.dp)).background(NetflixBlack.copy(alpha = 0.7f)).padding(horizontal = 6.dp, vertical = 2.dp)) { Text(ep, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite) } }
             }
         }
         Text(item.title ?: "Unknown", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
         if (showMetadata) Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 2.dp)) {
             item.episode?.let { Text(it, fontSize = 11.sp, color = NetflixTextMetadata) }
-            item.score?.let { Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { Icon(Icons.Default.Star, null, NetflixOrange, Modifier.size(11.dp)); Text(it, fontSize = 11.sp, color = NetflixTextMetadata) } }
+            item.score?.let { Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { Icon(Icons.Default.Star, contentDescription = null, tint = NetflixOrange, modifier = Modifier.size(11.dp)); Text(it, fontSize = 11.sp, color = NetflixTextMetadata) } }
         }
     }
 }
@@ -305,8 +313,8 @@ fun ContinueWatchingCard(item: AnimeKompiItem, onClick: () -> Unit) {
     Column(modifier = Modifier.width(160.dp).clickable { onClick() }) {
         Box(modifier = Modifier.width(160.dp).height(90.dp).clip(RoundedCornerShape(6.dp))) {
             AsyncImage(model = item.backdrop ?: item.poster, contentDescription = item.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(modifier = Modifier.fillMaxSize().background(NetflixBlack.copy(alpha = 0.3f)).clip(RoundedCornerShape(6.dp))) { Icon(Icons.Default.PlayArrow, "Play", NetflixWhite, Modifier.size(32.dp).wrapContentSize(Alignment.Center).background(NetflixBlack.copy(alpha = 0.5f), RoundedCornerShape(16.dp)).padding(16.dp)) }
-            Box(modifier = Modifier.fillMaxWidth().height(4.dp).align(Alignment.BottomCenter).background(NetflixProgressTrack).clip(RoundedCornerShape(2.dp))) { Box(modifier = Modifier.fillMaxHeight().width({ (this@Box.maxWidth * progress).toInt() }).background(NetflixRed).clip(RoundedCornerShape(2.dp))) }
+            Box(modifier = Modifier.fillMaxSize().background(NetflixBlack.copy(alpha = 0.3f)).clip(RoundedCornerShape(6.dp))) { Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = NetflixWhite, modifier = Modifier.size(32.dp).wrapContentSize(Alignment.Center).background(NetflixBlack.copy(alpha = 0.5f), RoundedCornerShape(16.dp)).padding(16.dp)) }
+            Box(modifier = Modifier.fillMaxWidth().height(4.dp).align(Alignment.BottomCenter).background(NetflixProgressTrack).clip(RoundedCornerShape(2.dp))) { Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(progress).background(NetflixRed).clip(RoundedCornerShape(2.dp))) }
         }
         Text(item.title ?: "Unknown", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
         Text("S1:E${(progress * 10).toInt()} \u2022 ${(10 * (1 - progress)).toInt()} min left", fontSize = 11.sp, color = NetflixTextMetadata, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
@@ -321,7 +329,23 @@ fun ContinueWatchingCard(item: AnimeKompiItem, onClick: () -> Unit) {
 fun HomeSkeletonLoading() {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
         Box(modifier = Modifier.fillMaxWidth().height(460.dp).background(NetflixSkeletonStart))
-        repeat(15) { Column(modifier = Modifier.padding(top = 24.dp)) { Box(modifier = Modifier.width(150.dp).height(22.dp).padding(horizontal = 16.dp).background(NetflixSkeletonStart)); Spacer(Modifier.height(8.dp)); LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(16.dp)) { items(5) { Column { Box(modifier = Modifier.width(120.dp).height(180.dp).background(NetflixSkeletonStart).clip(RoundedCornerShape(6.dp))); Spacer(Modifier.height(4.dp)); Box(Modifier.width(80.dp).height(12.dp).background(NetflixSkeletonStart)); Box(Modifier.width(60.dp).height(11.dp).background(NetflixSkeletonStart)) } } } } }
+        repeat(15) {
+            Column(modifier = Modifier.padding(top = 24.dp)) {
+                Box(modifier = Modifier.width(150.dp).height(22.dp).padding(horizontal = 16.dp).background(NetflixSkeletonStart))
+                Spacer(Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(16.dp)) {
+                    items(5) {
+                        Column {
+                            Box(modifier = Modifier.width(120.dp).height(180.dp).background(NetflixSkeletonStart).clip(RoundedCornerShape(6.dp)))
+                            Spacer(Modifier.height(4.dp))
+                            Box(Modifier.width(80.dp).height(12.dp).background(NetflixSkeletonStart))
+                            Box(Modifier.width(60.dp).height(11.dp).background(NetflixSkeletonStart))
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -338,11 +362,11 @@ fun HomeErrorState(error: String, onRetry: () -> Unit) {
 // ============================================================================
 
 @Composable
-fun placeholderSkeleton(): AsyncImage.Painter = remember {
+fun placeholderSkeleton(): Painter = remember {
     androidx.compose.ui.res.painterResource(id = android.R.color.transparent)
 }
 
 @Composable
-fun errorImage(): AsyncImage.Painter = remember {
+fun errorImage(): Painter = remember {
     androidx.compose.ui.res.painterResource(id = android.R.color.transparent)
 }

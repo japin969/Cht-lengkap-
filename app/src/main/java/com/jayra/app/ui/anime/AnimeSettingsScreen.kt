@@ -3,6 +3,7 @@ package com.jayra.app.ui.anime
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -12,7 +13,7 @@ import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filed.FileDownload
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.NavigateNext
@@ -23,7 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -264,7 +267,7 @@ fun SettingsSection(title: String) {
 
 @Composable
 fun SettingsRow(
-    icon: androidx.compose.material.icons.filled.ImageVector,
+    icon: ImageVector,
     title: String,
     subtitle: String,
     value: String,
@@ -286,7 +289,7 @@ fun SettingsRow(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
-                Column(crossAxisAlignment = CrossAxisAlignment.Start) {
+                Column(horizontalAlignment = Alignment.Start) {
                     Text(title, fontSize = 15.sp, color = NetflixWhite)
                     Text(subtitle, fontSize = 13.sp, color = NetflixTextMetadata)
                 }
@@ -303,7 +306,7 @@ fun SettingsRow(
 
 @Composable
 fun SettingsToggle(
-    icon: androidx.compose.material.icons.filled.ImageVector,
+    icon: ImageVector,
     title: String,
     subtitle: String,
     checked: Boolean,
@@ -325,7 +328,7 @@ fun SettingsToggle(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
-                Column(crossAxisAlignment = CrossAxisAlignment.Start) {
+                Column(horizontalAlignment = Alignment.Start) {
                     Text(title, fontSize = 15.sp, color = NetflixWhite)
                     Text(subtitle, fontSize = 13.sp, color = NetflixTextMetadata)
                 }

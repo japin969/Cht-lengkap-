@@ -14,8 +14,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
@@ -203,7 +206,7 @@ fun DetailMainInfo(
         }
         val firstEpisodeSlug = episodes.firstOrNull()?.slug
         val isUpcoming = detail.status?.lowercase() == "upcoming"
-        Button(onClick = if (isUpcoming) null else { onPlayClick(firstEpisodeSlug) }, modifier = Modifier.fillMaxWidth().height(48.dp).padding(top = 24.dp), enabled = !isUpcoming, colors = ButtonDefaults.buttonColors(containerColor = if (isUpcoming) NetflixCardGray else NetflixWhite, contentColor = if (isUpcoming) NetflixTextMetadata else NetflixBlack), shape = RoundedCornerShape(4.dp)) {
+        Button(onClick = { if (!isUpcoming) onPlayClick(firstEpisodeSlug) }, modifier = Modifier.fillMaxWidth().height(48.dp).padding(top = 24.dp), enabled = !isUpcoming, colors = ButtonDefaults.buttonColors(containerColor = if (isUpcoming) NetflixCardGray else NetflixWhite, contentColor = if (isUpcoming) NetflixTextMetadata else NetflixBlack), shape = RoundedCornerShape(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { Icon(Icons.Default.PlayArrow, null, tint = if (isUpcoming) NetflixTextMetadata else NetflixBlack, modifier = Modifier.size(20.dp)); Text(if (isUpcoming) "Coming Soon" else "Play", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (isUpcoming) NetflixTextMetadata else NetflixBlack) }
         }
         if (!isUpcoming && episodes.isNotEmpty()) {
@@ -212,13 +215,13 @@ fun DetailMainInfo(
         }
         Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onMyListClick, modifier = Modifier.weight(1f).height(40.dp), colors = ButtonDefaults.buttonColors(NetflixButtonSecondaryBg, NetflixWhite), shape = RoundedCornerShape(4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { Icon(Icons.Default.Add, null, NetflixWhite, Modifier.size(18.dp)); Text("My List", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { Icon(Icons.Default.Add, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp)); Text("My List", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite) }
             }
             Button(onClick = onShareClick, modifier = Modifier.weight(1f).height(40.dp), colors = ButtonDefaults.buttonColors(NetflixButtonSecondaryBg, NetflixWhite), shape = RoundedCornerShape(4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { Icon(Icons.Default.Share, null, NetflixWhite, Modifier.size(18.dp)); Text("Share", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { Icon(Icons.Default.Share, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp)); Text("Share", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite) }
             }
             Button(onClick = onDownloadClick, modifier = Modifier.weight(1f).height(40.dp), colors = ButtonDefaults.buttonColors(NetflixButtonSecondaryBg, NetflixWhite), shape = RoundedCornerShape(4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { Icon(Icons.Default.Download, null, NetflixWhite, Modifier.size(18.dp)); Text("Download", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { Icon(Icons.Default.Download, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp)); Text("Download", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite) }
             }
         }
         Divider(color = NetflixDivider, thickness = 1.dp, modifier = Modifier.padding(top = 16.dp))
@@ -240,7 +243,7 @@ fun DetailTabs(selectedTab: Int, onTabClick: (Int) -> Unit) {
         listOf("Episodes", "More Like This", "Details").forEachIndexed { index, title ->
             val isSelected = selectedTab == index
             Text(title, fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) NetflixWhite else NetflixTextSecondary, modifier = Modifier.fillMaxWidth().height(44.dp).clickable { onTabClick(index) }.padding(horizontal = 8.dp))
-            if (isSelected) Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(NetflixWhite).align(Alignment.BottomCenter))
+            if (isSelected) Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(NetflixWhite).align(Alignment.Bottom))
         }
     }
 }
@@ -254,18 +257,18 @@ fun EpisodesSection(episodes: List<AnimeKompiEpisodeItem>, detail: AnimeKompiDet
     val sortAscending = remember { mutableStateOf(true) }
     val searchQuery = remember { mutableStateOf("") }
     val showSearch = remember { mutableStateOf(false) }
-    val filteredEpisodes = episodes.filter { it.title?.lowercase().contains(searchQuery.value.lowercase()) != false }.sortedBy { it.episode?.toIntOrNull() ?: 0 }.apply { if (!sortAscending.value) reverse() }
+    val filteredEpisodes = episodes.filter { it.title?.lowercase()?.contains(searchQuery.value.lowercase()) != false }.sortedBy { it.episode?.toIntOrNull() ?: 0 }.let { if (sortAscending.value) it else it.reversed() }
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Episodes", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
             Button(onClick = { sortAscending.value = !sortAscending.value }, colors = ButtonDefaults.buttonColors(NetflixCardGray, NetflixWhite), modifier = Modifier.padding(start = 8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { Icon(Icons.Default.SwapVert, null, NetflixWhite, Modifier.size(16.dp)); Text(if (sortAscending.value) "1 - ${episodes.size}" else "${episodes.size} - 1", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = NetflixWhite) }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { Icon(Icons.Default.SwapVert, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(16.dp)); Text(if (sortAscending.value) "1 - ${episodes.size}" else "${episodes.size} - 1", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = NetflixWhite) }
             }
-            IconButton(onClick = { showSearch.value = !showSearch.value }) { Icon(Icons.Default.Search, "Search episodes", NetflixWhite, Modifier.size(20.dp).padding(8.dp)) }
+            IconButton(onClick = { showSearch.value = !showSearch.value }) { Icon(Icons.Default.Search, contentDescription = "Search episodes", tint = NetflixWhite, modifier = Modifier.size(20.dp).padding(8.dp)) }
         }
         if (showSearch.value) {
-            TextField(value = searchQuery.value, onValueChange = { searchQuery.value = it }, placeholder = { Text("Search episodes...", color = NetflixTextMetadata) }, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).background(NetflixCardGray).clip(RoundedCornerShape(6.dp)).height(44.dp), colors = TextFieldDefaults.textFieldColors(containerColor = NetflixCardGray, textColor = NetflixWhite, cursorColor = NetflixRed), singleLine = true)
+            TextField(value = searchQuery.value, onValueChange = { searchQuery.value = it }, placeholder = { Text("Search episodes...", color = NetflixTextMetadata) }, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).background(NetflixCardGray).clip(RoundedCornerShape(6.dp)).height(44.dp), colors = TextFieldDefaults.colors(focusedContainerColor = NetflixCardGray, unfocusedContainerColor = NetflixCardGray, focusedTextColor = NetflixWhite, unfocusedTextColor = NetflixWhite, cursorColor = NetflixRed), singleLine = true)
         }
         if (filteredEpisodes.isEmpty()) EmptyEpisodesState() else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) { items(filteredEpisodes) { EpisodeItem(it, false, 0f, { it.slug?.let(onEpisodeClick) }, { }) } }
@@ -276,7 +279,7 @@ fun EpisodesSection(episodes: List<AnimeKompiEpisodeItem>, detail: AnimeKompiDet
 @Composable
 fun EmptyEpisodesState() {
     Column(modifier = Modifier.fillMaxWidth().padding(48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Default.Movie, null, NetflixTextMetadata, Modifier.size(48.dp))
+        Icon(Icons.Default.Movie, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(48.dp))
         Spacer(Modifier.height(16.dp))
         Text("Belum ada episode", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
         Spacer(Modifier.height(4.dp))
@@ -297,8 +300,8 @@ fun EpisodeItem(episode: AnimeKompiEpisodeItem, isCurrent: Boolean, progress: Fl
         Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.Top) {
             Box(modifier = Modifier.width(140.dp).height(78.dp).clip(RoundedCornerShape(6.dp))) {
                 AsyncImage(model = episode.thumbnail, contentDescription = episode.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                if (isWatched) Box(modifier = Modifier.fillMaxSize().background(NetflixBlack.copy(alpha = 0.6f)).clip(RoundedCornerShape(6.dp))) { Icon(Icons.Default.Check, "Watched", NetflixGreen, Modifier.align(Alignment.TopEnd).padding(8.dp).size(24.dp)) }
-                else Icon(Icons.Default.PlayArrow, "Play", NetflixWhite, Modifier.size(24.dp).background(NetflixBlack.copy(alpha = 0.5f), RoundedCornerShape(16.dp)).padding(16.dp).align(Alignment.Center))
+                if (isWatched) Box(modifier = Modifier.fillMaxSize().background(NetflixBlack.copy(alpha = 0.6f)).clip(RoundedCornerShape(6.dp))) { Icon(Icons.Default.Check, contentDescription = "Watched", tint = NetflixGreen, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(24.dp)) }
+                else Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = NetflixWhite, modifier = Modifier.size(24.dp).background(NetflixBlack.copy(alpha = 0.5f), RoundedCornerShape(16.dp)).padding(16.dp).align(Alignment.Center))
                 if (episode.isUpcoming == true) Box(modifier = Modifier.fillMaxSize().background(NetflixBlack.copy(alpha = 0.6f)).clip(RoundedCornerShape(6.dp))) { Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text("Coming Soon", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NetflixWhite); episode.releaseDate?.let { Text(it, fontSize = 10.sp, color = NetflixTextSecondary) } } }
             }
             Column(modifier = Modifier.weight(1f).padding(start = 12.dp, top = 4.dp)) {
@@ -308,10 +311,9 @@ fun EpisodeItem(episode: AnimeKompiEpisodeItem, isCurrent: Boolean, progress: Fl
                 }
                 episode.synopsis?.let { if (it.isNotBlank()) Text(it, fontSize = 13.sp, color = NetflixTextSecondary, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp)) }
                 if (isWatching) Column(modifier = Modifier.padding(top = 8.dp)) {
-                    Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(NetflixProgressTrack).clip(RoundedCornerShape(2.dp))) { Box(modifier = Modifier.fillMaxHeight().width({ (this@Box.maxWidth * progress).toInt() }).background(NetflixRed).clip(RoundedCornerShape(2.dp))) }
+                    Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(NetflixProgressTrack).clip(RoundedCornerShape(2.dp))) { Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(progress).background(NetflixRed).clip(RoundedCornerShape(2.dp))) }
                     Text("${(progress * 100).toInt()}% watched", fontSize = 11.sp, color = NetflixTextMetadata, modifier = Modifier.padding(top = 2.dp))
                 }
-                if (episode.isNew == true) Text("NEW", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, modifier = Modifier.padding(top = 4.dp).padding(6.dp, 2.dp).background(NetflixRed).clip(RoundedCornerShape(2.dp)))
                 episode.releaseDate?.let { Text(it, fontSize = 12.sp, color = NetflixTextMetadata, modifier = Modifier.padding(top = 4.dp)) }
             }
         }
@@ -346,7 +348,7 @@ fun MoreLikeThisCard(item: AnimeKompiItem, onClick: () -> Unit) {
 @Composable
 fun DetailsSection(detail: AnimeKompiDetailData) {
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        DetailRow("Judul", detail.title)
+        DetailRow("Judul", detail.title ?: "")
         detail.alternativeTitle?.let { DetailRow("Judul Alternatif", it) }
         detail.year?.let { DetailRow("Tahun", it) }
         detail.status?.let { DetailRow("Status", it) }

@@ -23,8 +23,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -156,12 +159,13 @@ fun SearchHeader(
                     .focusRequester(focusRequester),
                 placeholder = { Text("Search anime...", color = NetflixTextMetadata, fontSize = 14.sp) },
                 singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = NetflixCardGray,
-                    unfocusedContainerColor = NetflixCardGray,
+                colors = TextFieldDefaults.colors(
                     focusedContainerColor = NetflixCardGray,
-                    textColor = NetflixWhite,
-                    placeholderColor = NetflixTextMetadata,
+                    unfocusedContainerColor = NetflixCardGray,
+                    focusedTextColor = NetflixWhite,
+                    unfocusedTextColor = NetflixWhite,
+                    focusedPlaceholderColor = NetflixTextMetadata,
+                    unfocusedPlaceholderColor = NetflixTextMetadata,
                     cursorColor = NetflixRed
                 ),
                 trailingIcon = {
@@ -203,7 +207,7 @@ fun SuggestionsDropdown(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, top = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .background(NetflixDarkGray, RoundedCornerShape(12.dp))
         ) {
             suggestions.forEach { item ->
@@ -224,7 +228,7 @@ fun SuggestionsDropdown(
                             .clip(RoundedCornerShape(4.dp)),
                         contentScale = ContentScale.Crop
                     )
-                    Column(crossAxisAlignment = CrossAxisAlignment.Start) {
+                    Column(horizontalAlignment = Alignment.Start) {
                         Text(item.title ?: "Unknown", fontSize = 14.sp, color = NetflixWhite, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             item.type?.let { Text(it, fontSize = 12.sp, color = NetflixTextMetadata) }

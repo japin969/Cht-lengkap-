@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -206,27 +208,27 @@ fun CategoryGridCard(
                 "batch" -> Box(
                     modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
                 ) {
-                    Text("Batch", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
-                        .background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
+                    Text("Batch", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite,
+                        modifier = Modifier.clip(RoundedCornerShape(2.dp)).background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp))
                 }
                 "movie" -> Box(
                     modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
                 ) {
-                    Text("Movie", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
-                        .background(NetflixRed).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
+                    Text("Movie", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite,
+                        modifier = Modifier.clip(RoundedCornerShape(2.dp)).background(NetflixRed).padding(horizontal = 6.dp, vertical = 2.dp))
                 }
                 "live-action" -> Box(
                     modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
                 ) {
-                    Text("Live-Action", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
-                        .background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
+                    Text("Live-Action", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = NetflixWhite,
+                        modifier = Modifier.clip(RoundedCornerShape(2.dp)).background(NetflixCardGray.copy(alpha = 0.9f)).padding(horizontal = 6.dp, vertical = 2.dp))
                 }
                 "donghua" -> item.episode?.let { ep ->
                     Box(
                         modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
                     ) {
-                        Text(ep, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
-                            .background(NetflixBlack.copy(alpha = 0.7f)).padding(horizontal = 6.dp, vertical = 2.dp).clip(RoundedCornerShape(2.dp))
+                        Text(ep, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NetflixWhite,
+                            modifier = Modifier.clip(RoundedCornerShape(2.dp)).background(NetflixBlack.copy(alpha = 0.7f)).padding(horizontal = 6.dp, vertical = 2.dp))
                     }
                 }
                 "upcoming" -> Box(

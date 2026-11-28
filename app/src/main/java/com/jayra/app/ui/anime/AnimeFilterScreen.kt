@@ -1,11 +1,17 @@
 package com.jayra.app.ui.anime
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FilterList
@@ -15,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,7 +77,7 @@ fun FilterSheetContent(
             Text("Filter Anime", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { viewModel.resetFilter() }) { Text("Reset", fontSize = 14.sp, color = NetflixTextSecondary) }
-                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close", NetflixWhite, Modifier.size(24.dp)) }
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "Close", tint = NetflixWhite, modifier = Modifier.size(24.dp)) }
             }
         }
         Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
@@ -108,7 +115,7 @@ fun FilterSection(
             Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (selected.isNotEmpty() && multiSelect) Text("${selected.size} dipilih", fontSize = 12.sp, color = NetflixTextSecondary)
-                Icon(Icons.Default.ExpandMore, null, NetflixWhite, Modifier.size(20.dp).graphicsLayer { rotationZ = if (showContent.value) 180f else 0f })
+                Icon(Icons.Default.ExpandMore, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = if (showContent.value) 180f else 0f })
             }
         }
         AnimatedVisibility(visible = showContent.value) {
@@ -119,7 +126,7 @@ fun FilterSection(
                     val count = option.count?.let { " ($it)" } ?: ""
                     if (multiSelect) {
                         Row(modifier = Modifier.fillMaxWidth().padding(8.dp).background(if (isSelected) NetflixRed.copy(alpha = 0.1f) else Color.Transparent, RoundedCornerShape(8.dp)).clickable { onSelectionChange(if (isSelected) selected.filter { it != option.slug } else selected + (option.slug ?: "")) }) {
-                            Box(modifier = Modifier.size(20.dp).border(2.dp, if (isSelected) NetflixRed else NetflixTextMetadata, RoundedCornerShape(4.dp)).background(if (isSelected) NetflixRed else Color.Transparent)) { if (isSelected) Icon(Icons.Default.Check, null, NetflixWhite, Modifier.size(14.dp).align(Alignment.Center)) }
+                            Box(modifier = Modifier.size(20.dp).border(2.dp, if (isSelected) NetflixRed else NetflixTextMetadata, RoundedCornerShape(4.dp)).background(if (isSelected) NetflixRed else Color.Transparent)) { if (isSelected) Icon(Icons.Default.Check, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(14.dp).align(Alignment.Center)) }
                             Spacer(Modifier.width(12.dp))
                             Text(displayName, fontSize = 14.sp, color = NetflixWhite, modifier = Modifier.weight(1f))
                             Text(count, fontSize = 12.sp, color = NetflixTextMetadata)
@@ -155,7 +162,7 @@ fun AnimeFilterChipRow(
                 val isSelected = selectedChip == chip.id
                 FilterChip(selected = isSelected, onClick = { onChipClick(chip.id) }, label = { Text(chip.label) }, modifier = Modifier.height(32.dp), colors = FilterChipDefaults.colors(containerColor = if (isSelected) NetflixWhite else NetflixCardGray, labelColor = if (isSelected) NetflixBlack else NetflixWhite, selectedContainerColor = NetflixWhite, selectedLabelColor = NetflixBlack), shape = RoundedCornerShape(16.dp))
             }
-            item { IconButton(onClick = onFilterClick) { Icon(Icons.Default.FilterList, "Filter", NetflixWhite, Modifier.size(20.dp).padding(6.dp)) }.background(NetflixCardGray, RoundedCornerShape(16.dp)) }
+            item { Box(modifier = Modifier.background(NetflixCardGray, RoundedCornerShape(16.dp))) { IconButton(onClick = onFilterClick) { Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = NetflixWhite, modifier = Modifier.size(20.dp).padding(6.dp)) } } }
         }
     }
 }

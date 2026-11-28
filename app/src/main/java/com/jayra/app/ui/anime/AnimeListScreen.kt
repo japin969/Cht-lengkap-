@@ -625,7 +625,7 @@ fun AzGridCard(
 @Composable
 fun ListSkeletonLoading(listType: String) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp, horizontal = 16.dp, vertical = 16.dp),
+        modifier = Modifier.fillMaxSize().padding(start = 16.dp, top = 56.dp, end = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         when (listType) {
@@ -652,10 +652,8 @@ fun ListSkeletonLoading(listType: String) {
                             Box(modifier = Modifier.fillMaxWidth().height(22.dp).background(NetflixCardGray))
                             Spacer(Modifier.height(16.dp))
                             repeat(3) {
-                                item {
-                                    Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f/3f).background(NetflixCardGray).clip(RoundedCornerShape(6.dp)))
-                                    Spacer(Modifier.height(8.dp))
-                                }
+                                Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f/3f).background(NetflixCardGray).clip(RoundedCornerShape(6.dp)))
+                                Spacer(Modifier.height(8.dp))
                             }
                         }
                     }
