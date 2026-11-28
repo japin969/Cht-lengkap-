@@ -3,9 +3,8 @@ package com.jayra.app.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavController
-import androidx.navigation.compose.navController
 import com.jayra.app.ui.drama.DramaScreen
 import com.jayra.app.ui.komik.KomikHomeScreen
 
@@ -17,7 +16,6 @@ fun VidHubScreen(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Drama", "Anime", "Komik")
-    val navController = rememberNavController()
 
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTab) {
