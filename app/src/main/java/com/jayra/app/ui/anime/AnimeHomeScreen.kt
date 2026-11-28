@@ -170,7 +170,7 @@ fun ChipFilterRow(options: List<ChipOption>, selectedChip: String, onChipClick: 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(0.dp)) {
             items(options) { option ->
                 val isSelected = selectedChip == option.id
-                FilterChip(selected = isSelected, onClick = { onChipClick(option) }, label = { Text(option.label) }, modifier = Modifier.height(32.dp), colors = FilterChipDefaults.colors(containerColor = if (isSelected) NetflixChipActive else NetflixChipInactive, selectedContainerColor = NetflixChipActive, labelColor = if (isSelected) NetflixBlack else NetflixWhite, selectedLabelColor = NetflixBlack), shape = RoundedCornerShape(16.dp))
+                FilterChip(selected = isSelected, onClick = { onChipClick(option) }, label = { Text(option.label) }, modifier = Modifier.height(32.dp), shape = RoundedCornerShape(16.dp))
             }
         }
     }
@@ -281,7 +281,7 @@ fun ScheduleSection(scheduleData: AnimeKompiScheduleData, onItemClick: (String) 
     val selectedDay = remember { mutableStateOf(days[0]) }
     Column(modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
         Text("Jadwal Rilis Anime", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = NetflixWhite, modifier = Modifier.padding(horizontal = 16.dp))
-        Surface(color = NetflixBlack, modifier = Modifier.fillMaxWidth().height(40.dp).padding(vertical = 8.dp, horizontal = 16.dp)) { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(days) { day -> val sel = selectedDay.value == day; FilterChip(selected = sel, onClick = { selectedDay.value = day }, label = { Text(day, fontSize = 13.sp) }, modifier = Modifier.height(32.dp), colors = FilterChipDefaults.colors(containerColor = if (sel) NetflixWhite else NetflixCardGray, labelColor = if (sel) NetflixBlack else NetflixWhite), shape = RoundedCornerShape(16.dp)) } } }
+        Surface(color = NetflixBlack, modifier = Modifier.fillMaxWidth().height(40.dp).padding(vertical = 8.dp, horizontal = 16.dp)) { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(days) { day -> val sel = selectedDay.value == day; FilterChip(selected = sel, onClick = { selectedDay.value = day }, label = { Text(day, fontSize = 13.sp) }, modifier = Modifier.height(32.dp), shape = RoundedCornerShape(16.dp)) } } }
         val dayItems = scheduleData.schedule?.get(selectedDay.value) ?: emptyList()
         if (dayItems.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 16.dp)) { items(dayItems) { SchedulePosterCard(it, { it.slug?.let(onItemClick) }) } } else Text("Tidak ada jadwal hari ini", fontSize = 13.sp, color = NetflixTextSecondary, modifier = Modifier.fillMaxWidth().padding(16.dp, 24.dp))
     }
@@ -362,11 +362,7 @@ fun HomeErrorState(error: String, onRetry: () -> Unit) {
 // ============================================================================
 
 @Composable
-fun placeholderSkeleton(): Painter = remember {
-    androidx.compose.ui.res.painterResource(id = android.R.color.transparent)
-}
+fun placeholderSkeleton(): Painter = androidx.compose.ui.res.painterResource(id = android.R.color.transparent)
 
 @Composable
-fun errorImage(): Painter = remember {
-    androidx.compose.ui.res.painterResource(id = android.R.color.transparent)
-}
+fun errorImage(): Painter = androidx.compose.ui.res.painterResource(id = android.R.color.transparent)

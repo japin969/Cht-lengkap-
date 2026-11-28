@@ -160,7 +160,7 @@ fun AnimeFilterChipRow(
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(chips) { chip ->
                 val isSelected = selectedChip == chip.id
-                FilterChip(selected = isSelected, onClick = { onChipClick(chip.id) }, label = { Text(chip.label) }, modifier = Modifier.height(32.dp), colors = FilterChipDefaults.colors(containerColor = if (isSelected) NetflixWhite else NetflixCardGray, labelColor = if (isSelected) NetflixBlack else NetflixWhite, selectedContainerColor = NetflixWhite, selectedLabelColor = NetflixBlack), shape = RoundedCornerShape(16.dp))
+                FilterChip(selected = isSelected, onClick = { onChipClick(chip.id) }, label = { Text(chip.label) }, modifier = Modifier.height(32.dp), shape = RoundedCornerShape(16.dp))
             }
             item { Box(modifier = Modifier.background(NetflixCardGray, RoundedCornerShape(16.dp))) { IconButton(onClick = onFilterClick) { Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = NetflixWhite, modifier = Modifier.size(20.dp).padding(6.dp)) } } }
         }
