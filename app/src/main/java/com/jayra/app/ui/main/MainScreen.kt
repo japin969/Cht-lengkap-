@@ -349,7 +349,7 @@ fun MainScreen(
                                 0 -> "chat_list"
                                 1 -> "calls"
                                 2 -> "music_home"
-                                3 -> "drama_home"
+                                3 -> "hub"
                                 4 -> "settings"
                                 else -> "chat_list"
                             }
