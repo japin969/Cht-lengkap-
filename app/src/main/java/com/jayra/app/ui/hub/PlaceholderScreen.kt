@@ -89,4 +89,3 @@ fun PlaceholderScreen(title: String, accentColor: Color = Color(0xFF00B4D8), onB
         }
     }
 }
-```

@@ -822,14 +822,6 @@ private fun MainNavigationGraph(
             )
         }
 
-        composable(
-            route = MainViewModel.ROUTE_DRAMA_DETAIL,
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            com.jayra.app.ui.drama.DramaDetailScreen(dramaUrl = java.net.URLDecoder.decode(url, "UTF-8"))
-        }
-
         
         composable(
             route = MainViewModel.ROUTE_KOMIK_DETAIL,
