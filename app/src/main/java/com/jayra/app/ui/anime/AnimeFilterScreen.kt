@@ -35,6 +35,7 @@ private val NetflixTextPrimary = Color(0xFFFFFFFF)
 private val NetflixTextSecondary = Color(0xFFB3B3B3)
 private val NetflixTextMetadata = Color(0xFF8C8C8C)
 private val NetflixRed = Color(0xFFE50914)
+private val NetflixDivider = Color(0xFF262626)
 
 // ============================================================================
 // FILTER BOTTOM SHEET
@@ -48,7 +49,7 @@ fun AnimeFilterBottomSheet(
 ) {
     val state by viewModel.filterState.collectAsState()
     val expandedSections = remember {
-        mutableStateMapOf<String, Boolean>(
+        mutableMapOf<String, Boolean>(
             "genres" to true,
             "seasons" to false,
             "studios" to false,
@@ -83,7 +84,7 @@ fun AnimeFilterBottomSheet(
 @Composable
 fun FilterSheetContent(
     state: AnimeFilterUiState,
-    expandedSections: MutableStateMap<String, Boolean>,
+    expandedSections: MutableMap<String, Boolean>,
     onApplyClick: () -> Unit,
     onDismiss: () -> Unit,
     viewModel: AnimeViewModel

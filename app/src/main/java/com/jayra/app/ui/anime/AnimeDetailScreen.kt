@@ -22,7 +22,10 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,8 +60,10 @@ private val NetflixTextSecondary = Color(0xFFB3B3B3)
 private val NetflixTextMetadata = Color(0xFF8C8C8C)
 private val NetflixRed = Color(0xFFE50914)
 private val NetflixGreen = Color(0xFF46D369)
+private val NetflixOrange = Color(0xFFFF9800)
 private val NetflixButtonSecondaryBg = Color(0xFF2A2A2A)
 private val NetflixDivider = Color(0xFF262626)
+private val NetflixProgressTrack = Color(0xFF4D4D4D)
 
 // ============================================================================
 // MAIN DETAIL SCREEN
@@ -673,7 +678,10 @@ fun EpisodesSection(
                     placeholderColor = NetflixTextMetadata,
                     cursorColor = NetflixRed
                 ),
-                keyboardActions = androidx.compose.ui.window.KeyboardActions(
+                keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                ),
+                keyboardActions = androidx.compose.ui.text.input.KeyboardActions(
                     onDone = { showSearch.value = false }
                 )
             )
@@ -732,8 +740,8 @@ fun EpisodeItem(
     val isWatched = progress >= 0.95f
     val isWatching = progress > 0f && progress < 0.95f
 
-    Surface(
-        color = if (isCurrent) NetflixDarkGray else Color.Transparent,
+    // Use Box with border instead of Modifier.border + combinedClickable
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
@@ -742,8 +750,17 @@ fun EpisodeItem(
                 onLongClick = { onLongClick() },
                 onClick = { onClick() }
             )
-            .then(if (isCurrent) Modifier.border(3.dp, NetflixRed, RoundedCornerShape(6.dp)) else Modifier)
+            .background(if (isCurrent) NetflixDarkGray else Color.Transparent)
     ) {
+        // Border for current episode
+        if (isCurrent) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .border(3.dp, NetflixRed, RoundedCornerShape(6.dp))
+            )
+        }
+
         Row(
             modifier = Modifier.padding(8.dp),
             verticalAlignment = Alignment.Top
