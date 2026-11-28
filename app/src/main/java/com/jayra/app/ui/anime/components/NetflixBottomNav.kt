@@ -2,7 +2,7 @@ package com.jayra.app.ui.anime.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import clickable
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Home
