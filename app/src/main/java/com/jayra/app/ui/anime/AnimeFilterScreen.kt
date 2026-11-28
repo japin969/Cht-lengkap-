@@ -48,36 +48,12 @@ fun AnimeFilterBottomSheet(
     onDismiss: () -> Unit
 ) {
     val state by viewModel.filterState.collectAsState()
-    val expandedSections = remember {
-        mutableMapOf<String, Boolean>(
-            "genres" to true,
-            "seasons" to false,
-            "studios" to false,
-            "status" to true,
-            "types" to false,
-            "orders" to true,
-        )
-    }
+    val expandedSections = remember { mutableMapOf("genres" to true, "seasons" to false, "studios" to false, "status" to true, "types" to false, "orders" to true) }
 
-    // Load filter list on first open
-    LaunchedEffect(Unit) {
-        viewModel.loadFilterList()
-    }
+    LaunchedEffect(Unit) { viewModel.loadFilterList() }
 
-    // Simple bottom sheet implementation using a Box with background
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable { onDismiss() }
-    ) {
-        FilterSheetContent(
-            state = state,
-            expandedSections = expandedSections,
-            onApplyClick = onApplyClick,
-            onDismiss = onDismiss,
-            viewModel = viewModel
-        )
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { onDismiss() }) {
+        FilterSheetContent(state, expandedSections, onApplyClick, onDismiss, viewModel)
     }
 }
 
@@ -89,135 +65,24 @@ fun FilterSheetContent(
     onDismiss: () -> Unit,
     viewModel: AnimeViewModel
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(500.dp)
-            .background(NetflixDarkGray, RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-            .padding(bottom = 16.dp) // Handle bottom padding
-    ) {
-        // Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Column(modifier = Modifier.fillMaxWidth().height(500.dp).background(NetflixDarkGray, RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)).padding(bottom = 16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("Filter Anime", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = {
-                    viewModel.resetFilter()
-                }) {
-                    Text("Reset", fontSize = 14.sp, color = NetflixTextSecondary)
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = NetflixWhite, modifier = Modifier.size(24.dp))
-                }
+                TextButton(onClick = { viewModel.resetFilter() }) { Text("Reset", fontSize = 14.sp, color = NetflixTextSecondary) }
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close", NetflixWhite, Modifier.size(24.dp)) }
             }
         }
-
-        androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-
-        // Scrollable filter content - use verticalScroll with rememberScrollState
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .height(400.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Genres
-            FilterSection(
-                title = "Genre",
-                options = state.filterList?.genres ?: emptyList(),
-                selected = state.selectedGenres,
-                isExpanded = expandedSections["genres"] ?: true,
-                onToggleExpand = { expandedSections["genres"] = !(expandedSections["genres"] ?: true) },
-                onSelectionChange = { selected ->
-                    viewModel.applyFilter(genres = selected)
-                },
-                multiSelect = true
-            )
-
-            // Seasons
-            FilterSection(
-                title = "Season",
-                options = state.filterList?.seasons ?: emptyList(),
-                selected = state.selectedSeasons,
-                isExpanded = expandedSections["seasons"] ?: false,
-                onToggleExpand = { expandedSections["seasons"] = !(expandedSections["seasons"] ?: false) },
-                onSelectionChange = { selected ->
-                    viewModel.applyFilter(seasons = selected)
-                },
-                multiSelect = true
-            )
-
-            // Studios
-            FilterSection(
-                title = "Studio",
-                options = state.filterList?.studios ?: emptyList(),
-                selected = state.selectedStudios,
-                isExpanded = expandedSections["studios"] ?: false,
-                onToggleExpand = { expandedSections["studios"] = !(expandedSections["studios"] ?: false) },
-                onSelectionChange = { selected ->
-                    viewModel.applyFilter(studios = selected)
-                },
-                multiSelect = true
-            )
-
-            // Status
-            FilterSection(
-                title = "Status",
-                options = state.filterList?.status ?: emptyList(),
-                selected = state.selectedStatus,
-                isExpanded = expandedSections["status"] ?: true,
-                onToggleExpand = { expandedSections["status"] = !(expandedSections["status"] ?: true) },
-                onSelectionChange = { selected ->
-                    viewModel.applyFilter(status = selected)
-                },
-                multiSelect = true
-            )
-
-            // Types
-            FilterSection(
-                title = "Type",
-                options = state.filterList?.types ?: emptyList(),
-                selected = state.selectedTypes,
-                isExpanded = expandedSections["types"] ?: false,
-                onToggleExpand = { expandedSections["types"] = !(expandedSections["types"] ?: false) },
-                onSelectionChange = { selected ->
-                    viewModel.applyFilter(types = selected)
-                },
-                multiSelect = true
-            )
-
-            // Orders (Single select)
-            FilterSection(
-                title = "Urutkan",
-                options = state.filterList?.orders ?: emptyList(),
-                selected = state.selectedOrder?.let { listOf(it) } ?: emptyList(),
-                isExpanded = expandedSections["orders"] ?: true,
-                onToggleExpand = { expandedSections["orders"] = !(expandedSections["orders"] ?: true) },
-                onSelectionChange = { selected ->
-                    viewModel.applyFilter(order = selected.firstOrNull())
-                },
-                multiSelect = false
-            )
+        Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp).height(400.dp).verticalScroll(rememberScrollState())) {
+            FilterSection("Genre", state.filterList?.genres ?: emptyList(), state.selectedGenres, expandedSections["genres"] ?: true, { expandedSections["genres"] = !(expandedSections["genres"] ?: true) }, { viewModel.applyFilter(genres = it) }, true)
+            FilterSection("Season", state.filterList?.seasons ?: emptyList(), state.selectedSeasons, expandedSections["seasons"] ?: false, { expandedSections["seasons"] = !(expandedSections["seasons"] ?: false) }, { viewModel.applyFilter(seasons = it) }, true)
+            FilterSection("Studio", state.filterList?.studios ?: emptyList(), state.selectedStudios, expandedSections["studios"] ?: false, { expandedSections["studios"] = !(expandedSections["studios"] ?: false) }, { viewModel.applyFilter(studios = it) }, true)
+            FilterSection("Status", state.filterList?.status ?: emptyList(), state.selectedStatus, expandedSections["status"] ?: true, { expandedSections["status"] = !(expandedSections["status"] ?: true) }, { viewModel.applyFilter(status = it) }, true)
+            FilterSection("Type", state.filterList?.types ?: emptyList(), state.selectedTypes, expandedSections["types"] ?: false, { expandedSections["types"] = !(expandedSections["types"] ?: false) }, { viewModel.applyFilter(types = it) }, true)
+            FilterSection("Urutkan", state.filterList?.orders ?: emptyList(), state.selectedOrder?.let { listOf(it) } ?: emptyList(), expandedSections["orders"] ?: true, { expandedSections["orders"] = !(expandedSections["orders"] ?: true) }, { viewModel.applyFilter(order = it.firstOrNull()) }, false)
         }
-
-        // Apply button
-        Button(
-            onClick = onApplyClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = NetflixRed, contentColor = NetflixWhite),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("Terapkan Filter", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
+        Button(onClick = onApplyClick, modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp), colors = ButtonDefaults.buttonColors(NetflixRed, NetflixWhite), shape = RoundedCornerShape(8.dp)) { Text("Terapkan Filter", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -239,84 +104,29 @@ fun FilterSection(
     LaunchedEffect(isExpanded) { showContent.value = isExpanded }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Section header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp)
-                .clickable { onToggleExpand() },
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).clickable { onToggleExpand() }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (selected.isNotEmpty() && multiSelect) {
-                    Text("${selected.size} dipilih", fontSize = 12.sp, color = NetflixTextSecondary)
-                }
-                // Use graphicsLayer for rotation instead of .rotate()
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = NetflixWhite,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer { rotationZ = if (showContent.value) 180f else 0f }
-                )
+                if (selected.isNotEmpty() && multiSelect) Text("${selected.size} dipilih", fontSize = 12.sp, color = NetflixTextSecondary)
+                Icon(Icons.Default.ExpandMore, null, NetflixWhite, Modifier.size(20.dp).graphicsLayer { rotationZ = if (showContent.value) 180f else 0f })
             }
         }
-
-        // Options - using crossfade for animation instead of AnimatedVisibility
-        androidx.compose.animation.AnimatedVisibility(visible = showContent.value) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+        AnimatedVisibility(visible = showContent.value) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 options.forEach { option ->
                     val isSelected = option.slug?.let { selected.contains(it) } == true
                     val displayName = option.name ?: option.slug ?: ""
                     val count = option.count?.let { " ($it)" } ?: ""
-
                     if (multiSelect) {
-                        // Checkbox style
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp, horizontal = 8.dp)
-                                .background(if (isSelected) NetflixRed.copy(alpha = 0.1f) else Color.Transparent, RoundedCornerShape(8.dp))
-                                .clickable { onSelectionChange(if (isSelected) selected.filter { it != option.slug } else selected + (option.slug ?: "")) }
-                        ) {
-                            // Custom checkbox using Box with border
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .border(2.dp, if (isSelected) NetflixRed else NetflixTextMetadata, RoundedCornerShape(4.dp))
-                                    .background(if (isSelected) NetflixRed else Color.Transparent)
-                            ) {
-                                if (isSelected) {
-                                    Icon(Icons.Default.Check, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(14.dp).align(Alignment.Center))
-                                }
-                            }
+                        Row(modifier = Modifier.fillMaxWidth().padding(8.dp).background(if (isSelected) NetflixRed.copy(alpha = 0.1f) else Color.Transparent, RoundedCornerShape(8.dp)).clickable { onSelectionChange(if (isSelected) selected.filter { it != option.slug } else selected + (option.slug ?: "")) }) {
+                            Box(modifier = Modifier.size(20.dp).border(2.dp, if (isSelected) NetflixRed else NetflixTextMetadata, RoundedCornerShape(4.dp)).background(if (isSelected) NetflixRed else Color.Transparent)) { if (isSelected) Icon(Icons.Default.Check, null, NetflixWhite, Modifier.size(14.dp).align(Alignment.Center)) }
                             Spacer(Modifier.width(12.dp))
                             Text(displayName, fontSize = 14.sp, color = NetflixWhite, modifier = Modifier.weight(1f))
                             Text(count, fontSize = 12.sp, color = NetflixTextMetadata)
                         }
                     } else {
-                        // Radio style
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp, horizontal = 8.dp)
-                                .background(if (isSelected) NetflixRed.copy(alpha = 0.1f) else Color.Transparent, RoundedCornerShape(8.dp))
-                                .clickable { option.slug?.let { onSelectionChange(listOf(it)) } }
-                        ) {
-                            // Custom radio using Box
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .border(2.dp, if (isSelected) NetflixRed else NetflixTextMetadata)
-                                    .background(if (isSelected) NetflixRed else Color.Transparent)
-                            )
+                        Row(modifier = Modifier.fillMaxWidth().padding(8.dp).background(if (isSelected) NetflixRed.copy(alpha = 0.1f) else Color.Transparent, RoundedCornerShape(8.dp)).clickable { option.slug?.let { onSelectionChange(listOf(it)) } }) {
+                            Box(modifier = Modifier.size(20.dp).clip(RoundedCornerShape(10.dp)).border(2.dp, if (isSelected) NetflixRed else NetflixTextMetadata).background(if (isSelected) NetflixRed else Color.Transparent))
                             Spacer(Modifier.width(12.dp))
                             Text(displayName, fontSize = 14.sp, color = NetflixWhite, modifier = Modifier.weight(1f))
                             Text(count, fontSize = 12.sp, color = NetflixTextMetadata)
@@ -339,67 +149,24 @@ fun AnimeFilterChipRow(
     onFilterClick: () -> Unit,
     chips: List<FilterChipData> = defaultFilterChips()
 ) {
-    Surface(
-        color = NetflixBlack,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .padding(vertical = 4.dp, horizontal = 16.dp)
-    ) {
-        androidx.compose.foundation.lazy.LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+    Surface(color = NetflixBlack, modifier = Modifier.fillMaxWidth().height(40.dp).padding(vertical = 4.dp, horizontal = 16.dp)) {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(chips) { chip ->
                 val isSelected = selectedChip == chip.id
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onChipClick(chip.id) },
-                    label = { Text(chip.label) },
-                    modifier = Modifier.height(32.dp),
-                    colors = FilterChipDefaults.colors(
-                        containerColor = if (isSelected) NetflixWhite else NetflixCardGray,
-                        labelColor = if (isSelected) NetflixBlack else NetflixWhite,
-                        selectedContainerColor = NetflixWhite,
-                        selectedLabelColor = NetflixBlack
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                )
+                FilterChip(selected = isSelected, onClick = { onChipClick(chip.id) }, label = { Text(chip.label) }, modifier = Modifier.height(32.dp), colors = FilterChipDefaults.colors(containerColor = if (isSelected) NetflixWhite else NetflixCardGray, labelColor = if (isSelected) NetflixBlack else NetflixWhite, selectedContainerColor = NetflixWhite, selectedLabelColor = NetflixBlack), shape = RoundedCornerShape(16.dp))
             }
-            // Filter button at end
-            item {
-                IconButton(onClick = onFilterClick) {
-                    Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = NetflixWhite, modifier = Modifier.size(20.dp).padding(6.dp))
-                }
-                .background(NetflixCardGray, RoundedCornerShape(16.dp))
-            }
+            item { IconButton(onClick = onFilterClick) { Icon(Icons.Default.FilterList, "Filter", NetflixWhite, Modifier.size(20.dp).padding(6.dp)) }.background(NetflixCardGray, RoundedCornerShape(16.dp)) }
         }
     }
 }
 
-data class FilterChipData(
-    val label: String,
-    val id: String
-)
+data class FilterChipData(val label: String, val id: String)
 
-fun defaultFilterChips(): List<FilterChipData> {
-    return listOf(
-        FilterChipData("Semua", "all"),
-        FilterChipData("Ongoing", "ongoing"),
-        FilterChipData("Completed", "completed"),
-        FilterChipData("Popular", "popular"),
-        FilterChipData("New", "new"),
-        FilterChipData("Top Rated", "top_rated"),
-        FilterChipData("Batch", "batch"),
-        FilterChipData("Movie", "movie"),
-        FilterChipData("Live-Action", "live_action"),
-        FilterChipData("Donghua", "donghua"),
-        FilterChipData("Tokusatsu", "tokusatsu"),
-        FilterChipData("Upcoming", "upcoming"),
-        FilterChipData("Schedule", "schedule"),
-        FilterChipData("Action", "action"),
-        FilterChipData("Fantasy", "fantasy"),
-        FilterChipData("Romance", "romance"),
-        FilterChipData("Comedy", "comedy"),
-        FilterChipData("Adventure", "adventure"),
-    )
-}
+fun defaultFilterChips(): List<FilterChipData> = listOf(
+    FilterChipData("Semua", "all"), FilterChipData("Ongoing", "ongoing"), FilterChipData("Completed", "completed"),
+    FilterChipData("Popular", "popular"), FilterChipData("New", "new"), FilterChipData("Top Rated", "top_rated"),
+    FilterChipData("Batch", "batch"), FilterChipData("Movie", "movie"), FilterChipData("Live-Action", "live_action"),
+    FilterChipData("Donghua", "donghua"), FilterChipData("Tokusatsu", "tokusatsu"), FilterChipData("Upcoming", "upcoming"),
+    FilterChipData("Schedule", "schedule"), FilterChipData("Action", "action"), FilterChipData("Fantasy", "fantasy"),
+    FilterChipData("Romance", "romance"), FilterChipData("Comedy", "comedy"), FilterChipData("Adventure", "adventure")
+)
