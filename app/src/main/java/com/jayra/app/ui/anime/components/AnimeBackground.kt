@@ -8,4 +8,3 @@ import com.jayra.app.ui.auth.IOSAuthBackdrop
 fun AnimeBackground(modifier: Modifier = Modifier) {
     IOSAuthBackdrop(modifier = modifier)
 }
-```

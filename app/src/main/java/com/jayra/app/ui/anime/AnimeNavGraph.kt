@@ -21,4 +21,3 @@ fun AnimeNavGraph(navController: NavHostController) {
         composable("anime_episode/{slug}") { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Anime Episode") } }
     }
 }
-```

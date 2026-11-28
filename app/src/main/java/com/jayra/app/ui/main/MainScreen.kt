@@ -749,40 +749,6 @@ private fun MainNavigationGraph(
         }
 
         composable(
-            route = "anime_detail?url={url}",
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
-            com.jayra.app.ui.anime.AnimeDetailScreen(
-                animeUrl = decoded,
-                onPlayEpisode = { epUrl ->
-                    val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
-                    navController.navigate("anime_player?url=$epEncoded")
-                }
-            )
-        }
-
-        composable(
-            route = "anime_player?url={url}",
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
-        ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
-            val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-            val state by vm.uiState.collectAsState()
-            LaunchedEffect(decoded) { vm.loadStream(decoded) }
-            val stream = state.streamUrl
-            if (stream.isNullOrBlank()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream ?: "")
-            }
-        }
-
-        composable(
             route = "donghua_detail?source={source}&slug={slug}",
             arguments = listOf(
                 androidx.navigation.navArgument("source") { type = androidx.navigation.NavType.StringType; defaultValue = "DONGHUA" },
