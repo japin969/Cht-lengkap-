@@ -175,7 +175,7 @@ class MainViewModel(
             icon = Icons.Rounded.MusicNote
         ),
         NavItem(
-            route = ROUTE_DRAMA_HOME,
+            route = ROUTE_HUB,
             icon = Icons.Rounded.PlayArrow,
             label = "VidHub"
         ),
@@ -216,8 +216,10 @@ class MainViewModel(
         const val ROUTE_CHAT_LIST = "chat_list"
         const val ROUTE_CALLS = "calls"
         const val ROUTE_MUSIC_HOME = "music_home"
-    const val ROUTE_DRAMA_HOME = "drama_home"
-    const val ROUTE_DRAMA_DETAIL = "drama_detail?url={url}"
+    const val ROUTE_HUB = "hub"
+    const val ROUTE_ANIME_HOME = "anime_home"
+    const val ROUTE_PLACEHOLDER_DONGHUB = "placeholder_donghub"
+    const val ROUTE_PLACEHOLDER_DONGHUA = "placeholder_donghua"
     const val ROUTE_KOMIK_DETAIL = "komik_detail?slug={slug}"
     const val ROUTE_KOMIK_READER = "komik_reader?slug={slug}"
         const val ROUTE_SETTINGS = "settings"
@@ -229,7 +231,7 @@ class MainViewModel(
             ROUTE_CHAT_LIST,
             ROUTE_CALLS,
             ROUTE_MUSIC_HOME,
-            ROUTE_DRAMA_HOME,
+            ROUTE_HUB,
             ROUTE_SETTINGS
         )
     }
@@ -718,20 +720,28 @@ private fun MainNavigationGraph(
             )
         }
 
-        composable(MainViewModel.ROUTE_DRAMA_HOME) {
+        composable(MainViewModel.ROUTE_HUB) {
             com.jayra.app.ui.VidHubScreen(
-                onDramaClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("drama_detail?url=$encoded")
-                },
-                onDonghuaClick = { source, slug ->
-                    val encoded = java.net.URLEncoder.encode(slug, "UTF-8")
-                    navController.navigate("donghua_detail?source=$source&slug=$encoded")
-                },
-                onKomikClick = { slug ->
-                    navController.navigate("komik_detail?slug=$slug")
-                }
+                onAnimeClick = { navController.navigate(MainViewModel.ROUTE_ANIME_HOME) },
+                onDonghubClick = { navController.navigate(MainViewModel.ROUTE_PLACEHOLDER_DONGHUB) },
+                onDonghuaClick = { navController.navigate(MainViewModel.ROUTE_PLACEHOLDER_DONGHUA) },
+                onKomikClick = { }
             )
+        }
+
+        composable(MainViewModel.ROUTE_ANIME_HOME) {
+            com.jayra.app.ui.anime.AnimeHomeScreen(onAnimeClick = { url ->
+                val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                navController.navigate("anime_detail?url=$encoded")
+            })
+        }
+
+        composable(MainViewModel.ROUTE_PLACEHOLDER_DONGHUB) {
+            com.jayra.app.ui.hub.PlaceholderScreen("Donghub", accentColor = Color(0xFFFF6B35)) { navController.popBackStack() }
+        }
+
+        composable(MainViewModel.ROUTE_PLACEHOLDER_DONGHUA) {
+            com.jayra.app.ui.hub.PlaceholderScreen("Donghua", accentColor = Color(0xFF00B4D8)) { navController.popBackStack() }
         }
 
         composable(
