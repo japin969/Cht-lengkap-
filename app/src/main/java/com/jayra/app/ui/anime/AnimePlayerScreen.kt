@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -156,9 +157,12 @@ fun AnimePlayerScreen(
             .background(NetflixBlack)
             .clickable { isControllerVisible = !isControllerVisible }
             .pointerInput(Unit) {
-                detectDragGestures { _, _, _, _ ->
-                    // Seek gesture handling
-                }
+                detectDragGestures(
+                    onDragStart = { },
+                    onDrag = { _, _ -> },
+                    onDragEnd = { },
+                    onDragCancel = { }
+                )
             }
     ) {
         // Player View
@@ -166,7 +170,7 @@ fun AnimePlayerScreen(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 PlayerView(ctx).apply {
-                    player = player
+                    this.player = player
                     useController = false
                     layoutParams = android.widget.FrameLayout.LayoutParams(
                         android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
