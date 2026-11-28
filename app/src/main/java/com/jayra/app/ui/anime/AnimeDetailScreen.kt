@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
@@ -717,7 +718,7 @@ fun EmptyEpisodesState() {
             .padding(vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(androidx.compose.material.icons.Icons.Default.VideoLibrary, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(48.dp))
+        Icon(androidx.compose.material.icons.Icons.Default.Movie, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(48.dp))
         Spacer(Modifier.height(16.dp))
         Text("Belum ada episode", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
         Spacer(Modifier.height(4.dp))
@@ -752,11 +753,12 @@ fun EpisodeItem(
             )
             .background(if (isCurrent) NetflixDarkGray else Color.Transparent)
     ) {
-        // Border for current episode
+        // Border for current episode - draw manually
         if (isCurrent) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer { }
                     .border(3.dp, NetflixRed, RoundedCornerShape(6.dp))
             )
         }

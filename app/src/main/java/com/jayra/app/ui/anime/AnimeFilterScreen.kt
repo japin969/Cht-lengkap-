@@ -119,7 +119,7 @@ fun FilterSheetContent(
 
         androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
 
-        // Scrollable filter content
+        // Scrollable filter content - use verticalScroll with rememberScrollState
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -253,13 +253,14 @@ fun FilterSection(
                 if (selected.isNotEmpty() && multiSelect) {
                     Text("${selected.size} dipilih", fontSize = 12.sp, color = NetflixTextSecondary)
                 }
+                // Use graphicsLayer for rotation instead of .rotate()
                 Icon(
                     imageVector = androidx.compose.material.icons.Icons.Default.ExpandMore,
                     contentDescription = null,
                     tint = NetflixWhite,
                     modifier = Modifier
                         .size(20.dp)
-                        .rotate(if (showContent.value) 180f else 0f)
+                        .graphicsLayer { rotationZ = if (showContent.value) 180f else 0f }
                 )
             }
         }
@@ -284,6 +285,7 @@ fun FilterSection(
                                 .background(if (isSelected) NetflixRed.copy(alpha = 0.1f) else Color.Transparent, RoundedCornerShape(8.dp))
                                 .clickable { onSelectionChange(if (isSelected) selected.filter { it != option.slug } else selected + (option.slug ?: "")) }
                         ) {
+                            // Custom checkbox using Box with border
                             Box(
                                 modifier = Modifier
                                     .size(20.dp)
@@ -307,6 +309,7 @@ fun FilterSection(
                                 .background(if (isSelected) NetflixRed.copy(alpha = 0.1f) else Color.Transparent, RoundedCornerShape(8.dp))
                                 .clickable { option.slug?.let { onSelectionChange(listOf(it)) } }
                         ) {
+                            // Custom radio using Box
                             Box(
                                 modifier = Modifier
                                     .size(20.dp)
