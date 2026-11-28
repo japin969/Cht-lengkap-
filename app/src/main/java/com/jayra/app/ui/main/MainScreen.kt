@@ -312,7 +312,7 @@ fun MainScreen(
 
     val isDark = isSystemInDarkTheme()
     val screenBg = if (isDark) JayraDarkChatBg else JayraLightChatBg
-    val showBottomBar = currentRoute in MainViewModel.BOTTOM_BAR_ROUTES && currentUser != null
+    val showBottomBar = currentRoute in MainViewModel.BOTTOM_BAR_ROUTES && currentUser != null && currentRoute?.startsWith("anime") != true
 
     Scaffold(
         contentWindowInsets = if (showBottomBar) WindowInsets.safeDrawing else WindowInsets(0, 0, 0, 0),
@@ -722,18 +722,11 @@ private fun MainNavigationGraph(
 
         composable(MainViewModel.ROUTE_HUB) {
             com.jayra.app.ui.VidHubScreen(
-                onAnimeClick = { navController.navigate(MainViewModel.ROUTE_ANIME_HOME) },
+                onAnimeClick = { navController.navigate("anime_home") },
                 onDonghubClick = { navController.navigate(MainViewModel.ROUTE_PLACEHOLDER_DONGHUB) },
                 onDonghuaClick = { navController.navigate(MainViewModel.ROUTE_PLACEHOLDER_DONGHUA) },
                 onKomikClick = { }
             )
-        }
-
-        composable(MainViewModel.ROUTE_ANIME_HOME) {
-            com.jayra.app.ui.anime.AnimeHomeScreen(onAnimeClick = { url ->
-                val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                navController.navigate("anime_detail?url=$encoded")
-            })
         }
 
         composable(MainViewModel.ROUTE_PLACEHOLDER_DONGHUB) {
@@ -742,6 +735,17 @@ private fun MainNavigationGraph(
 
         composable(MainViewModel.ROUTE_PLACEHOLDER_DONGHUA) {
             com.jayra.app.ui.hub.PlaceholderScreen("Donghua", accentColor = Color(0xFF00B4D8)) { navController.popBackStack() }
+        }
+
+        composable("anime_home") {
+            val animeNavController = androidx.navigation.compose.rememberNavController()
+            Box(Modifier.fillMaxSize()) {
+                com.jayra.app.ui.anime.AnimeNavGraph(navController = animeNavController)
+                com.jayra.app.ui.anime.AnimeBottomNav(
+                    currentRoute = animeNavController.currentBackStackEntry?.destination?.route,
+                    onNavigate = { animeNavController.navigate(it) { launchSingleTop = true } }
+                )
+            }
         }
 
         composable(
