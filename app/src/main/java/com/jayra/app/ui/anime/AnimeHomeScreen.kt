@@ -2,11 +2,9 @@ package com.jayra.app.ui.anime
 
 import android.net.Uri
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -15,7 +13,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.rememberScrollableState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -39,8 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import coil.size.Dimension
 import com.jayra.app.data.AnimeKompiItem
 import com.jayra.app.ui.theme.JayraTheme
 
@@ -556,7 +551,7 @@ fun HeroBanner(
                     item.dub?.let { add("Dub") }
                 }
                 Text(
-                    text = metaParts.joinToString(" • "),
+                    text = metaParts.joinToString(" \u2022 "),
                     fontSize = 12.sp,
                     color = NetflixTextSecondary,
                     maxLines = 1,
@@ -567,7 +562,7 @@ fun HeroBanner(
             // Genres
             if (item.genres?.isNotEmpty() == true) {
                 Text(
-                    text = item.genres!!.take(3).joinToString(" • "),
+                    text = item.genres!!.take(3).joinToString(" \u2022 "),
                     fontSize = 12.sp,
                     color = NetflixTextSecondary,
                     maxLines = 1,
@@ -608,7 +603,7 @@ fun HeroBanner(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = NetflixBlack, modifier = Modifier.size(20.dp))
+                        Icon(androidx.compose.material.icons.Icons.Default.PlayArrow, contentDescription = null, tint = NetflixBlack, modifier = Modifier.size(20.dp))
                         Text("Play", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = NetflixBlack)
                     }
                 }
@@ -623,7 +618,7 @@ fun HeroBanner(
                     ),
                     shape = RoundedCornerShape(4.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "My List", tint = NetflixWhite, modifier = Modifier.size(20.dp))
+                    Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = "My List", tint = NetflixWhite, modifier = Modifier.size(20.dp))
                 }
 
                 // Info button
@@ -637,7 +632,7 @@ fun HeroBanner(
                     shape = RoundedCornerShape(4.dp),
                     border = androidx.compose.ui.graphics.drawscope.BorderStroke(1.dp, NetflixWhite.copy(alpha = 0.5f))
                 ) {
-                    Icon(Icons.Default.Info, contentDescription = "Info", tint = NetflixWhite, modifier = Modifier.size(20.dp))
+                    Icon(androidx.compose.material.icons.Icons.Default.Info, contentDescription = "Info", tint = NetflixWhite, modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -736,8 +731,6 @@ fun AnimeRow(
                     showMetadata = showMetadata
                 )
             }
-            // Skeleton items while loading more
-            // items(3) { AnimePosterCardSkeleton() }
         }
     }
 }
@@ -812,9 +805,6 @@ fun Top10PosterCard(
                 color = numberColor,
                 letterSpacing = (-4).sp
             )
-            .graphicsLayer {
-                // Add stroke effect for number
-            }
         }
 
         // Poster
@@ -1047,7 +1037,7 @@ fun AnimePosterCard(
                 }
                 item.score?.let {
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Icon(Icons.Default.Star, contentDescription = null, tint = NetflixOrange, modifier = Modifier.size(11.dp))
+                        Icon(androidx.compose.material.icons.Icons.Default.Star, contentDescription = null, tint = NetflixOrange, modifier = Modifier.size(11.dp))
                         Text(
                             text = it,
                             fontSize = 11.sp,
@@ -1101,7 +1091,7 @@ fun ScheduleSection(
                         label = { Text(day, fontSize = 13.sp) },
                         modifier = Modifier.height(32.dp),
                         colors = FilterChipDefaults.colors(
-                            containerColor = if (isSelected) NetflixWhite else NetflixChipInactive,
+                            containerColor = if (isSelected) NetflixWhite else NetflixCardGray,
                             labelColor = if (isSelected) NetflixBlack else NetflixWhite
                         ),
                         shape = RoundedCornerShape(16.dp)
@@ -1244,7 +1234,7 @@ fun ContinueWatchingCard(
                     .clip(RoundedCornerShape(6.dp))
             ) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow,
+                    imageVector = androidx.compose.material.icons.Icons.Default.PlayArrow,
                     contentDescription = "Play",
                     tint = NetflixWhite,
                     modifier = Modifier
@@ -1287,7 +1277,7 @@ fun ContinueWatchingCard(
 
         // Progress text
         Text(
-            text = "S1:E${(progress * 10).toInt()} • ${(10 * (1 - progress)).toInt()} min left",
+            text = "S1:E${(progress * 10).toInt()} \u2022 ${(10 * (1 - progress)).toInt()} min left",
             fontSize = 11.sp,
             color = NetflixTextMetadata,
             maxLines = 1,
@@ -1396,14 +1386,4 @@ fun placeholderSkeleton(): AsyncImage.Painter = remember {
 @Composable
 fun errorImage(): AsyncImage.Painter = remember {
     androidx.compose.ui.res.painterResource(id = android.R.color.transparent) // Error handled by Coil
-}
-
-// Extension for Coil placeholder/error
-@Composable
-private fun ImageRequest.Builder.placeholderSkeleton(): ImageRequest.Builder {
-    return this.placeholder(
-        androidx.compose.ui.graphics.drawscope.drawRect(
-            color = NetflixSkeletonStart
-        )
-    )
 }

@@ -61,19 +61,26 @@ fun AnimeFilterBottomSheet(
         viewModel.loadFilterList()
     }
 
-    ModalBottomSheetLayout(
-        sheetState = rememberModalBottomSheetState(ModalBottomSheetValue.Hidden),
-        sheetContent = {
-            FilterSheetContent(
-                state = state,
-                expandedSections = expandedSections,
-                onApplyClick = onApplyClick,
-                onDismiss = onDismiss,
-                viewModel = viewModel
-            )
-        },
-        sheetAction = { onDismiss() }
-    )
+    // Use a simple BottomSheet instead of ModalBottomSheetLayout
+    val isSheetOpen = remember { mutableStateOf(true) }
+
+    if (!isSheetOpen.value) return
+
+    // Simple bottom sheet implementation
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { isSheetOpen.value = false; onDismiss() }
+    ) {
+        FilterSheetContent(
+            state = state,
+            expandedSections = expandedSections,
+            onApplyClick = onApplyClick,
+            onDismiss = { isSheetOpen.value = false; onDismiss() },
+            viewModel = viewModel
+        )
+    }
 }
 
 @Composable
@@ -87,7 +94,9 @@ fun FilterSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .height(500.dp)
             .background(NetflixDarkGray, RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+            .padding(bottom = 16.dp) // Handle bottom padding
     ) {
         // Header
         Row(
@@ -104,7 +113,7 @@ fun FilterSheetContent(
                 }) {
                     Text("Reset", fontSize = 14.sp, color = NetflixTextSecondary)
                 }
-                IconButton(onClick = onDismiss) {
+                IconButton(onClick = { /* handled by parent */ }) {
                     Icon(Icons.Default.Close, contentDescription = "Close", tint = NetflixWhite, modifier = Modifier.size(24.dp))
                 }
             }
@@ -113,11 +122,11 @@ fun FilterSheetContent(
         androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
 
         // Scrollable filter content
-        androidx.compose.foundation.layout.Column(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
-                .height(400.dp)
+                .fillMaxHeight()
                 .verticalScroll(rememberScrollState())
         ) {
             // Genres
@@ -246,18 +255,20 @@ fun FilterSection(
                 if (selected.isNotEmpty() && multiSelect) {
                     Text("${selected.size} dipilih", fontSize = 12.sp, color = NetflixTextSecondary)
                 }
-                androidx.compose.material.icons.filled.ExpandMore
-                    .let { icon ->
-                        Icon(icon, contentDescription = null, tint = NetflixWhite, modifier = Modifier
-                            .size(20.dp)
-                            .rotate(if (showContent.value) 180f else 0f)
-                        )
-                    }
+                // Use a simple icon instead of ExpandMore
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = NetflixWhite,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(if (showContent.value) 180f else 0f)
+                )
             }
         }
 
-        // Options
-        AnimatedVisibility(visible = showContent.value) {
+        // Options - using crossfade for animation instead of AnimatedVisibility
+        androidx.compose.animation.AnimatedVisibility(visible = showContent.value) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)

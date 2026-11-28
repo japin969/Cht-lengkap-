@@ -2,7 +2,6 @@ package com.jayra.app.ui.anime
 
 import android.net.Uri
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -248,7 +247,7 @@ fun DetailBackdrop(
             // Back button
             IconButton(onClick = onBackClick) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
                     contentDescription = "Back",
                     tint = NetflixWhite,
                     modifier = Modifier
@@ -262,7 +261,7 @@ fun DetailBackdrop(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 IconButton(onClick = onShareClick) {
                     Icon(
-                        imageVector = Icons.Default.Share,
+                        imageVector = androidx.compose.material.icons.Icons.Default.Share,
                         contentDescription = "Share",
                         tint = NetflixWhite,
                         modifier = Modifier
@@ -273,7 +272,7 @@ fun DetailBackdrop(
                 }
                 IconButton(onClick = onBookmarkClick) {
                     Icon(
-                        imageVector = Icons.Default.Bookmark,
+                        imageVector = androidx.compose.material.icons.Icons.Default.Bookmark,
                         contentDescription = "Bookmark",
                         tint = NetflixWhite,
                         modifier = Modifier
@@ -328,7 +327,7 @@ fun DetailMainInfo(
                 detail.rating?.let { add(it) } // Age rating like TV-14
             }
             Text(
-                text = meta1.joinToString(" • "),
+                text = meta1.joinToString(" \u2022 "),
                 fontSize = 12.sp,
                 color = NetflixTextSecondary,
                 maxLines = 1,
@@ -344,10 +343,10 @@ fun DetailMainInfo(
             val meta2 = buildList {
                 detail.sub?.let { add("Sub: $it") }
                 detail.dub?.let { add("Dub: $it") }
-                detail.genres?.take(3)?.joinToString(" • ")?.let { add(it) }
+                detail.genres?.take(3)?.joinToString(" \u2022 ")?.let { add(it) }
             }
             Text(
-                text = meta2.joinToString(" • "),
+                text = meta2.joinToString(" \u2022 "),
                 fontSize = 12.sp,
                 color = NetflixTextSecondary,
                 maxLines = 1,
@@ -400,7 +399,7 @@ fun DetailMainInfo(
                     detail.producers?.joinToString(", ")?.let { add("Producer: $it") }
                 }
                 Text(
-                    text = castInfo.joinToString(" • "),
+                    text = castInfo.joinToString(" \u2022 "),
                     fontSize = 12.sp,
                     color = NetflixTextMetadata,
                     maxLines = 2,
@@ -431,7 +430,7 @@ fun DetailMainInfo(
                 horizontalArrangement = Arrangement.Center,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = if (isUpcoming) NetflixTextMetadata else NetflixBlack, modifier = Modifier.size(20.dp))
+                Icon(androidx.compose.material.icons.Icons.Default.PlayArrow, contentDescription = null, tint = if (isUpcoming) NetflixTextMetadata else NetflixBlack, modifier = Modifier.size(20.dp))
                 Text(
                     text = if (isUpcoming) "Coming Soon" else "Play",
                     fontSize = 16.sp,
@@ -445,7 +444,7 @@ fun DetailMainInfo(
         if (!isUpcoming && episodes.isNotEmpty()) {
             val firstEp = episodes.first()
             Text(
-                text = "S1:E${firstEp.episode} • ${firstEp.title ?: "Episode ${firstEp.episode}"}",
+                text = "S1:E${firstEp.episode} \u2022 ${firstEp.title ?: "Episode ${firstEp.episode}"}",
                 fontSize = 12.sp,
                 color = NetflixTextSecondary,
                 textAlign = TextAlign.Center,
@@ -475,7 +474,7 @@ fun DetailMainInfo(
                     horizontalArrangement = Arrangement.Center,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp))
+                    Icon(androidx.compose.material.icons.Icons.Default.Add, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp))
                     Text("My List", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite)
                 }
             }
@@ -495,7 +494,7 @@ fun DetailMainInfo(
                     horizontalArrangement = Arrangement.Center,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp))
+                    Icon(androidx.compose.material.icons.Icons.Default.Share, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp))
                     Text("Share", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite)
                 }
             }
@@ -516,7 +515,7 @@ fun DetailMainInfo(
                     horizontalArrangement = Arrangement.Center,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(Icons.Default.Download, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp))
+                    Icon(androidx.compose.material.icons.Icons.Default.Download, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(18.dp))
                     Text("Download", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NetflixWhite)
                 }
             }
@@ -638,7 +637,7 @@ fun EpisodesSection(
                 modifier = Modifier.padding(start = 8.dp)
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Default.SwapVert, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(16.dp))
+                    Icon(androidx.compose.material.icons.Icons.Default.SwapVert, contentDescription = null, tint = NetflixWhite, modifier = Modifier.size(16.dp))
                     Text(
                         text = if (sortAscending.value) "1 - ${episodes.size}" : "${episodes.size} - 1",
                         fontSize = 13.sp,
@@ -650,13 +649,13 @@ fun EpisodesSection(
 
             // Search button
             IconButton(onClick = { showSearch.value = !showSearch.value }) {
-                Icon(Icons.Default.Search, contentDescription = "Search episodes", tint = NetflixWhite, modifier = Modifier.size(20.dp).padding(8.dp))
+                Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = "Search episodes", tint = NetflixWhite, modifier = Modifier.size(20.dp).padding(8.dp))
             }
         }
 
         // Search bar
         if (showSearch.value) {
-            TextField(
+            androidx.compose.material3.TextField(
                 value = searchQuery.value,
                 onValueChange = { searchQuery.value = it },
                 placeholder = { Text("Search episodes...", color = NetflixTextMetadata) },
@@ -710,7 +709,7 @@ fun EmptyEpisodesState() {
             .padding(vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(48.dp))
+        Icon(androidx.compose.material.icons.Icons.Default.VideoLibrary, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(48.dp))
         Spacer(Modifier.height(16.dp))
         Text("Belum ada episode", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
         Spacer(Modifier.height(4.dp))
@@ -772,12 +771,12 @@ fun EpisodeItem(
                             .background(NetflixBlack.copy(alpha = 0.6f))
                             .clip(RoundedCornerShape(6.dp))
                     ) {
-                        Icon(Icons.Default.Check, contentDescription = "Watched", tint = NetflixGreen, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(24.dp))
+                        Icon(androidx.compose.material.icons.Icons.Default.Check, contentDescription = "Watched", tint = NetflixGreen, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(24.dp))
                     }
                 } else {
                     // Play overlay
                     Icon(
-                        imageVector = Icons.Default.PlayArrow,
+                        imageVector = androidx.compose.material.icons.Icons.Default.PlayArrow,
                         contentDescription = "Play",
                         tint = NetflixWhite,
                         modifier = Modifier
