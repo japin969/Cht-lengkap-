@@ -3,9 +3,11 @@ package com.jayra.app.ui.anime
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -61,23 +63,18 @@ fun AnimeFilterBottomSheet(
         viewModel.loadFilterList()
     }
 
-    // Use a simple BottomSheet instead of ModalBottomSheetLayout
-    val isSheetOpen = remember { mutableStateOf(true) }
-
-    if (!isSheetOpen.value) return
-
-    // Simple bottom sheet implementation
+    // Simple bottom sheet implementation using a Box with background
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.5f))
-            .clickable { isSheetOpen.value = false; onDismiss() }
+            .clickable { onDismiss() }
     ) {
         FilterSheetContent(
             state = state,
             expandedSections = expandedSections,
             onApplyClick = onApplyClick,
-            onDismiss = { isSheetOpen.value = false; onDismiss() },
+            onDismiss = onDismiss,
             viewModel = viewModel
         )
     }
@@ -113,7 +110,7 @@ fun FilterSheetContent(
                 }) {
                     Text("Reset", fontSize = 14.sp, color = NetflixTextSecondary)
                 }
-                IconButton(onClick = { /* handled by parent */ }) {
+                IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = "Close", tint = NetflixWhite, modifier = Modifier.size(24.dp))
                 }
             }
@@ -126,7 +123,7 @@ fun FilterSheetContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
-                .fillMaxHeight()
+                .height(400.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             // Genres
@@ -255,7 +252,6 @@ fun FilterSection(
                 if (selected.isNotEmpty() && multiSelect) {
                     Text("${selected.size} dipilih", fontSize = 12.sp, color = NetflixTextSecondary)
                 }
-                // Use a simple icon instead of ExpandMore
                 Icon(
                     imageVector = androidx.compose.material.icons.Icons.Default.ExpandMore,
                     contentDescription = null,
