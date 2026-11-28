@@ -14,4 +14,3 @@ fun AnimeEpisodeScreen() {
         Text("Anime Player", color = Color.White, modifier = Modifier.align(Alignment.Center))
     }
 }
-```>

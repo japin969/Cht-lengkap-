@@ -2,7 +2,7 @@ package com.jayra.app.ui.anime.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.clickable
+import clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Cast
@@ -46,4 +46,4 @@ fun NetflixTopBar(
 }
 
 private fun Modifier.clickableSafe(onClick: () -> Unit): Modifier =
-    this.then(androidx.compose.foundation.clickable(onClick = onClick))
+    this.then(clickable(onClick = onClick))
