@@ -41,11 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.MediaItem
 import androidx.media3.exoplayer.Player
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.hls.HlsMediaSource
-import androidx.media3.exoplayer.source.dash.DashMediaSource
 import androidx.media3.exoplayer.ui.PlayerView
-import androidx.media3.exoplayer.upstream.DefaultHttpDataSource
 import com.jayra.app.data.AnimeKompiEpisodeData
 import com.jayra.app.data.AnimeKompiMirror
 import com.jayra.app.data.AnimeKompiSettingsData
@@ -166,7 +162,7 @@ fun AnimePlayerScreen(
             }
     ) {
         // Player View
-        AndroidView(
+        androidx.compose.ui.viewinterop.AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -202,7 +198,7 @@ fun AnimePlayerScreen(
         }
 
         // Top controls
-        AnimatedVisibility(visible = isControllerVisible) {
+        if (isControllerVisible) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Top bar
                 Box(
@@ -305,7 +301,7 @@ fun AnimePlayerScreen(
         }
 
         // Settings overlay
-        AnimatedVisibility(visible = showSettings) {
+        if (showSettings) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { showSettings = false }) {
                 Column(
                     modifier = Modifier
@@ -334,7 +330,7 @@ fun AnimePlayerScreen(
         }
 
         // Mirror sheet
-        AnimatedVisibility(visible = showMirrorSheet) {
+        if (showMirrorSheet) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { showMirrorSheet = false }) {
                 Column(
                     modifier = Modifier
@@ -360,7 +356,7 @@ fun AnimePlayerScreen(
         }
 
         // Speed overlay
-        AnimatedVisibility(visible = showSpeed) {
+        if (showSpeed) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { showSpeed = false }) {
                 Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -373,7 +369,7 @@ fun AnimePlayerScreen(
         }
 
         // Quality overlay
-        AnimatedVisibility(visible = showQuality) {
+        if (showQuality) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { showQuality = false }) {
                 Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -386,7 +382,7 @@ fun AnimePlayerScreen(
         }
 
         // Audio/Subs overlay
-        AnimatedVisibility(visible = showAudioSubs) {
+        if (showAudioSubs) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable { showAudioSubs = false }) {
                 Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)) {
                     Text("Audio", fontSize = 14.sp, color = NetflixTextSecondary, modifier = Modifier.padding(bottom = 8.dp))
@@ -408,7 +404,7 @@ fun AnimePlayerScreen(
         }
 
         // Next episode card
-        AnimatedVisibility(visible = showNextEpisodeCard) {
+        if (showNextEpisodeCard) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f)).clickable { }) {
                 Column(
                     modifier = Modifier.align(Alignment.Center),

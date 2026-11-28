@@ -75,7 +75,6 @@ fun AnimeListScreen(
         }
     }
 
-    // Use LazyColumn for scrollable content instead of Column + verticalScroll
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
