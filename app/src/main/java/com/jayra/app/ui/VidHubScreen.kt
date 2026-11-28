@@ -4,18 +4,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
+import androidx.navigation.compose.navController
 import com.jayra.app.ui.drama.DramaScreen
-import com.jayra.app.ui.anime.AnimeHomeScreen
 import com.jayra.app.ui.komik.KomikHomeScreen
 
 @Composable
 fun VidHubScreen(
     onDramaClick: (String) -> Unit,
-    onAnimeClick: (String) -> Unit,
+    onAnimeNavigate: () -> Unit,
     onKomikClick: (String) -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Drama", "Anime", "Komik")
+    val navController = rememberNavController()
 
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTab) {
@@ -30,7 +32,17 @@ fun VidHubScreen(
 
         when (selectedTab) {
             0 -> DramaScreen(onDramaClick = onDramaClick)
-            1 -> AnimeHomeScreen(onAnimeClick = onAnimeClick)
+            1 -> {
+                // Navigate to anime home when Anime tab is selected
+                LaunchedEffect(selectedTab) {
+                    if (selectedTab == 1) {
+                        onAnimeNavigate()
+                    }
+                }
+                Box(Modifier.fillMaxSize()) {
+                    Text("Loading Anime...", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.Center))
+                }
+            }
             2 -> KomikHomeScreen(onKomikClick = onKomikClick)
         }
     }

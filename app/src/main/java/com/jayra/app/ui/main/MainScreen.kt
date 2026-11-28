@@ -110,6 +110,13 @@ import com.jayra.app.ui.location.LocationSharingScreen
 import com.jayra.app.ui.music.MusicHomeScreen
 import com.jayra.app.ui.music.MusicPlayerScreen
 import com.jayra.app.ui.music.MusicViewModel
+import com.jayra.app.ui.anime.AnimeHomeScreen
+import com.jayra.app.ui.anime.AnimeDetailScreen
+import com.jayra.app.ui.anime.AnimePlayerScreen
+import com.jayra.app.ui.anime.AnimeCategoryScreen
+import com.jayra.app.ui.anime.AnimeListScreen
+import com.jayra.app.ui.anime.AnimeSearchScreen
+import com.jayra.app.ui.anime.AnimeSettingsScreen
 import com.jayra.app.ui.poll.CreatePollScreen
 import com.jayra.app.ui.profile.EditProfileScreen
 import com.jayra.app.ui.profile.MyProfileScreen
@@ -724,10 +731,7 @@ private fun MainNavigationGraph(
                     val encoded = java.net.URLEncoder.encode(url, "UTF-8")
                     navController.navigate("drama_detail?url=$encoded")
                 },
-                onAnimeClick = { url ->
-                    val encoded = java.net.URLEncoder.encode(url, "UTF-8")
-                    navController.navigate("anime_detail?url=$encoded")
-                },
+                onAnimeNavigate = { navController.navigate("anime_home") },
                 onKomikClick = { slug ->
                     navController.navigate("komik_detail?slug=$slug")
                 }
@@ -741,31 +745,162 @@ private fun MainNavigationGraph(
             val url = backStackEntry.arguments?.getString("url") ?: ""
             val decoded = java.net.URLDecoder.decode(url, "UTF-8")
             com.jayra.app.ui.anime.AnimeDetailScreen(
-                animeUrl = decoded,
-                onPlayEpisode = { epUrl ->
-                    val epEncoded = java.net.URLEncoder.encode(epUrl, "UTF-8")
-                    navController.navigate("anime_player?url=$epEncoded")
-                }
+                animeSlug = decoded,
+                onPlayEpisode = { epSlug ->
+                    navController.navigate("anime_player?slug=$epSlug")
+                },
+                onBackClick = { navController.popBackStack() }
             )
         }
 
         composable(
-            route = "anime_player?url={url}",
-            arguments = listOf(androidx.navigation.navArgument("url") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
+            route = "anime_player?slug={slug}",
+            arguments = listOf(androidx.navigation.navArgument("slug") { type = androidx.navigation.NavType.StringType; defaultValue = "" })
         ) { backStackEntry ->
-            val url = backStackEntry.arguments?.getString("url") ?: ""
-            val decoded = java.net.URLDecoder.decode(url, "UTF-8")
+            val slug = backStackEntry.arguments?.getString("slug") ?: ""
             val vm: com.jayra.app.ui.anime.AnimeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-            val state by vm.uiState.collectAsState()
-            LaunchedEffect(decoded) { vm.loadStream(decoded) }
-            val stream = state.streamUrl
-            if (stream.isNullOrBlank()) {
+            val state by vm.episodeState.collectAsState()
+            LaunchedEffect(slug) { vm.loadEpisode(slug) }
+            if (state.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
+            } else if (state.error != null) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Error: ${state.error}")
+                }
             } else {
-                com.jayra.app.ui.anime.AnimePlayerScreen(videoUrl = stream ?: "")
+                com.jayra.app.ui.anime.AnimePlayerScreen(
+                    episodeData = state.episodeData!!,
+                    mirrors = state.mirrors,
+                    danmaku = state.danmaku,
+                    settings = null, // TODO: Load settings
+                    onBackClick = { navController.popBackStack() },
+                    onNextEpisode = { nextSlug ->
+                        navController.navigate("anime_player?slug=$nextSlug") {
+                            popUpTo("anime_player") { inclusive = true }
+                        }
+                    },
+                    onPrevEpisode = { prevSlug ->
+                        navController.navigate("anime_player?slug=$prevSlug") {
+                            popUpTo("anime_player") { inclusive = true }
+                        }
+                    },
+                    onMirrorChange = { url ->
+                        // TODO: Handle mirror change
+                    },
+                    onShowComments = { /* TODO */ },
+                    onShowReactions = { /* TODO */ }
+                )
             }
+        }
+
+        // New Anime Home Screen
+        composable("anime_home") {
+            com.jayra.app.ui.anime.AnimeHomeScreen(
+                onAnimeClick = { slug ->
+                    val encoded = java.net.URLEncoder.encode(slug, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onCategoryClick = { categoryType, slug, title ->
+                    val encodedSlug = if (slug.isNotBlank()) java.net.URLEncoder.encode(slug, "UTF-8") else ""
+                    val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+                    when (categoryType) {
+                        "batch", "movie", "live-action", "donghua", "tokusatsu", "upcoming" ->
+                            navController.navigate("anime_category?type=$categoryType&slug=$encodedSlug&title=$encodedTitle")
+                        "genre", "season", "studio", "status", "type", "order" ->
+                            navController.navigate("anime_category?type=$categoryType&slug=$encodedSlug&title=$encodedTitle")
+                        "schedule" ->
+                            navController.navigate("anime_list?type=schedule")
+                        "status" ->
+                            navController.navigate("anime_list?type=status")
+                        "order" ->
+                            navController.navigate("anime_list?type=orders")
+                        else ->
+                            navController.navigate("anime_category?type=$categoryType&slug=$encodedSlug&title=$encodedTitle")
+                    }
+                },
+                onSearchClick = { navController.navigate("anime_search") },
+                onFilterClick = { navController.navigate("anime_filter") },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // Anime Category Screen (Batch, Movie, Live-Action, Donghua, Tokusatsu, Upcoming, Genre, Season, Studio, Status, Type, Order)
+        composable(
+            route = "anime_category?type={type}&slug={slug}&title={title}",
+            arguments = listOf(
+                navArgument("type") { type = NavType.StringType },
+                navArgument("slug") { type = NavType.StringType },
+                navArgument("title") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: ""
+            val slug = java.net.URLDecoder.decode(backStackEntry.arguments?.getString("slug") ?: "", "UTF-8")
+            val title = java.net.URLDecoder.decode(backStackEntry.arguments?.getString("title") ?: "", "UTF-8")
+            com.jayra.app.ui.anime.AnimeCategoryScreen(
+                categoryType = type,
+                slug = slug,
+                title = title,
+                onAnimeClick = { animeSlug ->
+                    val encoded = java.net.URLEncoder.encode(animeSlug, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // Anime List Screen (Genres, Seasons, Studios, Status, Types, Orders, A-Z)
+        composable(
+            route = "anime_list?type={type}",
+            arguments = listOf(navArgument("type") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val type = backStackEntry.arguments?.getString("type") ?: ""
+            com.jayra.app.ui.anime.AnimeListScreen(
+                listType = type,
+                onItemClick = { slug, title ->
+                    val encodedSlug = java.net.URLEncoder.encode(slug, "UTF-8")
+                    val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+                    when (type) {
+                        "genres", "seasons", "studios", "status", "types" ->
+                            navController.navigate("anime_category?type=$type&slug=$encodedSlug&title=$encodedTitle")
+                        "orders" ->
+                            navController.navigate("anime_category?type=order&slug=$encodedSlug&title=$encodedTitle")
+                        "az" ->
+                            navController.navigate("anime_category?type=az&slug=$encodedSlug&title=$encodedTitle")
+                        else ->
+                            navController.navigate("anime_category?type=$type&slug=$encodedSlug&title=$encodedTitle")
+                    }
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // Anime Search Screen
+        composable("anime_search") {
+            com.jayra.app.ui.anime.AnimeSearchScreen(
+                onBackClick = { navController.popBackStack() },
+                onAnimeClick = { slug ->
+                    val encoded = java.net.URLEncoder.encode(slug, "UTF-8")
+                    navController.navigate("anime_detail?url=$encoded")
+                }
+            )
+        }
+
+        // Anime Filter Screen (Bottom Sheet - handled in Home)
+        composable("anime_filter") {
+            // Filter is shown as bottom sheet from home, this is a placeholder
+            com.jayra.app.ui.settings.PlaceholderScreen(
+                title = "Filter Anime",
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // Anime Settings Screen
+        composable("anime_settings") {
+            com.jayra.app.ui.anime.AnimeSettingsScreen(
+                onBackClick = { navController.popBackStack() }
+            )
         }
 
         composable(
