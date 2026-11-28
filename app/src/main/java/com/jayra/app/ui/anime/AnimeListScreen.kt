@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +49,7 @@ private val NetflixTextPrimary = Color(0xFFFFFFFF)
 private val NetflixTextSecondary = Color(0xFFB3B3B3)
 private val NetflixTextMetadata = Color(0xFF8C8C8C)
 private val NetflixRed = Color(0xFFE50914)
+private val NetflixGreen = Color(0xFF46D369)
 
 // ============================================================================
 // LIST SCREEN (Genres, Seasons, Studios, Status, Types, Orders, A-Z)
@@ -55,13 +57,12 @@ private val NetflixRed = Color(0xFFE50914)
 
 @Composable
 fun AnimeListScreen(
-    listType: String, // "genres", "seasons", "studios", "status", "types", "orders", "az"
+    listType: String,
     viewModel: AnimeViewModel = viewModel(),
-    onItemClick: (String, String) -> Unit, // (slug, title)
+    onItemClick: (String, String) -> Unit,
     onBackClick: () -> Unit
 ) {
     val state by viewModel.listState.collectAsState()
-    val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
         viewModel.loadListMetadata()
@@ -74,23 +75,14 @@ fun AnimeListScreen(
         Modifier
             .fillMaxSize()
             .background(NetflixBlack)
-            .verticalScroll(scrollState)
+            .verticalScroll(rememberScrollState())
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header
-            ListHeader(
-                title = getListTitle(listType),
-                onBackClick = onBackClick
-            )
+            ListHeader(title = getListTitle(listType), onBackClick = onBackClick)
 
-            // Content
             when {
-                state.isLoading -> {
-                    ListSkeletonLoading(listType)
-                }
-                state.error != null -> {
-                    ListErrorState(error = state.error!!, onRetry = { viewModel.loadListMetadata() })
-                }
+                state.isLoading -> ListSkeletonLoading(listType)
+                state.error != null -> ListErrorState(error = state.error!!, onRetry = { viewModel.loadListMetadata() })
                 else -> {
                     when (listType) {
                         "genres" -> GenresList(items = state.genres, onItemClick = onItemClick)
@@ -170,9 +162,7 @@ fun GenresList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Text("Pilih Genre", fontSize = 13.sp, color = NetflixTextSecondary)
-        }
+        item { Text("Pilih Genre", fontSize = 13.sp, color = NetflixTextSecondary) }
         item {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -205,7 +195,6 @@ fun GenreCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Genre poster/icon
             if (genre.poster?.isNotBlank() == true) {
                 AsyncImage(
                     model = genre.poster,
@@ -218,7 +207,7 @@ fun GenreCard(
                     modifier = Modifier.size(50.dp).background(NetflixCardGray).clip(RoundedCornerShape(4.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Tag, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Category, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
                 }
             }
 
@@ -246,9 +235,7 @@ fun SeasonsList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Text("Pilih Musim", fontSize = 13.sp, color = NetflixTextSecondary)
-        }
+        item { Text("Pilih Musim", fontSize = 13.sp, color = NetflixTextSecondary) }
         item {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -321,9 +308,7 @@ fun StudiosList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Text("Pilih Studio", fontSize = 13.sp, color = NetflixTextSecondary)
-        }
+        item { Text("Pilih Studio", fontSize = 13.sp, color = NetflixTextSecondary) }
         item {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -368,7 +353,7 @@ fun StudioCard(
                     modifier = Modifier.size(50.dp).background(NetflixCardGray).clip(RoundedCornerShape(4.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Business, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Movie, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
                 }
             }
 
@@ -396,9 +381,7 @@ fun StatusList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Text("Pilih Status", fontSize = 13.sp, color = NetflixTextSecondary)
-        }
+        item { Text("Pilih Status", fontSize = 13.sp, color = NetflixTextSecondary) }
         items(items) { status ->
             StatusCard(status = status, onClick = { status.slug?.let { onItemClick(it, status.name ?: "") } })
         }
@@ -424,7 +407,6 @@ fun StatusCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Status icon
                 Box(
                     modifier = Modifier.size(40.dp).background(NetflixCardGray).clip(RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
@@ -433,7 +415,7 @@ fun StatusCard(
                         "ongoing" -> Text("▶", fontSize = 18.sp, color = NetflixGreen)
                         "completed" -> Text("✓", fontSize = 18.sp, color = NetflixWhite)
                         "upcoming" -> Text("⏰", fontSize = 18.sp, color = NetflixRed)
-                        else -> Icon(Icons.Default.RadioButtonChecked, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
+                        else -> Text("●", fontSize = 18.sp, color = NetflixTextMetadata)
                     }
                 }
                 Column(verticalArrangement = Arrangement.Center) {
@@ -441,7 +423,7 @@ fun StatusCard(
                     status.count?.let { Text("$it anime", fontSize = 12.sp, color = NetflixTextMetadata) }
                 }
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.NavigateNext, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -460,9 +442,7 @@ fun TypesList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Text("Pilih Tipe", fontSize = 13.sp, color = NetflixTextSecondary)
-        }
+        item { Text("Pilih Tipe", fontSize = 13.sp, color = NetflixTextSecondary) }
         items(items) { type ->
             TypeCard(type = type, onClick = { type.slug?.let { onItemClick(it, type.name ?: "") } })
         }
@@ -489,7 +469,7 @@ fun TypeCard(
         ) {
             Text(type.name ?: "Unknown", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = NetflixWhite)
             type.count?.let { Text("$it anime", fontSize = 12.sp, color = NetflixTextMetadata) }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.NavigateNext, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -508,9 +488,7 @@ fun OrdersList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Text("Pilih Urutan", fontSize = 13.sp, color = NetflixTextSecondary)
-        }
+        item { Text("Pilih Urutan", fontSize = 13.sp, color = NetflixTextSecondary) }
         items(items) { order ->
             OrderCard(order = order, onClick = { order.slug?.let { onItemClick(it, order.name ?: "") } })
         }
@@ -536,7 +514,7 @@ fun OrderCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(order.name ?: "Unknown", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = NetflixWhite)
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.NavigateNext, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -557,7 +535,6 @@ fun AzList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Letter index bar
         item {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -580,13 +557,10 @@ fun AzList(
             }
         }
 
-        // Sections for each letter
         letters.forEach { letter ->
             val items = azData?.az?.get(letter) ?: emptyList()
             if (items.isNotEmpty()) {
-                item {
-                    Text(letter, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = NetflixWhite)
-                }
+                item { Text(letter, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = NetflixWhite) }
                 item {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),

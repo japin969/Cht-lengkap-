@@ -12,6 +12,11 @@ import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filed.FileDownload
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.NavigateNext
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,10 +65,8 @@ fun AnimeSettingsScreen(
             .background(NetflixBlack)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header
             SettingsHeader(onBackClick = onBackClick)
 
-            // Settings List
             if (state.isLoading) {
                 SettingsSkeletonLoading()
             } else if (state.error != null) {
@@ -113,147 +116,113 @@ fun SettingsHeader(onBackClick: () -> Unit) {
 
 @Composable
 fun SettingsList(settings: AnimeKompiSettingsData?) {
-    val settings = settings ?: AnimeKompiSettingsData()
+    val s = settings ?: AnimeKompiSettingsData()
 
-    androidx.compose.foundation.lazy.LazyColumn(
+    LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
-        // Video Quality
-        item {
-            SettingsSection(title = "Video")
-        }
+        item { SettingsSection(title = "Video") }
         item {
             SettingsRow(
                 icon = Icons.Default.HighQuality,
                 title = "Kualitas Default",
-                subtitle = settings.availableQualities?.joinToString(", ") ?: "Auto, 1080p, 720p, 480p, 360p",
-                value = settings.defaultQuality ?: "Auto",
-                onClick = { /* TODO: Show quality picker */ }
+                subtitle = s.availableQualities?.joinToString(", ") ?: "Auto, 1080p, 720p, 480p, 360p",
+                value = s.defaultQuality ?: "Auto",
+                onClick = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
 
-        // Subtitle
         item {
             SettingsRow(
                 icon = Icons.Default.Subtitles,
                 title = "Subtitle Default",
                 subtitle = "Bahasa subtitle otomatis",
-                value = settings.defaultSubtitle ?: "id",
-                onClick = { /* TODO: Show subtitle picker */ }
+                value = s.defaultSubtitle ?: "id",
+                onClick = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
 
-        // Audio
         item {
             SettingsRow(
                 icon = Icons.Default.Videocam,
                 title = "Audio Default",
                 subtitle = "Sub atau Dub",
-                value = settings.defaultAudio ?: "sub",
-                onClick = { /* TODO: Show audio picker */ }
+                value = s.defaultAudio ?: "sub",
+                onClick = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
 
-        // Playback
-        item {
-            SettingsSection(title = "Pemutaran")
-        }
+        item { SettingsSection(title = "Pemutaran") }
         item {
             SettingsToggle(
                 icon = Icons.Default.PlayArrow,
                 title = "Auto Next Episode",
                 subtitle = "Otomatis memutar episode berikutnya",
-                checked = settings.autoNext ?: true,
+                checked = s.autoNext ?: true,
                 onCheckedChange = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
         item {
             SettingsToggle(
                 icon = Icons.Default.PlayArrow,
                 title = "Auto Play",
                 subtitle = "Otomatis memutar video saat dibuka",
-                checked = settings.autoPlay ?: true,
+                checked = s.autoPlay ?: true,
                 onCheckedChange = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
 
-        // Danmaku
         item {
             SettingsToggle(
                 icon = Icons.Default.ClosedCaption,
                 title = "Danmaku / Komentar Berjalan",
                 subtitle = "Tampilkan komentar di atas video",
-                checked = settings.danmakuEnabled ?: false,
+                checked = s.danmakuEnabled ?: false,
                 onCheckedChange = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
 
-        // Skip Intro/Outro
         item {
             SettingsToggle(
-                icon = Icons.Default.Forward10,
+                icon = Icons.Default.SkipNext,
                 title = "Skip Intro Otomatis",
                 subtitle = "Lewati opening secara otomatis",
-                checked = settings.skipIntroEnabled ?: true,
+                checked = s.skipIntroEnabled ?: true,
                 onCheckedChange = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
         item {
             SettingsToggle(
-                icon = Icons.Default.Forward10,
+                icon = Icons.Default.SkipNext,
                 title = "Skip Outro Otomatis",
                 subtitle = "Lewati ending secara otomatis",
-                checked = settings.skipOutroEnabled ?: true,
+                checked = s.skipOutroEnabled ?: true,
                 onCheckedChange = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
 
-        // Download
-        item {
-            SettingsSection(title = "Unduhan")
-        }
+        item { SettingsSection(title = "Unduhan") }
         item {
             SettingsRow(
                 icon = Icons.Default.FileDownload,
                 title = "Kualitas Unduhan",
                 subtitle = "Kualitas video saat diunduh",
-                value = settings.downloadQuality ?: "720p",
-                onClick = { /* TODO: Show download quality picker */ }
+                value = s.downloadQuality ?: "720p",
+                onClick = { /* TODO */ }
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
 
-        // About
-        item {
-            SettingsSection(title = "Tentang")
-        }
+        item { SettingsSection(title = "Tentang") }
         item {
             SettingsRow(
                 icon = Icons.Default.Info,
@@ -263,12 +232,10 @@ fun SettingsList(settings: AnimeKompiSettingsData?) {
                 onClick = {}
             )
         }
-        item {
-            androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
-        }
+        item { Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp)) }
         item {
             SettingsRow(
-                icon = Icons.Default.Web,
+                icon = Icons.Default.Language,
                 title = "Sumber Data API",
                 subtitle = "sankavollerei.web.id",
                 value = "",
@@ -328,7 +295,7 @@ fun SettingsRow(
                 if (value.isNotBlank()) {
                     Text(value, fontSize = 13.sp, color = NetflixTextSecondary)
                 }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.NavigateNext, contentDescription = null, tint = NetflixTextMetadata, modifier = Modifier.size(24.dp))
             }
         }
     }
@@ -363,7 +330,7 @@ fun SettingsToggle(
                     Text(subtitle, fontSize = 13.sp, color = NetflixTextMetadata)
                 }
             }
-            androidx.compose.material3.Switch(
+            Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(
@@ -383,7 +350,7 @@ fun SettingsToggle(
 
 @Composable
 fun SettingsSkeletonLoading() {
-    androidx.compose.foundation.lazy.LazyColumn(
+    LazyColumn(
         modifier = Modifier.fillMaxSize().padding(top = 56.dp),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
@@ -398,7 +365,7 @@ fun SettingsSkeletonLoading() {
                 )
             }
             item {
-                androidx.compose.material3.Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
+                Divider(color = NetflixDivider, modifier = Modifier.padding(horizontal = 16.dp))
             }
         }
     }

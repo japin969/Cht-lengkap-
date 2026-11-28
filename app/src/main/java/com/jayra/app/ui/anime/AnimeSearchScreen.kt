@@ -17,14 +17,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,6 +46,7 @@ private val NetflixTextPrimary = Color(0xFFFFFFFF)
 private val NetflixTextSecondary = Color(0xFFB3B3B3)
 private val NetflixTextMetadata = Color(0xFF8C8C8C)
 private val NetflixRed = Color(0xFFE50914)
+private val NetflixDivider = Color(0xFF262626)
 
 // ============================================================================
 // SEARCH SCREEN
@@ -56,7 +56,7 @@ private val NetflixRed = Color(0xFFE50914)
 fun AnimeSearchScreen(
     viewModel: AnimeViewModel = viewModel(),
     onBackClick: () -> Unit,
-    onAnimeClick: (String) -> Unit, // slug
+    onAnimeClick: (String) -> Unit,
 ) {
     val state by viewModel.searchState.collectAsState()
     val searchText = remember { mutableStateOf("") }
@@ -64,7 +64,6 @@ fun AnimeSearchScreen(
     val recentSearches = remember { mutableStateOf<List<String>>(emptyList()) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
 
-    // Load recent searches from local storage
     LaunchedEffect(Unit) {
         // TODO: Load from DataStore/SharedPreferences
     }
@@ -74,13 +73,11 @@ fun AnimeSearchScreen(
             .fillMaxSize()
             .background(NetflixBlack)
     ) {
-        // Search Header
         SearchHeader(
             searchText = searchText,
             onBackClick = onBackClick,
             onSearchSubmit = { query ->
                 viewModel.search(query)
-                // Save to recent searches
                 if (query.isNotBlank() && !recentSearches.value.contains(query)) {
                     recentSearches.value = (listOf(query) + recentSearches.value).take(10)
                 }
@@ -98,9 +95,7 @@ fun AnimeSearchScreen(
             focusRequester = focusRequester
         )
 
-        // Content
         Box(modifier = Modifier.fillMaxSize()) {
-            // Suggestions dropdown
             if (showSuggestions.value && state.suggestions.isNotEmpty()) {
                 SuggestionsDropdown(
                     suggestions = state.suggestions,
@@ -113,44 +108,12 @@ fun AnimeSearchScreen(
                 )
             }
 
-            // Main content
             when {
-                state.isLoading && state.results.isEmpty() -> {
-                    SearchSkeletonLoading()
-                }
-                state.error != null && state.results.isEmpty() -> {
-                    SearchErrorState(error = state.error!!, onRetry = { searchText.value.let(viewModel::search) })
-                }
-                state.results.isNotEmpty() -> {
-                    SearchResultsGrid(
-                        items = state.results,
-                        onItemClick = onAnimeClick,
-                        onLoadMore = {
-                            if (state.hasMore) {
-                                viewModel.search(state.query, state.currentPage + 1)
-                            }
-                        }
-                    )
-                }
-                state.query.isNotBlank() -> {
-                    // No results
-                    SearchEmptyState(query = state.query)
-                }
-                else -> {
-                    // Initial state - show recent searches
-                    RecentSearchesList(
-                        recentSearches = recentSearches.value,
-                        onItemClick = { query ->
-                            searchText.value = query
-                            viewModel.search(query)
-                            showSuggestions.value = false
-                        },
-                        onClearClick = {
-                            recentSearches.value = emptyList()
-                            // TODO: Clear from storage
-                        }
-                    )
-                }
+                state.isLoading && state.results.isEmpty() -> SearchSkeletonLoading()
+                state.error != null && state.results.isEmpty() -> SearchErrorState(error = state.error!!, onRetry = { searchText.value.let(viewModel::search) })
+                state.results.isNotEmpty() -> SearchResultsGrid(items = state.results, onItemClick = onAnimeClick, onLoadMore = { if (state.hasMore) viewModel.search(state.query, state.currentPage + 1) })
+                state.query.isNotBlank() -> SearchEmptyState(query = state.query)
+                else -> RecentSearchesList(recentSearches = recentSearches.value, onItemClick = { query -> searchText.value = query; viewModel.search(query); showSuggestions.value = false }, onClearClick = { recentSearches.value = emptyList() })
             }
         }
     }
@@ -183,8 +146,7 @@ fun SearchHeader(
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = NetflixWhite, modifier = Modifier.size(24.dp))
             }
 
-            // Search field
-            androidx.compose.material3.TextField(
+            TextField(
                 value = searchText.value,
                 onValueChange = onTextChange,
                 modifier = Modifier
@@ -194,12 +156,6 @@ fun SearchHeader(
                     .focusRequester(focusRequester),
                 placeholder = { Text("Search anime...", color = NetflixTextMetadata, fontSize = 14.sp) },
                 singleLine = true,
-                keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(
-                    imeAction = androidx.compose.ui.text.input.ImeAction.Search
-                ),
-                keyboardActions = androidx.compose.ui.text.input.KeyboardActions(
-                    onSearch = { onSearchSubmit(searchText.value) }
-                ),
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = NetflixCardGray,
                     unfocusedContainerColor = NetflixCardGray,
@@ -235,9 +191,8 @@ fun SuggestionsDropdown(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 56.dp) // Below header
+            .padding(top = 56.dp)
     ) {
-        // Background dim
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -245,12 +200,11 @@ fun SuggestionsDropdown(
                 .clickable { onDismiss() }
         )
 
-        // Dropdown content
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, top = 8.dp)
-                .background(NetflixDarkGray, RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
+                .background(NetflixDarkGray, RoundedCornerShape(12.dp))
         ) {
             suggestions.forEach { item ->
                 Row(
@@ -268,7 +222,7 @@ fun SuggestionsDropdown(
                             .width(40.dp)
                             .height(60.dp)
                             .clip(RoundedCornerShape(4.dp)),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        contentScale = ContentScale.Crop
                     )
                     Column(crossAxisAlignment = CrossAxisAlignment.Start) {
                         Text(item.title ?: "Unknown", fontSize = 14.sp, color = NetflixWhite, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -280,7 +234,7 @@ fun SuggestionsDropdown(
                     }
                 }
                 if (item != suggestions.last()) {
-                    androidx.compose.material3.Divider(color = NetflixDivider, thickness = 1.dp)
+                    Divider(color = NetflixDivider, thickness = 1.dp)
                 }
             }
         }
@@ -302,7 +256,6 @@ fun SearchResultsGrid(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Results header
         item {
             Text(
                 text = "${items.size} hasil ditemukan",
@@ -311,7 +264,6 @@ fun SearchResultsGrid(
             )
         }
 
-        // Grid
         item {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
@@ -321,13 +273,9 @@ fun SearchResultsGrid(
                 items(items) { item ->
                     SearchResultCard(item = item, onClick = { item.slug?.let(onItemClick) })
                 }
-                // Load more trigger
                 item {
-                    if (items.size > 0) {
-                        // This item triggers load more when visible
-                        LaunchedEffect(Unit) {
-                            onLoadMore()
-                        }
+                    if (items.isNotEmpty()) {
+                        LaunchedEffect(Unit) { onLoadMore() }
                     }
                 }
             }
@@ -352,7 +300,7 @@ fun SearchResultCard(
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
                 .clip(RoundedCornerShape(6.dp)),
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            contentScale = ContentScale.Crop
         )
         Text(
             text = item.title ?: "Unknown",
@@ -366,12 +314,8 @@ fun SearchResultCard(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(top = 2.dp)
         ) {
-            item.episode?.let {
-                Text(it, fontSize = 11.sp, color = NetflixTextMetadata)
-            }
-            item.score?.let {
-                Text("★ $it", fontSize = 11.sp, color = NetflixTextMetadata)
-            }
+            item.episode?.let { Text(it, fontSize = 11.sp, color = NetflixTextMetadata) }
+            item.score?.let { Text("★ $it", fontSize = 11.sp, color = NetflixTextMetadata) }
         }
     }
 }
@@ -420,9 +364,7 @@ fun RecentSearchesList(
                             Icon(Icons.Default.History, contentDescription = null, tint = NetflixTextSecondary, modifier = Modifier.size(20.dp))
                             Text(query, fontSize = 14.sp, color = NetflixWhite)
                         }
-                        Icon(Icons.Default.Close, contentDescription = "Remove", tint = NetflixTextMetadata, modifier = Modifier.size(20.dp)
-                            .clickable { /* TODO: Remove single item */ }
-                            .padding(8.dp))
+                        Icon(Icons.Default.Close, contentDescription = "Remove", tint = NetflixTextMetadata, modifier = Modifier.size(20.dp).clickable { /* TODO */ }.padding(8.dp))
                     }
                 }
             }

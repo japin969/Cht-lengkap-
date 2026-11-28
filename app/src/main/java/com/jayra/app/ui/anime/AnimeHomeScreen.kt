@@ -337,5 +337,12 @@ fun HomeErrorState(error: String, onRetry: () -> Unit) {
 // IMAGE PLACEHOLDER HELPERS
 // ============================================================================
 
-@Composable fun placeholderSkeleton(): AsyncImage.Painter = remember { androidx.compose.ui.res.painterResource(id = android.R.color.transparent) }
-@Composable fun errorImage(): AsyncImage.Painter = remember { androidx.compose.ui.res.painterResource(id = android.R.color.transparent) }
+@Composable
+fun placeholderSkeleton(): AsyncImage.Painter = remember {
+    androidx.compose.ui.res.painterResource(id = android.R.color.transparent)
+}
+
+@Composable
+fun errorImage(): AsyncImage.Painter = remember {
+    androidx.compose.ui.res.painterResource(id = android.R.color.transparent)
+}
