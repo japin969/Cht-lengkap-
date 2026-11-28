@@ -3,7 +3,7 @@ import java.time.Duration
 
 plugins {
   alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
   alias(libs.plugins.firebase.crashlytics)
@@ -68,6 +68,12 @@ secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
+}
+
+kotlin {
+  compose {
+    compilerOptions.freeCompilerArgs += listOf("-P", "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=true")
+  }
 }
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
