@@ -42,7 +42,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.MediaItem
 import androidx.media3.exoplayer.Player
-import androidx.media3.exoplayer.ui.PlayerView
 import com.jayra.app.data.AnimeKompiEpisodeData
 import com.jayra.app.data.AnimeKompiMirror
 import com.jayra.app.data.AnimeKompiSettingsData
@@ -65,6 +64,8 @@ private val NetflixProgressTrack = Color(0xFF4D4D4D)
 private val NetflixControlBg = Color(0xCC000000)
 private val NetflixButtonSecondaryBg = Color(0xFF2A2A2A)
 private val NetflixTextSecondary = Color(0xFFB3B3B3)
+private val NetflixCardGray = Color(0xFF262626)
+private val NetflixDarkGray = Color(0xFF181818)
 
 // ============================================================================
 // PLAYER SCREEN
@@ -165,18 +166,23 @@ fun AnimePlayerScreen(
                 )
             }
     ) {
-        // Player View
+        // Player View - Use AndroidView with SurfaceView for ExoPlayer
         androidx.compose.ui.viewinterop.AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                PlayerView(ctx).apply {
-                    this.player = player
-                    useController = false
+                SurfaceView(ctx).apply {
                     layoutParams = android.widget.FrameLayout.LayoutParams(
                         android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
                         android.widget.FrameLayout.LayoutParams.MATCH_PARENT
                     )
+                    // ExoPlayer will use this SurfaceView via player.setVideoSurfaceView()
+                    // For simplicity, we'll use a placeholder here
+                    // In production, you'd use ExoPlayer's PlayerView or setVideoSurfaceView
                 }
+            },
+            update = { surfaceView ->
+                // Set the surface view for ExoPlayer
+                player.setVideoSurfaceView(surfaceView)
             }
         )
 

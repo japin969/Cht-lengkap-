@@ -625,7 +625,7 @@ fun AzGridCard(
 @Composable
 fun ListSkeletonLoading(listType: String) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(PaddingValues(top = 56.dp, horizontal = 16.dp, vertical = 16.dp)),
+        modifier = Modifier.fillMaxSize().padding(top = 56.dp, horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         when (listType) {
