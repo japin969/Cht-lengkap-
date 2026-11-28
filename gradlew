@@ -6,4 +6,4 @@ if [ -n "$JAVA_HOME" ]; then
 else
     JAVACMD=java
 fi
-exec "$JAVACMD" -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStorePassword=changeit -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+exec "$JAVACMD" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
