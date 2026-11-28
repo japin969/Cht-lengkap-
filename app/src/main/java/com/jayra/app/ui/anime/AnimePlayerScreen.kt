@@ -38,14 +38,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.source.hls.HlsMediaSource
-import com.google.android.exoplayer2.source.dash.DashMediaSource
-import com.google.android.exoplayer2.ui.PlayerView
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.MediaItem
+import androidx.media3.exoplayer.Player
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.hls.HlsMediaSource
+import androidx.media3.exoplayer.source.dash.DashMediaSource
+import androidx.media3.exoplayer.ui.PlayerView
+import androidx.media3.exoplayer.upstream.DefaultHttpDataSource
 import com.jayra.app.data.AnimeKompiEpisodeData
 import com.jayra.app.data.AnimeKompiMirror
 import com.jayra.app.data.AnimeKompiSettingsData
@@ -95,8 +95,8 @@ fun AnimePlayerScreen(
     // Player state
     val isControllerVisible by remember { mutableStateOf(true) }
     val isBuffering by remember { mutableStateOf(false) }
-    val currentPosition by remember { mutableStateOf(0L) }
-    val duration by remember { mutableStateOf(0L) }
+    var currentPosition by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(0L) }
     val playbackSpeed by remember { mutableStateOf(1.0f) }
     val selectedQuality by remember { mutableStateOf("Auto") }
     val selectedAudio by remember { mutableStateOf(0) }
@@ -170,7 +170,7 @@ fun AnimePlayerScreen(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 PlayerView(ctx).apply {
-                    setPlayer(player)
+                    player = player
                     useController = false
                     layoutParams = android.widget.FrameLayout.LayoutParams(
                         android.widget.FrameLayout.LayoutParams.MATCH_PARENT,

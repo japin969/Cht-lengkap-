@@ -13,6 +13,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,6 +53,7 @@ private val NetflixTextSecondary = Color(0xFFB3B3B3)
 private val NetflixTextMetadata = Color(0xFF8C8C8C)
 private val NetflixRed = Color(0xFFE50914)
 private val NetflixGreen = Color(0xFF46D369)
+private val NetflixDivider = Color(0xFF262626)
 
 // ============================================================================
 // LIST SCREEN (Genres, Seasons, Studios, Status, Types, Orders, A-Z)
@@ -71,29 +75,30 @@ fun AnimeListScreen(
         }
     }
 
-    Box(
-        Modifier
+    // Use LazyColumn for scrollable content instead of Column + verticalScroll
+    LazyColumn(
+        modifier = Modifier
             .fillMaxSize()
-            .background(NetflixBlack)
-            .verticalScroll(rememberScrollState())
+            .background(NetflixBlack),
+        contentPadding = PaddingValues(0.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        item {
             ListHeader(title = getListTitle(listType), onBackClick = onBackClick)
+        }
 
-            when {
-                state.isLoading -> ListSkeletonLoading(listType)
-                state.error != null -> ListErrorState(error = state.error!!, onRetry = { viewModel.loadListMetadata() })
-                else -> {
-                    when (listType) {
-                        "genres" -> GenresList(items = state.genres, onItemClick = onItemClick)
-                        "seasons" -> SeasonsList(items = state.seasons, onItemClick = onItemClick)
-                        "studios" -> StudiosList(items = state.studios, onItemClick = onItemClick)
-                        "status" -> StatusList(items = state.statuses, onItemClick = onItemClick)
-                        "types" -> TypesList(items = state.types, onItemClick = onItemClick)
-                        "orders" -> OrdersList(items = state.orders, onItemClick = onItemClick)
-                        "az" -> AzList(azData = state.azData, onItemClick = onItemClick)
-                        else -> ListErrorState(error = "Tipe daftar tidak dikenal", onRetry = {})
-                    }
+        when {
+            state.isLoading -> item { ListSkeletonLoading(listType) }
+            state.error != null -> item { ListErrorState(error = state.error!!, onRetry = { viewModel.loadListMetadata() }) }
+            else -> item {
+                when (listType) {
+                    "genres" -> GenresList(items = state.genres, onItemClick = onItemClick)
+                    "seasons" -> SeasonsList(items = state.seasons, onItemClick = onItemClick)
+                    "studios" -> StudiosList(items = state.studios, onItemClick = onItemClick)
+                    "status" -> StatusList(items = state.statuses, onItemClick = onItemClick)
+                    "types" -> TypesList(items = state.types, onItemClick = onItemClick)
+                    "orders" -> OrdersList(items = state.orders, onItemClick = onItemClick)
+                    "az" -> AzList(azData = state.azData, onItemClick = onItemClick)
+                    else -> ListErrorState(error = "Tipe daftar tidak dikenal", onRetry = {})
                 }
             }
         }
@@ -158,7 +163,7 @@ fun GenresList(
     onItemClick: (String, String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -231,7 +236,7 @@ fun SeasonsList(
     onItemClick: (String, String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -304,7 +309,7 @@ fun StudiosList(
     onItemClick: (String, String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -377,7 +382,7 @@ fun StatusList(
     onItemClick: (String, String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -438,7 +443,7 @@ fun TypesList(
     onItemClick: (String, String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -484,7 +489,7 @@ fun OrdersList(
     onItemClick: (String, String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -531,7 +536,7 @@ fun AzList(
     val letters = azData?.az?.keys?.toList()?.sorted() ?: ('A'..'Z').map { it.toString() }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -620,26 +625,39 @@ fun AzGridCard(
 
 @Composable
 fun ListSkeletonLoading(listType: String) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(top = 56.dp, horizontal = 16.dp, vertical = 16.dp)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(top = 56.dp, horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         when (listType) {
             "genres", "seasons", "studios" -> {
                 repeat(6) {
-                    Box(modifier = Modifier.fillMaxWidth().height(80.dp).background(NetflixCardGray).clip(RoundedCornerShape(8.dp)).padding(top = 12.dp))
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().height(80.dp).background(NetflixCardGray).clip(RoundedCornerShape(8.dp)))
+                    }
+                    item { Spacer(Modifier.height(12.dp)) }
                 }
             }
             "status", "types", "orders" -> {
                 repeat(8) {
-                    Box(modifier = Modifier.fillMaxWidth().height(56.dp).background(NetflixCardGray).clip(RoundedCornerShape(8.dp)).padding(top = 12.dp))
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().height(56.dp).background(NetflixCardGray).clip(RoundedCornerShape(8.dp)))
+                    }
+                    item { Spacer(Modifier.height(12.dp)) }
                 }
             }
             "az" -> {
                 repeat(5) {
-                    Column {
-                        Box(modifier = Modifier.fillMaxWidth().height(22.dp).background(NetflixCardGray).padding(top = 16.dp))
-                        repeat(3) {
-                            Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f/3f).background(NetflixCardGray).clip(RoundedCornerShape(6.dp)).padding(top = 8.dp))
+                    item {
+                        Column {
+                            Box(modifier = Modifier.fillMaxWidth().height(22.dp).background(NetflixCardGray))
+                            Spacer(Modifier.height(16.dp))
+                            repeat(3) {
+                                item {
+                                    Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f/3f).background(NetflixCardGray).clip(RoundedCornerShape(6.dp)))
+                                    Spacer(Modifier.height(8.dp))
+                                }
+                            }
                         }
                     }
                 }
